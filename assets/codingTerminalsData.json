@@ -147,10 +147,69 @@
     }
   ],
   "upcomingTopic": {
-    "title": "",
+    "title": "Angular 21 | Application Flow | Step-by-Step | CodingTerminals",
     "description": "",
-    "subtopics": [],
-    "interviewQuestions": [],
+    "subtopics": [
+      "<p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉 Angular application start होने का पूरा flow&nbsp;&nbsp;</p><p>👉 index.html का role&nbsp;&nbsp;</p><p>👉 &lt;app-root&gt; कैसे work करता है&nbsp;&nbsp;</p><p>👉 main.ts entry point&nbsp;&nbsp;</p><p>👉 Bootstrap process explained&nbsp;&nbsp;</p><p>👉 Root component कैसे load होता है&nbsp;&nbsp;</p><p>👉 Interview-focused explanation</p>"
+    ],
+    "interviewQuestions": [
+      {
+        "question": "What is Angular application flow?",
+        "answer": "It describes how an Angular application starts and how control moves from index.html to components."
+      },
+      {
+        "question": "What is the entry point of an Angular application?",
+        "answer": "main.ts"
+      },
+      {
+        "question": "What is the role of index.html in Angular?",
+        "answer": "It is the host HTML file where the Angular application is loaded."
+      },
+      {
+        "question": "What is <app-root> in Angular?",
+        "answer": "It is the selector of the root component where the application is rendered."
+      },
+      {
+        "question": "Which file bootstraps the Angular application?",
+        "answer": "main.ts"
+      },
+      {
+        "question": "What happens when an Angular application starts?",
+        "answer": "<p>index.html loads, Angular finds , main.ts bootstraps</p><p> the root component, and the component tree is rendered.</p>"
+      },
+      {
+        "question": "What is bootstrapping in Angular?",
+        "answer": "It is the process of initializing and launching the Angular application."
+      },
+      {
+        "question": "<p>What is the role of <strong>bootstrapApplication() or bootstrapModule()</strong>?</p>",
+        "answer": "They initialize the Angular app and load the root component."
+      },
+      {
+        "question": "How does Angular render a component on the screen?",
+        "answer": "By linking the component class with its template and inserting it into the DOM."
+      },
+      {
+        "question": "What is the difference between module-based and standalone bootstrapping?",
+        "answer": "Module-based uses AppModule, while standalone bootstraps directly from a component."
+      },
+      {
+        "question": "What role does change detection play in application flow?",
+        "answer": "It keeps the view updated with the latest component data."
+      },
+      {
+        "question": "What are common issues in Angular application flow?",
+        "answer": "Incorrect bootstrap setup, missing root component, routing misconfiguration, or service scope issues."
+      },
+      {
+        "question": "<p>Why is Angular application flow important?</p>",
+        "answer": "It helps understand how Angular works internally."
+      },
+      {
+        "question": "<p><strong style=\"color: rgb(0, 138, 0);\">📍Explanation of Complete Angular Application Flow end to end .</strong></p>",
+        "answer": "<p>1️⃣ <code><strong>npm start</strong></code></p><p>Runs the script defined in <code>package.json</code></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">\"start\": \"ng serve\"</span></p><p><br></p><p><span style=\"background-color: white; color: rgb(33, 37, 41);\">2️⃣ </span><strong style=\"background-color: white; color: rgb(33, 37, 41);\">Angular CLI reads </strong><code><strong>angular.json</strong></code></p><ul><li><code>angular.json</code> contains <strong>project configuration</strong></li><li>Angular CLI checks:</li><li class=\"ql-indent-1\">Project name</li><li class=\"ql-indent-1\">Build &amp; serve options</li><li class=\"ql-indent-1\">Assets, styles, scripts</li><li class=\"ql-indent-1\"><strong>Default port (4200)</strong> and other dev-server settings</li></ul><p>📌 Example: we can set port if required other than 4200.</p><p><br></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">\"serve\": {</span></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">&nbsp; \"options\": {</span></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">&nbsp; &nbsp; \"port\": 4200</span></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">&nbsp; }</span></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">}</span></p><p><br></p><p>3️⃣ <strong>Dev server starts</strong></p><ul><li>Angular CLI starts the development server on the configured port</li><li>Browser opens:</li></ul><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">http://localhost:4200</span></p><p>4️⃣ <code><strong>index.html</strong></code><strong> loads</strong></p><ul><li>First file rendered in the browser</li></ul><p>Contains:</p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">&lt;app-root&gt;&lt;/app-root&gt;</span></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">&lt;script src=\"main.js\"</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></p><p>5️⃣ <code><strong>main.ts</strong></code><strong> executes</strong></p><ul><li>Entry point of Angular</li><li>Bootstraps the app:</li></ul><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">bootstrapApplication(AppComponent, appConfig);</span></p><p><br></p><p>6️⃣ app.config.ts loads</p><ul><li>Registers:</li><li class=\"ql-indent-1\">Providers</li><li class=\"ql-indent-1\">Routing</li><li class=\"ql-indent-1\">Interceptors</li><li class=\"ql-indent-1\">Global configuration</li></ul><p>7️⃣ <code><strong>AppComponent</strong></code><strong> loads</strong></p><ul><li>Root component with selector <code>app-root</code></li></ul><p>8️⃣ <strong>Selector matches in </strong><code><strong>index.html</strong></code></p><ul><li>Angular replaces <code>&lt;app-root&gt;</code> with:</li><li class=\"ql-indent-1\">HTML</li><li class=\"ql-indent-1\">CSS</li><li class=\"ql-indent-1\">TS logic</li></ul><p>9️⃣ <strong>Lifecycle hooks run</strong></p><ul><li><code>constructor</code></li><li><code>ngOnInit</code></li></ul><p>🔟 <strong>UI is rendered</strong></p><p><br></p><p><strong style=\"color: rgb(230, 0, 0);\"><u>Diagram Representation</u></strong></p><p><br></p><p>npm start</p><p>&nbsp;|</p><p>&nbsp;|&nbsp;(package.json)</p><p>&nbsp;|</p><p>ng serve</p><p>&nbsp;|</p><p>&nbsp;|&nbsp;(Angular CLI)</p><p>&nbsp;|</p><p>angular.json</p><p>&nbsp;|&nbsp;→ Port (4200)</p><p>&nbsp;|&nbsp;→ Build &amp; Serve config</p><p>&nbsp;|</p><p>Dev Server Running</p><p>&nbsp;|</p><p>Browser loads</p><p>&nbsp;|</p><p>index.html</p><p>&nbsp;|&nbsp;→ &lt;app-root&gt;</p><p>&nbsp;|</p><p>main.ts</p><p>&nbsp;|&nbsp;→ bootstrapApplication()</p><p>&nbsp;|</p><p>app.config.ts</p><p>&nbsp;|&nbsp;→ providers</p><p>&nbsp;|&nbsp;→ routing</p><p>&nbsp;|</p><p>AppComponent</p><p>&nbsp;|&nbsp;→ selector: app-root</p><p>&nbsp;|</p><p>Component Lifecycle</p><p>&nbsp;|&nbsp;→ constructor</p><p>&nbsp;|&nbsp;→ ngOnInit</p><p>&nbsp;|</p><p>UI Rendered</p><p><br></p>"
+      }
+    ],
     "estimatedDate": "2025-12-25"
   }
 }

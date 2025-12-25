@@ -363,6 +363,24 @@ function toggleInterviewAnswer(questionElement) {
     const toggleIcon = questionElement.querySelector('.interview-question-toggle');
 
     if (answerElement) {
+        // Find the parent interview section to close only answers within this card
+        const parentInterviewSection = questionElement.closest('.interview-section');
+        
+        // Close all other interview answers within the same card
+        if (parentInterviewSection) {
+            parentInterviewSection.querySelectorAll('.interview-answer').forEach(answer => {
+                if (answer !== answerElement && answer.classList.contains('active')) {
+                    answer.classList.remove('active');
+                    // Also toggle the icon for the closed answer
+                    const closedIcon = answer.parentElement.querySelector('.interview-question-toggle');
+                    if (closedIcon) {
+                        closedIcon.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        // Toggle current answer
         answerElement.classList.toggle('active');
         if (toggleIcon) {
             toggleIcon.classList.toggle('active');

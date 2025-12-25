@@ -333,7 +333,7 @@ body {
 }
 
 .card-content.active {
-    max-height: 2000px;
+    max-height: 5000px;
     padding: 25px;
 }
 
@@ -578,9 +578,10 @@ body {
 }
 
 .interview-answer.active {
-    max-height: 800px;
+    max-height: 3000px;
     padding: 20px 20px 20px 85px;
     opacity: 1;
+    overflow-y: auto;
 }
 
 .interview-questions-list li:before {
