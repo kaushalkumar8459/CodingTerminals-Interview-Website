@@ -1340,7 +1340,7 @@ function downloadJSON() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'roadmap-backup.json';
+    a.download = 'codingterminal-backup.json';
     a.click();
     showToast('Backup downloaded!', 'success');
 }

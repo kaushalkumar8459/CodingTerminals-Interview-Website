@@ -24,6 +24,58 @@ function renderHTMLContent(html) {
     return html.replace(/\n/g, '<br>');
 }
 
+// Helper function to convert HTML to plain text
+function htmlToPlainText(html) {
+    if (!html) return '';
+    
+    // Create a temporary div element to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Get the text content (this strips all HTML tags)
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Clean up extra whitespace
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    return text;
+}
+
+// Helper function to convert HTML to Word-friendly format (preserves structure)
+function htmlToWordFormat(html) {
+    if (!html) return '';
+    
+    // Create a temporary div element to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Replace common HTML tags with Word-compatible formatting
+    let wordHtml = html
+        // Preserve line breaks
+        .replace(/<br\s*\/?>/gi, '<br>')
+        // Convert paragraph tags
+        .replace(/<p>/gi, '<p style="margin: 10px 0;">')
+        // Convert lists
+        .replace(/<ul>/gi, '<ul style="margin: 10px 0; padding-left: 20px;">')
+        .replace(/<ol>/gi, '<ol style="margin: 10px 0; padding-left: 20px;">')
+        .replace(/<li>/gi, '<li style="margin: 5px 0;">')
+        // Convert headings
+        .replace(/<h1>/gi, '<h1 style="font-size: 24px; font-weight: bold; margin: 15px 0;">')
+        .replace(/<h2>/gi, '<h2 style="font-size: 20px; font-weight: bold; margin: 12px 0;">')
+        .replace(/<h3>/gi, '<h3 style="font-size: 18px; font-weight: bold; margin: 10px 0;">')
+        .replace(/<h4>/gi, '<h4 style="font-size: 16px; font-weight: bold; margin: 8px 0;">')
+        // Convert code blocks
+        .replace(/<code>/gi, '<code style="background-color: #f4f4f4; padding: 2px 6px; font-family: Consolas, monospace; border-radius: 3px;">')
+        .replace(/<pre>/gi, '<pre style="background-color: #f4f4f4; padding: 10px; font-family: Consolas, monospace; border-radius: 5px; overflow-x: auto; white-space: pre-wrap;">')
+        // Convert bold and italic
+        .replace(/<strong>/gi, '<strong style="font-weight: bold;">')
+        .replace(/<b>/gi, '<b style="font-weight: bold;">')
+        .replace(/<em>/gi, '<em style="font-style: italic;">')
+        .replace(/<i>/gi, '<i style="font-style: italic;">');
+    
+    return wordHtml;
+}
+
 // Fetch playlist videos from YouTube API
 async function fetchPlaylistVideos() {
     try {
@@ -238,6 +290,11 @@ function displayVideoPlaylist(playlist) {
         card.className = `day-card ${day.isTodaysTopic ? 'todays-topic-card' : ''}`;
         card.style.animationDelay = `${index * 0.1}s`;
 
+        // Find the original index in allVideoPlaylistData for download functionality
+        const originalIndex = allVideoPlaylistData.findIndex(item => 
+            item.title === day.title && item.date === day.date
+        );
+
         const subtopicsList = day.subtopics.map(subtopic =>
             `<li>${renderHTMLContent(subtopic)}</li>`
         ).join('');
@@ -247,9 +304,20 @@ function displayVideoPlaylist(playlist) {
             <div class="interview-section">
                 <div class="interview-header">
                     <h3 class="interview-title">Interview Questions</h3>
-                    <button class="download-qa-btn" onclick="downloadQuestionsAndAnswers(${index}, '${day.title.replace(/'/g, "\\'")}')">
-                        Download Q&A as Text
-                    </button>
+                    <div class="download-dropdown">
+                        <button class="download-qa-btn" onclick="toggleDownloadMenu(event, ${originalIndex})">
+                            📥 Download Q&A
+                            <span class="dropdown-arrow">▼</span>
+                        </button>
+                        <div class="download-menu" id="downloadMenu${originalIndex}">
+                            <div class="download-option" onclick="downloadQuestionsAndAnswers(${originalIndex}, '${day.title.replace(/'/g, "\\'")}', 'text')">
+                                📄 Download as Text (.txt)
+                            </div>
+                            <div class="download-option" onclick="downloadQuestionsAndAnswers(${originalIndex}, '${day.title.replace(/'/g, "\\'")}', 'word')">
+                                📃 Download as Word (.docx)
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <ul class="interview-questions-list">
                     ${day.interviewQuestions.map((item, qIndex) => {
@@ -422,8 +490,8 @@ function sortVideos(order) {
     displayVideoPlaylist(sortedData);
 }
 
-// Download Questions and Answers as Text File
-function downloadQuestionsAndAnswers(cardIndex, topicTitle) {
+// Download Questions and Answers as Text or Word File
+function downloadQuestionsAndAnswers(cardIndex, topicTitle, format) {
     const day = allVideoPlaylistData[cardIndex];
 
     if (!day.interviewQuestions || day.interviewQuestions.length === 0) {
@@ -431,42 +499,200 @@ function downloadQuestionsAndAnswers(cardIndex, topicTitle) {
         return;
     }
 
-    // Create text content
-    let textContent = `=====================================\n`;
-    textContent += `${topicTitle}\n`;
-    textContent += `Interview Questions & Answers\n`;
-    textContent += `Date: ${formatDate(day.date)}\n`;
-    textContent += `=====================================\n\n`;
+    if (format === 'text') {
+        // Create text content for TXT file
+        let textContent = `=====================================\n`;
+        textContent += `${topicTitle}\n`;
+        textContent += `Interview Questions & Answers\n`;
+        textContent += `Date: ${formatDate(day.date)}\n`;
+        textContent += `=====================================\n\n`;
 
-    day.interviewQuestions.forEach((item, index) => {
-        const question = typeof item === 'object' ? item.question : item;
-        const answer = typeof item === 'object' ? item.answer : '';
+        day.interviewQuestions.forEach((item, index) => {
+            const question = typeof item === 'object' ? htmlToPlainText(item.question) : htmlToPlainText(item);
+            const answer = typeof item === 'object' ? htmlToPlainText(item.answer) : '';
 
-        textContent += `Q${index + 1}. ${question}\n\n`;
+            textContent += `Q${index + 1}. ${question}\n\n`;
 
-        if (answer) {
-            textContent += `Answer:\n${answer}\n\n`;
-        } else {
-            textContent += `Answer: (Not available yet)\n\n`;
+            if (answer) {
+                textContent += `Answer:\n${answer}\n\n`;
+            } else {
+                textContent += `Answer: (Not available yet)\n\n`;
+            }
+
+            textContent += `-------------------------------------\n\n`;
+        });
+
+        textContent += `\n\nGenerated from Coding Terminals Video Playlist\n`;
+        textContent += `YouTube: https://www.youtube.com/@codingterminals\n`;
+
+        // Download as text file
+        const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${topicTitle.replace(/[^a-z0-9]/gi, '_')}_QA.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    } else if (format === 'word') {
+        // Create HTML content for Word document
+        let htmlContent = `
+<!DOCTYPE html>
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+    <meta charset='utf-8'>
+    <title>${topicTitle} - Interview Q&A</title>
+    <style>
+        body { 
+            font-family: Calibri, Arial, sans-serif; 
+            line-height: 1.6; 
+            margin: 40px; 
+            font-size: 11pt;
         }
+        h1 { 
+            color: #2c3e50; 
+            border-bottom: 3px solid #3498db; 
+            padding-bottom: 10px; 
+            page-break-after: avoid;
+        }
+        h2 { 
+            color: #34495e; 
+            margin-top: 30px; 
+            page-break-after: avoid;
+        }
+        .header { 
+            background-color: #ecf0f1; 
+            padding: 20px; 
+            border-radius: 5px; 
+            margin-bottom: 30px; 
+        }
+        .question { 
+            background-color: #e8f5e9; 
+            padding: 15px; 
+            margin: 20px 0; 
+            border-left: 4px solid #4caf50;
+            page-break-inside: avoid;
+        }
+        .answer { 
+            background-color: #fff3e0; 
+            padding: 15px; 
+            margin: 10px 0 20px 20px; 
+            border-left: 4px solid #ff9800;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .question-number { 
+            font-weight: bold; 
+            color: #2196f3; 
+            font-size: 1.1em; 
+        }
+        .footer { 
+            margin-top: 40px; 
+            padding-top: 20px; 
+            border-top: 2px solid #bdc3c7; 
+            color: #7f8c8d; 
+            font-size: 0.9em; 
+        }
+        p { margin: 10px 0; }
+        ul, ol { margin: 10px 0; padding-left: 30px; }
+        li { margin: 5px 0; }
+        code { 
+            background-color: #f4f4f4; 
+            padding: 2px 6px; 
+            font-family: Consolas, 'Courier New', monospace; 
+            border-radius: 3px;
+            font-size: 10pt;
+        }
+        pre { 
+            background-color: #f4f4f4; 
+            padding: 10px; 
+            font-family: Consolas, 'Courier New', monospace; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>${topicTitle}</h1>
+        <p><strong>Interview Questions & Answers</strong></p>
+        <p>Date: ${formatDate(day.date)}</p>
+    </div>
+`;
 
-        textContent += `-------------------------------------\n\n`;
-    });
+        day.interviewQuestions.forEach((item, index) => {
+            const question = typeof item === 'object' ? item.question : item;
+            const answer = typeof item === 'object' ? item.answer : '';
 
-    textContent += `\n\nGenerated from Coding Terminals Video Playlist\n`;
-    textContent += `YouTube: https://www.youtube.com/@codingterminals\n`;
+            htmlContent += `
+    <div class="question">
+        <span class="question-number">Q${index + 1}.</span> ${htmlToWordFormat(question)}
+    </div>
+`;
 
-    // Create a blob and download
-    const blob = new Blob([textContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${topicTitle.replace(/[^a-z0-9]/gi, '_')}_QA.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+            if (answer) {
+                htmlContent += `
+    <div class="answer">
+        <strong>Answer:</strong><br><br>
+        ${htmlToWordFormat(answer)}
+    </div>
+`;
+            } else {
+                htmlContent += `
+    <div class="answer">
+        <strong>Answer:</strong> (Not available yet)
+    </div>
+`;
+            }
+        });
+
+        htmlContent += `
+    <div class="footer">
+        <p><strong>Generated from Coding Terminals Video Playlist</strong></p>
+        <p>YouTube: <a href="https://www.youtube.com/@codingterminals">https://www.youtube.com/@codingterminals</a></p>
+    </div>
+</body>
+</html>`;
+
+        // Create blob with proper Word HTML format
+        const blob = new Blob(['\ufeff', htmlContent], { 
+            type: 'application/vnd.ms-word;charset=utf-8' 
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${topicTitle.replace(/[^a-z0-9]/gi, '_')}_QA.doc`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }
 }
+
+// Toggle download menu visibility
+function toggleDownloadMenu(event, index) {
+    event.stopPropagation();
+    const menu = document.getElementById(`downloadMenu${index}`);
+    if (menu) {
+        menu.classList.toggle('visible');
+    }
+
+    // Close other menus
+    document.querySelectorAll('.download-menu').forEach(otherMenu => {
+        if (otherMenu !== menu) {
+            otherMenu.classList.remove('visible');
+        }
+    });
+}
+
+// Close download menu when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('.download-menu').forEach(menu => menu.classList.remove('visible'));
+});
 
 // Load video playlist on page load
 window.addEventListener('DOMContentLoaded', loadVideoPlaylist);
