@@ -1,0 +1,156 @@
+{
+  "channelName": "Coding Terminals",
+  "channelLogo": "../assets/CT logo.jpg",
+  "videoPlaylist": [
+    {
+      "subtopics": [
+        "introduction for playlist"
+      ],
+      "interviewQuestions": []
+    },
+    {
+      "subtopics": [
+        "Install Node.js",
+        "Install Angular cli",
+        "Install Vs Code (editor)",
+        "check version",
+        "npm installation check",
+        "Creating Angular project from scratch",
+        "Common beginner mistakes"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "What is the command to install Angular CLI globally?",
+          "answer": "npm install -g @angular/cli"
+        },
+        {
+          "question": "What is npm and why is it needed for Angular?",
+          "answer": "npm (Node Package Manager) is used to install and manage JavaScript packages/dependencies required for Angular projects"
+        },
+        {
+          "question": "What are the prerequisites for Angular development?",
+          "answer": "Node.js, npm, and a code editor (like VS Code)"
+        },
+        {
+          "question": "How do you create a new Angular project?",
+          "answer": "ng new projectname"
+        },
+        {
+          "question": "What command is used to start an Angular development server?",
+          "answer": "npm start or ng serve"
+        },
+        {
+          "question": "On which port does Angular run by default?",
+          "answer": "Port 4200 (http://localhost:4200)"
+        },
+        {
+          "question": "How do you check if Angular CLI is installed?",
+          "answer": "ng version or ng --version"
+        },
+        {
+          "question": "What is the difference between npm start and ng serve?",
+          "answer": "npm start runs the script defined in package.json (usually ng serve), while ng serve directly uses Angular CLI"
+        },
+        {
+          "question": "How do you run Angular on a different port?",
+          "answer": "ng serve --port 4500 or modify angular.json"
+        },
+        {
+          "question": "What files are created when you run ng new projectname?",
+          "answer": "package.json, angular.json, tsconfig files, src folder, node_modules, etc."
+        },
+        {
+          "question": "What is the difference between --skip-install and --skip-git flags?",
+          "answer": "--skip-install skips npm install, --skip-git skips git repository initialization"
+        },
+        {
+          "question": "How do you install Angular CLI locally (not globally)?",
+          "answer": "npm install @angular/cli --save-dev"
+        },
+        {
+          "question": "How do you open Angular app automatically in browser after running ng serve?",
+          "answer": "ng serve --open or ng serve -o"
+        }
+      ]
+    },
+    {
+      "subtopics": [
+        "Angular project folder structure explained",
+        "Role of each important file &amp; folder",
+        "Real-world best practices",
+        "Interview-focused explanations",
+        "Common mistakes beginners make",
+        "How folder structure helps in scalable projects"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "What is the main folder of an Angular project?",
+          "answer": "The src folder. It contains the complete source code of the application."
+        },
+        {
+          "question": "What is the purpose of the app folder?",
+          "answer": "It contains components, services, routing, and modules or standalone components."
+        },
+        {
+          "question": "What is the use of the assets folder?",
+          "answer": "To store static files like images, icons, fonts, and JSON files."
+        },
+        {
+          "question": "What is the role of index.html in Angular?",
+          "answer": "It is the single host HTML file where the Angular application is loaded."
+        },
+        {
+          "question": "Why is main.ts important?",
+          "answer": "It is the entry point of the Angular application where the app is bootstrapped."
+        },
+        {
+          "question": "What is role of angular.json?",
+          "answer": "angular.json defines project structure and build configurations used by Angular CLI commands like ng serve, ng build, and ng test.\nor\nit is the central configuration file that controls Angular CLI behavior for building, serving, testing, and managing assets and environments in an Angular project."
+        },
+        {
+          "question": "What is the purpose of package.json?",
+          "answer": "It manages project dependencies, scripts, and metadata."
+        },
+        {
+          "question": "Why do we use the environments folder?",
+          "answer": "To manage different environment configurations like development and production."
+        },
+        {
+          "question": "What is the difference between styles.css and component styles?",
+          "answer": "styles.css → Global styles\n\nComponent styles → Scoped to that component only"
+        },
+        {
+          "question": "Why is node_modules not pushed to GitHub?",
+          "answer": "Because dependencies can be recreated using package.json and it increases repo size."
+        },
+        {
+          "question": "Why is a feature-based folder structure recommended?",
+          "answer": "It improves scalability, maintainability, and code readability."
+        },
+        {
+          "question": "What is the difference between Core and Shared folders?",
+          "answer": "Core → Singleton services like Auth, Guards, Interceptors\n\nShared → Reusable components, directives, and pipes"
+        },
+        {
+          "question": "How do standalone components improve folder structure?",
+          "answer": "They remove the dependency on modules, making the structure simpler and cleaner."
+        },
+        {
+          "question": "What are common folder structure mistakes in Angular projects?",
+          "answer": "Putting everything inside the app folder\nNo feature separation\nDuplicating shared logic"
+        },
+        {
+          "question": "What is the use of Package.lock.json ?",
+          "answer": "when we are running npm install, package-lock.json ensures that a particular (exact) library version is installed on your local machine.\n\n👉 package.json says what you want\n👉 package-lock.json says what exactly got installed\n\npackage-lock.json ensures that the exact same versions of libraries and their dependencies are installed on every machine.\nThis helps avoid version mismatch issues and keeps the application consistent across development, testing, and production.\n\n⚠️ Common Mistake\n❌ Deleting package-lock.json\n✔ Always commit it to Git"
+        }
+      ]
+    }
+  ],
+  "upcomingTopic": {
+    "title": "",
+    "description": "",
+    "subtopics": [],
+    "interviewQuestions": [],
+    "estimatedDate": "2025-12-25"
+  }
+}
