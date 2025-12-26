@@ -387,6 +387,7 @@ async function editVideo(index) {
                 }).join('')}
             </div>
             <button class="btn-add" onclick="addQuestion()">➕ Add Question</button>
+            <button class="btn-clear-all" onclick="clearAllQuestions()">🗑️ Clear All Questions</button>
             <div class="tooltip-wrapper">
                 <button class="btn-bulk" onclick="toggleBulkAdd('questions')">📝 Bulk Add</button>
                 <button class="btn-info-help" title="Click for help">?</button>
@@ -591,6 +592,7 @@ function editUpcomingTopic() {
                 }).join('')}
             </div>
             <button class="btn-add" onclick="addUpcomingQuestion()">➕ Add Question</button>
+            <button class="btn-clear-all" onclick="clearAllUpcomingQuestions()" style="margin-left: 10px;">🗑️ Clear All Questions</button>
             <div class="tooltip-wrapper">
                 <button class="btn-bulk" onclick="toggleBulkAdd('upcomingQuestions')">📝 Bulk Add</button>
                 <button class="btn-info-help" title="Click for help">?</button>
@@ -1029,6 +1031,19 @@ function removeQuestion(index) {
     });
 }
 
+// Clear all questions
+function clearAllQuestions() {
+    showConfirmModal('⚠️ Are you sure you want to clear all questions?', () => {
+        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
+        editVideo(currentEditingIndex);
+        showToast('All questions cleared successfully', 'success');
+    }, {
+        title: '🗑️ Clear All Questions',
+        buttonText: 'Ok',
+        buttonClass: 'btn btn-danger'
+    });
+}
+
 // Move question up or down
 function moveQuestion(index, direction) {
     const questions = videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions;
@@ -1086,6 +1101,19 @@ function removeUpcomingQuestion(index) {
     }, {
         title: '🗑️ Delete Upcoming Question',
         buttonText: 'Delete',
+        buttonClass: 'btn btn-danger'
+    });
+}
+
+// Clear all upcoming questions
+function clearAllUpcomingQuestions() {
+    showConfirmModal('⚠️ Are you sure you want to clear all upcoming questions?', () => {
+        videoPlaylistData.upcomingTopic.interviewQuestions = [];
+        editUpcomingTopic();
+        showToast('All upcoming questions cleared successfully', 'success');
+    }, {
+        title: '🗑️ Clear All Upcoming Questions',
+        buttonText: 'Ok',
         buttonClass: 'btn btn-danger'
     });
 }
@@ -1483,7 +1511,7 @@ async function deleteUpcomingTopic() {
         showToast('Upcoming topic cleared successfully', 'success');
     }, {
         title: '🗑️ Clear Upcoming Topic',
-        buttonText: 'Clear',
+        buttonText: 'Ok',
         buttonClass: 'btn btn-danger'
     });
 }

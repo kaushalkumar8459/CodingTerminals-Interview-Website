@@ -452,6 +452,26 @@ body {
     background: #218838;
 }
 
+/* Clear All Questions Button */
+.btn-clear-all {
+    padding: 10px 15px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+}
+
+.btn-clear-all:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
 .bulk-add-container {
     display: none;
     margin-top: 15px;
