@@ -32,6 +32,7 @@ async function fetchPlaylistVideos() {
 
         const videos = sortedItems.map((item, index) => ({
             day: index + 1,
+            position: item.snippet.position, // Store YouTube position
             date: item.snippet.publishedAt.split('T')[0],
             title: item.snippet.title,
             videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
@@ -180,8 +181,9 @@ async function loadData() {
                     };
                 }
                 
-                // Merge videoPlaylist: YouTube videos + JSON subtopics/questions
+                // Merge videoPlaylist: Match by array index (based on YouTube position)
                 videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
+                    // Match by array index - YouTube videos are already sorted by position
                     const jsonVideo = jsonData.videoPlaylist[index] || {};
                     
                     // Ensure interview questions are in object format
@@ -1267,6 +1269,7 @@ async function saveToServer() {
                     });
                 
                 return {
+                    title: video.title,
                     subtopics: validSubtopics,
                     interviewQuestions: validQuestions
                 };
