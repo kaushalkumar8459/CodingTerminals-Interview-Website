@@ -33,9 +33,35 @@
     </script>
 
     <div class="container">
-        <!-- Header -->
+        <!-- Header with Navigation -->
         <div class="header">
-            <h2>🎬 Admin Panel - Coding Terminals</h2>
+            <div class="header-top">
+                <h2>🎬 Admin Panel - Coding Terminals</h2>
+                <button class="btn btn-danger btn-sm" onclick="logout()">
+                    🚪 Logout
+                </button>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="admin-nav">
+                <a href="admin.html" class="nav-link active">
+                    <span class="nav-icon">🎬</span>
+                    <span class="nav-text">Video Playlist</span>
+                </a>
+                <a href="study-notes/study-notes.html" class="nav-link">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-text">Study Notes</span>
+                </a>
+                <a href="#" class="nav-link disabled" title="Coming Soon">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Analytics</span>
+                </a>
+                <a href="#" class="nav-link disabled" title="Coming Soon">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">Settings</span>
+                </a>
+            </nav>
+            
             <div class="header-actions">
                 <button class="btn btn-success" onclick="saveAllData()">
                     💾 Save All Changes
@@ -49,7 +75,7 @@
             </div>
         </div>
 
-        <!-- Content -->
+        <!-- Video Playlist Section -->
         <div class="content-wrapper">
             <!-- Video List Sidebar -->
             <div class="video-list">
@@ -107,6 +133,12 @@
                 window.location.reload();
             }
         });
+
+        // Logout function
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
     </script>
 </body>
 </html>

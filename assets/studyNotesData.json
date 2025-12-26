@@ -1,0 +1,94 @@
+{
+  "_id": "study_notes_collection",
+  "version": "1.0",
+  "createdAt": "2025-12-26T00:00:00.000Z",
+  "updatedAt": "2025-12-26T00:00:00.000Z",
+  "notes": [
+    {
+      "_id": "note_001",
+      "title": "Angular Basics - Setup & Installation",
+      "date": "Dec 26, 2025",
+      "type": "rich",
+      "content": "<h1>Angular Setup Guide</h1><h2>Prerequisites</h2><ul><li><strong>Node.js</strong> - Download from <a href=\"https://nodejs.org\">nodejs.org</a></li><li><strong>npm</strong> - Comes with Node.js</li><li><strong>VS Code</strong> - Code editor</li></ul><h2>Installation Steps</h2><ol><li><strong>Install Angular CLI:</strong><pre>npm install -g @angular/cli</pre></li><li><strong>Check version:</strong><pre>ng version</pre></li><li><strong>Create new project:</strong><pre>ng new my-app</pre></li><li><strong>Run the app:</strong><pre>cd my-app\nnpm start</pre></li></ol><h2>Important Commands</h2><p><code>ng serve</code> - Start development server</p><p><code>ng build</code> - Build for production</p><p><code>ng generate component</code> - Create new component</p><p><code>ng test</code> - Run unit tests</p><h2>Common Issues</h2><p>⚠️ <strong>Port already in use:</strong></p><pre>ng serve --port 4500</pre><p>⚠️ <strong>Permission denied:</strong> Run terminal as Administrator</p>",
+      "tags": ["angular", "setup", "basics", "cli"],
+      "category": "Angular",
+      "createdAt": "2025-12-26T10:30:00.000Z",
+      "updatedAt": "2025-12-26T10:30:00.000Z"
+    },
+    {
+      "_id": "note_002",
+      "title": "JavaScript ES6+ Features",
+      "date": "Dec 26, 5",
+      "type": "rich",
+      "content": "<h1>Modern JavaScript ES6+ Features</h1><h2>1. Arrow Functions</h2><p><strong>Syntax:</strong> <code>const func = () => {}</code></p><pre>const add = (a, b) => a + b;\nconst greet = name => `Hello ${name}`;\n\n// Lexical 'this' binding\nclass Person {\n  constructor() {\n    this.age = 0;\n    setInterval(() => {\n      this.age++; // 'this' refers to Person instance\n    }, 1000);\n  }\n}</pre><h2>2. Destructuring</h2><pre>// Object Destructuring\nconst person = { name: 'John', age: 25, city: 'NYC' };\nconst { name, age } = person;\n\n// Array Destructuring\nconst colors = ['red', 'green', 'blue'];\nconst [primary, secondary] = colors;</pre><h2>3. Spread Operator</h2><pre>// Array spread\nconst arr1 = [1, 2, 3];\nconst arr2 = [...arr1, 4, 5]; // [1, 2, 3, 4, 5]\n\n// Object spread\nconst obj1 = { a: 1, b: 2 };\nconst obj2 = { ...obj1, c: 3 }; // { a: 1, b: 2, c: 3 }</pre><h2>4. Template Literals</h2><pre>const name = 'John';\nconst age = 25;\nconst message = `Hello ${name}, you are ${age} years old`;\n\n// Multiline strings\nconst html = `\n  &lt;div&gt;\n    &lt;h1&gt;${name}&lt;/h1&gt;\n  &lt;/div&gt;\n`;</pre><h2>5. Promises & Async/Await</h2><pre>// Promises\nfetch('https://api.example.com/data')\n  .then(res => res.json())\n  .then(data => console.log(data))\n  .catch(err => console.error(err));\n\n// Async/Await\nasync function fetchData() {\n  try {\n    const response = await fetch('https://api.example.com/data');\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error(error);\n  }\n}</pre><h2>6. Classes</h2><pre>class Person {\n  constructor(name, age) {\n    this.name = name;\n    this.age = age;\n  }\n\n  greet() {\n    return `Hello, I'm ${this.name}`;\n  }\n}\n\nclass Employee extends Person {\n  constructor(name, age, role) {\n    super(name, age);\n    this.role = role;\n  }\n}</pre>",
+      "tags": ["javascript", "es6", "features", "syntax"],
+      "category": "JavaScript",
+      "createdAt": "2025-12-26T11:00:00.000Z",
+      "updatedAt": "2025-12-26T11:00:00.000Z"
+    },
+    {
+      "_id": "note_003",
+      "title": "Angular Component Lifecycle Hooks",
+      "date": "Dec 26, 2025",
+      "type": "rich",
+      "content": "<h1>Angular Lifecycle Hooks Complete Guide</h1><h2>What are Lifecycle Hooks?</h2><p>Angular creates, updates, and destroys components during runtime. Lifecycle hooks are methods that allow you to tap into these key moments.</p><h2>1. ngOnChanges</h2><p><strong>When:</strong> Before ngOnInit and whenever @Input properties change</p><pre>ngOnChanges(changes: SimpleChanges) {\n  console.log('Input changed:', changes);\n  if (changes['data']) {\n    // React to data input change\n  }\n}</pre><p><strong>Use Cases:</strong> React to input changes, validation</p><h2>2. ngOnInit ⭐ (Most Used)</h2><p><strong>When:</strong> After first ngOnChanges, once component is initialized</p><pre>ngOnInit() {\n  this.loadData();\n  this.subscribeToEvents();\n}</pre><p><strong>Use Cases:</strong> Initialize data, API calls, subscriptions</p><h2>3. ngDoCheck</h2><p><strong>When:</strong> During every change detection run</p><pre>ngDoCheck() {\n  // Custom change detection\n}</pre><p><strong>Use Cases:</strong> Custom change detection logic (use carefully, impacts performance)</p><h2>4. ngAfterContentInit</h2><p><strong>When:</strong> After ng-content is projected</p><pre>ngAfterContentInit() {\n  console.log('Content projected');\n}</pre><h2>5. ngAfterViewInit</h2><p><strong>When:</strong> After component's view is initialized</p><pre>@ViewChild('childComponent') child!: ChildComponent;\n\nngAfterViewInit() {\n  this.child.doSomething();\n}</pre><p><strong>Use Cases:</strong> Access ViewChild, DOM manipulation</p><h2>6. ngOnDestroy ⭐ (Important)</h2><p><strong>When:</strong> Just before component is destroyed</p><pre>private subscription: Subscription;\n\nngOnDestroy() {\n  this.subscription.unsubscribe();\n  clearInterval(this.timer);\n}</pre><p><strong>Use Cases:</strong> Cleanup - unsubscribe observables, clear timers, prevent memory leaks</p><h2>Lifecycle Order</h2><ol><li>constructor</li><li>ngOnChanges</li><li>ngOnInit</li><li>ngDoCheck</li><li>ngAfterContentInit</li><li>ngAfterContentChecked</li><li>ngAfterViewInit</li><li>ngAfterViewChecked</li><li>ngOnDestroy</li></ol>",
+      "tags": ["angular", "lifecycle", "hooks", "component"],
+      "category": "Angular",
+      "createdAt": "2025-12-26T12:00:00.000Z",
+      "updatedAt": "2025-12-26T12:00:00.000Z"
+    },
+    {
+      "_id": "note_004",
+      "title": "TypeScript Interview Questions",
+      "date": "Dec 26, 2025",
+      "type": "rich",
+      "content": "<h1>TypeScript Important Concepts</h1><h2>1. What is TypeScript?</h2><p>TypeScript is a <strong>superset of JavaScript</strong> that adds static typing. It compiles to plain JavaScript.</p><h3>Benefits:</h3><ul><li>Type safety</li><li>Better IDE support</li><li>Early error detection</li><li>Improved code maintainability</li></ul><h2>2. Types in TypeScript</h2><pre>// Primitive Types\nlet name: string = 'John';\nlet age: number = 25;\nlet isActive: boolean = true;\n\n// Array Types\nlet numbers: number[] = [1, 2, 3];\nlet names: Array&lt;string&gt; = ['Alice', 'Bob'];\n\n// Tuple\nlet person: [string, number] = ['John', 25];\n\n// Enum\nenum Color { Red, Green, Blue }\nlet c: Color = Color.Green;\n\n// Any (avoid using)\nlet data: any = 'can be anything';\n\n// Union Types\nlet id: string | number = 123;</pre><h2>3. Interfaces vs Types</h2><pre>// Interface\ninterface User {\n  name: string;\n  age: number;\n  email?: string; // Optional\n}\n\n// Type Alias\ntype Product = {\n  id: number;\n  title: string;\n  price: number;\n};</pre><h2>4. Access Modifiers</h2><ul><li><code>public</code> - Accessible everywhere (default)</li><li><code>private</code> - Only within the class</li><li><code>protected</code> - Within class and subclasses</li></ul><pre>class Employee {\n  public name: string;\n  private salary: number;\n  protected department: string;\n}</pre><h2>5. Generics</h2><pre>function identity&lt;T&gt;(arg: T): T {\n  return arg;\n}\n\nlet output = identity&lt;string&gt;('Hello');\n\n// Generic Interface\ninterface Response&lt;T&gt; {\n  data: T;\n  status: number;\n}\n\nconst userResponse: Response&lt;User&gt; = {\n  data: { name: 'John', age: 25 },\n  status: 200\n};</pre><h2>Key Interview Points</h2><p>✅ TypeScript provides <strong>compile-time type checking</strong></p><p>✅ It's <strong>not a separate language</strong>, just JavaScript with types</p><p>✅ Helps catch bugs during development, not runtime</p><p>✅ All JavaScript code is valid TypeScript</p>",
+      "tags": ["typescript", "interview", "types", "programming"],
+      "category": "TypeScript",
+      "createdAt": "2025-12-26T13:00:00.000Z",
+      "updatedAt": "2025-12-26T13:00:00.000Z"
+    },
+    {
+      "_id": "note_005",
+      "title": "RxJS Operators Guide",
+      "date": "Dec 26, 2025",
+      "type": "rich",
+      "content": "<h1>RxJS Operators - Essential Guide</h1><h2>What is RxJS?</h2><p>RxJS (Reactive Extensions for JavaScript) is a library for reactive programming using Observables, making it easier to compose asynchronous code.</p><h2>Transformation Operators</h2><h3>1. map</h3><pre>import { map } from 'rxjs/operators';\n\nthis.http.get&lt;User[]&gt;('/api/users')\n  .pipe(\n    map(users => users.map(u => ({ ...u, fullName: `${u.firstName} ${u.lastName}` })))\n  )\n  .subscribe(users => console.log(users));</pre><h3>2. switchMap</h3><p><strong>Cancel previous, use latest</strong></p><pre>this.searchControl.valueChanges\n  .pipe(\n    debounceTime(300),\n    switchMap(term => this.http.get(`/api/search?q=${term}`))\n  )\n  .subscribe(results => this.results = results);</pre><h3>3. mergeMap</h3><p><strong>Execute all in parallel</strong></p><pre>const ids = [1, 2, 3];\nfrom(ids).pipe(\n  mergeMap(id => this.http.get(`/api/user/${id}`))\n).subscribe(user => console.log(user));</pre><h3>4. concatMap</h3><p><strong>Execute sequentially</strong></p><pre>from(requests).pipe(\n  concatMap(req => this.http.post('/api/data', req))\n).subscribe();</pre><h2>Filtering Operators</h2><h3>1. filter</h3><pre>fromEvent(document, 'click')\n  .pipe(\n    filter((event: any) => event.target.tagName === 'BUTTON')\n  )\n  .subscribe(event => console.log('Button clicked'));</pre><h3>2. debounceTime</h3><pre>this.searchInput.valueChanges\n  .pipe(\n    debounceTime(500),\n    distinctUntilChanged()\n  )\n  .subscribe(value => this.search(value));</pre><h3>3. take</h3><pre>// Take first 5 emissions\nthis.dataStream$.pipe(\n  take(5)\n).subscribe(data => console.log(data));</pre><h3>4. takeUntil</h3><pre>private destroy$ = new Subject();\n\nngOnInit() {\n  this.dataService.getData()\n    .pipe(takeUntil(this.destroy$))\n    .subscribe(data => this.data = data);\n}\n\nngOnDestroy() {\n  this.destroy$.next();\n  this.destroy$.complete();\n}</pre><h2>Error Handling</h2><h3>catchError</h3><pre>import { catchError } from 'rxjs/operators';\nimport { of } from 'rxjs';\n\nthis.http.get('/api/data')\n  .pipe(\n    catchError(error => {\n      console.error('Error:', error);\n      return of([]);  // Return empty array as fallback\n    })\n  )\n  .subscribe(data => console.log(data));</pre><h2>Combination Operators</h2><h3>combineLatest</h3><pre>combineLatest([\n  this.userService.getUser(),\n  this.settingsService.getSettings()\n]).subscribe(([user, settings]) => {\n  console.log('User:', user);\n  console.log('Settings:', settings);\n});</pre><h2>Utility Operators</h2><h3>tap</h3><pre>this.http.get('/api/data')\n  .pipe(\n    tap(data => console.log('Data received:', data)),\n    map(data => data.items)\n  )\n  .subscribe(items => console.log(items));</pre>",
+      "tags": ["rxjs", "observables", "operators", "angular"],
+      "category": "RxJS",
+      "createdAt": "2025-12-26T14:00:00.000Z",
+      "updatedAt": "2025-12-26T14:00:00.000Z"
+    },
+    {
+      "_id": "note_006",
+      "title": "Git Commands Essentials",
+      "date": "Dec 26, 2025",
+      "type": "rich",
+      "content": "<h1>Git Commands - Developer's Guide</h1><h2>Basic Commands</h2><h3>Initialize & Clone</h3><pre># Initialize new repository\ngit init\n\n# Clone existing repository\ngit clone https://github.com/username/repo.git</pre><h3>Status & Changes</h3><pre># Check status\ngit status\n\n# View changes\ngit diff\n\n# View commit history\ngit log --oneline --graph</pre><h2>Staging & Committing</h2><pre># Stage all files\ngit add .\n\n# Stage specific file\ngit add filename.txt\n\n# Commit with message\ngit commit -m \"Your commit message\"\n\n# Add and commit in one command\ngit commit -am \"Message\"</pre><h2>Branching</h2><pre># List branches\ngit branch\n\n# Create new branch\ngit branch feature-login\n\n# Switch to branch\ngit checkout feature-login\n\n# Create and switch (shortcut)\ngit checkout -b feature-login\n\n# Delete branch\ngit branch -d feature-login</pre><h2>Remote Operations</h2><pre># Push to remote\ngit push origin main\n\n# Pull from remote\ngit pull origin main\n\n# Fetch changes without merging\ngit fetch origin\n\n# View remotes\ngit remote -v</pre><h2>Merging</h2><pre># Merge branch into current\ngit merge feature-login\n\n# Abort merge if conflicts\ngit merge --abort</pre><h2>Undoing Changes</h2><pre># Unstage file\ngit reset HEAD filename.txt\n\n# Discard changes in working directory\ngit checkout -- filename.txt\n\n# Undo last commit (keep changes)\ngit reset --soft HEAD~1\n\n# Undo last commit (discard changes)\ngit reset --hard HEAD~1\n\n# Revert commit (creates new commit)\ngit revert commit-hash</pre><h2>Stashing</h2><pre># Stash changes\ngit stash\n\n# List stashes\ngit stash list\n\n# Apply latest stash\ngit stash apply\n\n# Apply and remove stash\ngit stash pop\n\n# Clear all stashes\ngit stash clear</pre><h2>Best Practices</h2><ul><li>✅ Commit frequently with meaningful messages</li><li>✅ Always pull before push</li><li>✅ Use branches for features</li><li>✅ Review changes before committing</li><li>✅ Keep commits atomic (one feature/fix per commit)</li><li>⚠️ Never commit sensitive data</li><li>⚠️ Avoid large binary files</li></ul>",
+      "tags": ["git", "version-control", "commands", "github"],
+      "category": "Tools",
+      "createdAt": "2025-12-26T15:00:00.000Z",
+      "updatedAt": "2025-12-26T15:00:00.000Z"
+    }
+  ],
+  "categories": [
+    "Angular",
+    "JavaScript",
+    "TypeScript",
+    "RxJS",
+    "Tools",
+    "Interview Prep"
+  ],
+  "tags": [
+    "angular",
+    "javascript",
+    "typescript",
+    "rxjs",
+    "git",
+    "interview",
+    "setup",
+    "basics",
+    "lifecycle",
+    "operators"
+  ]
+}
