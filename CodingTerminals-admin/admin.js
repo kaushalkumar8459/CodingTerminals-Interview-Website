@@ -288,8 +288,20 @@ async function editVideo(index) {
 
     const editorPanel = document.getElementById('editorPanel');
     
-    // Convert subtopics array to HTML list for the editor
-    const subtopicsHTML = (video.subtopics || ['']).map(topic => `<li>${topic}</li>`).join('');
+    // Prepare subtopics HTML - handle both plain text and HTML content
+    let subtopicsHTML = '';
+    if (video.subtopics && video.subtopics.length > 0) {
+        // Check if subtopics contain HTML or plain text
+        const hasHTML = video.subtopics.some(topic => topic.includes('<') && topic.includes('>'));
+        
+        if (hasHTML) {
+            // Join HTML content directly
+            subtopicsHTML = video.subtopics.join('');
+        } else {
+            // Wrap plain text in list items
+            subtopicsHTML = `<ul>${video.subtopics.map(topic => `<li>${topic}</li>`).join('')}</ul>`;
+        }
+    }
 
     // YouTube Statistics Section
     const statsHTML = `
@@ -426,9 +438,9 @@ A: TypeScript adds static typing to JS...</div>
         }
     });
     
-    // Set initial content
+    // Set initial content - directly set the HTML content
     if (subtopicsHTML) {
-        subtopicsEditor.root.innerHTML = `<ul>${subtopicsHTML}</ul>`;
+        subtopicsEditor.root.innerHTML = subtopicsHTML;
     }
     
     // Save changes on text change
@@ -512,8 +524,20 @@ function editUpcomingTopic() {
     // Get current date in YYYY-MM-DD format
     const currentDate = new Date().toISOString().split('T')[0];
     
-    // Convert subtopics array to HTML list for the editor
-    const subtopicsHTML = (topic.subtopics || ['']).map(t => `<li>${t}</li>`).join('');
+    // Prepare subtopics HTML - handle both plain text and HTML content
+    let subtopicsHTML = '';
+    if (topic.subtopics && topic.subtopics.length > 0) {
+        // Check if subtopics contain HTML or plain text
+        const hasHTML = topic.subtopics.some(t => t.includes('<') && t.includes('>'));
+        
+        if (hasHTML) {
+            // Join HTML content directly
+            subtopicsHTML = topic.subtopics.join('');
+        } else {
+            // Wrap plain text in list items
+            subtopicsHTML = `<ul>${topic.subtopics.map(t => `<li>${t}</li>`).join('')}</ul>`;
+        }
+    }
     
     const editorPanel = document.getElementById('editorPanel');
     editorPanel.innerHTML = `
@@ -623,9 +647,9 @@ A: TypeScript adds static typing to JS...</div>
         }
     });
     
-    // Set initial content
+    // Set initial content - directly set the HTML content
     if (subtopicsHTML) {
-        upcomingSubtopicsEditor.root.innerHTML = `<ul>${subtopicsHTML}</ul>`;
+        upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
     }
     
     // Save changes on text change
