@@ -88,12 +88,13 @@ const AuthUtils = {
                 sessionStorage.setItem(this.KEYS.REDIRECT, redirectBackTo);
             }
             
-            // Build login URL with redirect parameter
-            const loginUrl = redirectBackTo 
-                ? `../auth/login.html?redirect=${encodeURIComponent(redirectBackTo)}`
-                : '../auth/login.html';
+            // Use centralized config for login URL
+            const loginUrl = window.APP_CONFIG?.URLS?.AUTH?.LOGIN?.FROM_ADMIN || '../../auth/login.html';
+            const finalUrl = redirectBackTo 
+                ? `${loginUrl}?redirect=${encodeURIComponent(redirectBackTo)}`
+                : loginUrl;
             
-            window.location.href = loginUrl;
+            window.location.href = finalUrl;
             return false;
         }
         return true;
@@ -142,7 +143,9 @@ const AuthUtils = {
             if (onConfirm) {
                 onConfirm();
             } else {
-                window.location.href = '../auth/login.html';
+                // Use centralized config for login URL
+                const loginUrl = window.APP_CONFIG?.URLS?.AUTH?.LOGIN?.FROM_ADMIN || '../../auth/login.html';
+                window.location.href = loginUrl;
             }
         }
     }
@@ -161,6 +164,8 @@ function logout() {
 setInterval(() => {
     if (!AuthUtils.isAuthenticated()) {
         alert('Your session has expired. Please login again.');
-        window.location.href = '../auth/login.html';
+        // Use centralized config for login URL
+        const loginUrl = window.APP_CONFIG?.URLS?.AUTH?.LOGIN?.FROM_ADMIN || '../../auth/login.html';
+        window.location.href = loginUrl;
     }
 }, 5 * 60 * 1000); // 5 minutes

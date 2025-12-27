@@ -3,10 +3,10 @@ const API_URL = APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADM
 const YOUTUBE_API_KEY = APP_CONFIG.YOUTUBE.API_KEY;
 const PLAYLIST_ID = APP_CONFIG.YOUTUBE.PLAYLIST_ID;
 
-// IndexedDB Configuration
-const DB_NAME = 'CodingTerminalsDB';
-const DB_VERSION = 2; // Increment version to add new object store
-const ROADMAP_STORE_NAME = 'roadmapData';
+// IndexedDB Configuration - Use centralized config
+const DB_NAME = APP_CONFIG.INDEXEDDB.DB_NAME;
+const DB_VERSION = APP_CONFIG.INDEXEDDB.DB_VERSION;
+const ROADMAP_STORE_NAME = APP_CONFIG.INDEXEDDB.STORES.YOUTUBE_ROADMAP;
 let db = null; // IndexedDB instance
 
 let videoPlaylistData = {
@@ -33,6 +33,8 @@ function initializeIndexedDB() {
         request.onupgradeneeded = function(event) {
             db = event.target.result;
             
+            console.log('🔄 Upgrading database to version', DB_VERSION);
+            
             // Create roadmap object store if it doesn't exist
             if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
                 const objectStore = db.createObjectStore(ROADMAP_STORE_NAME, { keyPath: '_id' });
@@ -41,22 +43,46 @@ function initializeIndexedDB() {
                 objectStore.createIndex('type', 'type', { unique: false });
                 objectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
                 
-                console.log('✅ IndexedDB roadmap store created');
+                console.log('✅ IndexedDB roadmap store created:', ROADMAP_STORE_NAME);
             }
             
             // Create study notes store if it doesn't exist (for compatibility)
-            if (!db.objectStoreNames.contains('studyNotes')) {
-                const notesStore = db.createObjectStore('studyNotes', { keyPath: '_id' });
+            const studyNotesStore = APP_CONFIG.INDEXEDDB.STORES.STUDY_NOTES;
+            if (!db.objectStoreNames.contains(studyNotesStore)) {
+                const notesStore = db.createObjectStore(studyNotesStore, { keyPath: '_id' });
                 notesStore.createIndex('title', 'title', { unique: false });
                 notesStore.createIndex('category', 'category', { unique: false });
-                console.log('✅ IndexedDB study notes store created');
+                notesStore.createIndex('createdAt', 'createdAt', { unique: false });
+                console.log('✅ IndexedDB study notes store created:', studyNotesStore);
             }
         };
 
         // Handle success
         request.onsuccess = function(event) {
             db = event.target.result;
+            
+            // Check if the required object store exists
+            if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
+                console.error('❌ Object store not found:', ROADMAP_STORE_NAME);
+                console.log('Available stores:', Array.from(db.objectStoreNames));
+                
+                // Close and delete the database, then retry
+                db.close();
+                console.log('⚠️ Recreating database with correct object store...');
+                
+                const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+                deleteRequest.onsuccess = function() {
+                    console.log('🗑️ Old database deleted, reinitializing...');
+                    setTimeout(() => initializeIndexedDB(), 500);
+                };
+                deleteRequest.onerror = function() {
+                    console.error('❌ Failed to delete database');
+                };
+                return;
+            }
+            
             console.log('✅ IndexedDB initialized successfully');
+            console.log('Available stores:', Array.from(db.objectStoreNames));
             resolve(db);
         };
 
@@ -83,9 +109,9 @@ function saveRoadmapToIndexedDB(data) {
         const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
         
-        const roadmapData = {
-            _id: 'roadmap_main',
-            type: 'roadmap',
+        const YoutubeRoadmapData = {
+            _id: 'YoutubeRoadmap_main',
+            type: 'YoutubeRoadmap',
             channelName: data.channelName,
             channelLogo: data.channelLogo,
             videoPlaylist: data.videoPlaylist,
@@ -93,7 +119,7 @@ function saveRoadmapToIndexedDB(data) {
             updatedAt: new Date().toISOString()
         };
         
-        const request = objectStore.put(roadmapData);
+        const request = objectStore.put(YoutubeRoadmapData);
 
         request.onsuccess = function() {
             console.log('✅ Roadmap saved to IndexedDB');

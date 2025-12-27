@@ -9,10 +9,10 @@ let noteQuillEditor = null;
 let confirmModalCallback = null;
 let db = null; // IndexedDB instance
 
-// IndexedDB Configuration
-const DB_NAME = 'CodingTerminalsDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'studyNotes';
+// IndexedDB Configuration - Use centralized config
+const DB_NAME = APP_CONFIG.INDEXEDDB.DB_NAME;
+const DB_VERSION = APP_CONFIG.INDEXEDDB.DB_VERSION;
+const STORE_NAME = APP_CONFIG.INDEXEDDB.STORES.STUDY_NOTES;
 
 // ==================== INITIALIZATION ====================
 window.addEventListener('DOMContentLoaded', () => {
@@ -31,6 +31,8 @@ function initializeIndexedDB() {
     request.onupgradeneeded = function(event) {
         db = event.target.result;
         
+        console.log('🔄 Upgrading database...', 'Current stores:', db.objectStoreNames);
+        
         // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
             const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '_id' });
@@ -41,14 +43,39 @@ function initializeIndexedDB() {
             objectStore.createIndex('date', 'date', { unique: false });
             objectStore.createIndex('createdAt', 'createdAt', { unique: false });
             
-            console.log('✅ IndexedDB object store created with indexes');
+            console.log('✅ IndexedDB object store created:', STORE_NAME);
+        } else {
+            console.log('ℹ️ Object store already exists:', STORE_NAME);
         }
     };
 
     // Handle success
     request.onsuccess = function(event) {
         db = event.target.result;
+        
+        // Check if the required object store exists
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+            console.error('❌ Object store not found:', STORE_NAME);
+            console.log('Available stores:', Array.from(db.objectStoreNames));
+            
+            // Close and delete the database, then retry
+            db.close();
+            showToast('⚠️ Recreating database...', 'warning');
+            
+            const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+            deleteRequest.onsuccess = function() {
+                console.log('🗑️ Old database deleted, reinitializing...');
+                setTimeout(() => initializeIndexedDB(), 500);
+            };
+            deleteRequest.onerror = function() {
+                console.error('❌ Failed to delete database');
+                showToast('Database error. Please refresh the page.', 'error');
+            };
+            return;
+        }
+        
         console.log('✅ IndexedDB initialized successfully');
+        console.log('Available stores:', Array.from(db.objectStoreNames));
         loadStudyNotes();
     };
 

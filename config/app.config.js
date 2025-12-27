@@ -194,7 +194,7 @@ const APP_CONFIG = {
     // IndexedDB Configuration
     INDEXEDDB: {
         DB_NAME: 'CodingTerminalsDB',
-        DB_VERSION: 2,
+        DB_VERSION: 3, // Incremented to 3 to add youtubeRoadmapData store
         STORES: {
             YOUTUBE_ROADMAP: 'youtubeRoadmapData',
             STUDY_NOTES: 'studyNotesData'
