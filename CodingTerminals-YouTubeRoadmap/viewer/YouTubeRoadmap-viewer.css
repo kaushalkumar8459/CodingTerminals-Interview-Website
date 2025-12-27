@@ -623,6 +623,7 @@ body {
     flex-shrink: 0;
 }
 
+/* Interview Answer Styling */
 .interview-answer {
     max-height: 0;
     overflow: hidden;
@@ -631,7 +632,7 @@ body {
     color: #555;
     font-weight: 400;
     line-height: 1.8;
-    background: #f0fff4;
+    /* background: #f0fff4; */
     margin-top: 0;
     opacity: 0;
     border-top: 1px solid #e0e0e0;
@@ -644,8 +645,84 @@ body {
     overflow-y: auto;
 }
 
+/* Code Block Styling (from Quill editor) */
+.interview-answer pre,
+.subtopics-list pre,
+.ql-syntax {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 10px 0;
+    border-left: 4px solid #667eea;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.interview-answer pre code,
+.subtopics-list pre code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+}
+
+/* Inline Code Styling */
+.interview-answer code,
+.subtopics-list code {
+    background-color: #f4f4f4;
+    color: #e83e8c;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    border: 1px solid #e0e0e0;
+}
+
 .interview-questions-list li:before {
     content: none;
+}
+
+.subtopics-list {
+    list-style: none;
+    padding: 0;
+}
+
+/* Remove bullets/rounds from all lists inside subtopics */
+.subtopics-list ul,
+.subtopics-list ol {
+    list-style: none;
+    padding-left: 0;
+    margin: 10px 0;
+}
+
+.subtopics-list ul li,
+.subtopics-list ol li {
+    padding: 8px 0;
+    line-height: 1.6;
+}
+
+/* Remove ::before pseudo-elements that might add bullets */
+.subtopics-list ul li:before,
+.subtopics-list ol li:before {
+    content: none;
+    display: none;
+}
+
+/* Interview Answer Lists Styling */
+.interview-answer ul,
+.interview-answer ol {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.interview-answer ul li,
+.interview-answer ol li {
+    padding: 4px 0;
+    line-height: 1.6;
 }
 
 .subtopics-list {
