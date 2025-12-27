@@ -29,8 +29,18 @@
     </script>
     
     <link rel="stylesheet" href="study-notes.css">
+    
+    <!-- Load Config and Auth -->
+    <script src="../../config/app.config.js"></script>
+    <script src="../../auth/auth.js"></script>
 </head>
 <body class="bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 min-h-screen">
+    
+    <!-- Authentication Check Script (Must be first) -->
+    <script>
+        // Check authentication using centralized AuthUtils
+        AuthUtils.requireAuth(window.location.href);
+    </script>
     
     <!-- Header with Navigation -->
     <header class="bg-white shadow-lg">
@@ -40,14 +50,17 @@
                 <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
                     📝 Study Notes - Coding Terminals
                 </h1>
-                <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg">
-                    🚪 Logout
-                </button>
+                <div class="flex items-center gap-4">
+                    <div id="userInfo"></div>
+                    <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg">
+                        🚪 Logout
+                    </button>
+                </div>
             </div>
             
             <!-- Navigation Menu -->
             <nav class="flex gap-3 border-t border-gray-200 pt-4">
-                <a href="../admin.html" class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all duration-300 hover:shadow-md">
+                <a href="../../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html" class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all duration-300 hover:shadow-md">
                     <span class="text-2xl">🎬</span>
                     <span class="font-semibold text-sm">Video Playlist</span>
                 </a>
@@ -78,7 +91,7 @@
                 💾 Save All Notes
             </button>
             
-            <button onclick="window.open('../../CodingTerminals-viewer/study-notes/study-notes-viewer.html', '_blank')" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+            <button onclick="window.open('../viewer/study-notes-viewer.html', '_blank')" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                 👁️ Preview Study Notes
             </button>
             
@@ -179,6 +192,12 @@
     <!-- Hidden File Input for Import -->
     <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="handleFileImport(event)">
 
+    <!-- Study Notes JavaScript -->
     <script src="study-notes.js"></script>
+    
+    <script>
+        // Display user info in header
+        AuthUtils.displayUserInfo('userInfo');
+    </script>
 </body>
 </html>

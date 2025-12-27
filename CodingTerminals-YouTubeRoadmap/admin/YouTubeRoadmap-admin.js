@@ -1,7 +1,13 @@
 // Load configuration
-const API_URL = APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.ROADMAP;
+const API_URL = APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP;
 const YOUTUBE_API_KEY = APP_CONFIG.YOUTUBE.API_KEY;
 const PLAYLIST_ID = APP_CONFIG.YOUTUBE.PLAYLIST_ID;
+
+// IndexedDB Configuration
+const DB_NAME = 'CodingTerminalsDB';
+const DB_VERSION = 2; // Increment version to add new object store
+const ROADMAP_STORE_NAME = 'roadmapData';
+let db = null; // IndexedDB instance
 
 let videoPlaylistData = {
     channelName: APP_CONFIG.APP.CHANNEL_NAME,
@@ -13,6 +19,143 @@ let videoPlaylistData = {
 let currentEditingIndex = null;
 let youtubeVideos = [];
 let quillEditors = {}; // Store Quill editor instances
+
+// ==================== INDEXEDDB SETUP ====================
+/**
+ * Initialize IndexedDB
+ * Creates database and object stores if they don't exist
+ */
+function initializeIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        // Handle database upgrade (first time or version change)
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            
+            // Create roadmap object store if it doesn't exist
+            if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
+                const objectStore = db.createObjectStore(ROADMAP_STORE_NAME, { keyPath: '_id' });
+                
+                // Create indexes for better query performance
+                objectStore.createIndex('type', 'type', { unique: false });
+                objectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+                
+                console.log('✅ IndexedDB roadmap store created');
+            }
+            
+            // Create study notes store if it doesn't exist (for compatibility)
+            if (!db.objectStoreNames.contains('studyNotes')) {
+                const notesStore = db.createObjectStore('studyNotes', { keyPath: '_id' });
+                notesStore.createIndex('title', 'title', { unique: false });
+                notesStore.createIndex('category', 'category', { unique: false });
+                console.log('✅ IndexedDB study notes store created');
+            }
+        };
+
+        // Handle success
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            console.log('✅ IndexedDB initialized successfully');
+            resolve(db);
+        };
+
+        // Handle error
+        request.onerror = function(event) {
+            console.error('❌ IndexedDB initialization failed:', event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+/**
+ * Save roadmap data to IndexedDB
+ * @param {Object} data - Roadmap data to save
+ * @returns {Promise}
+ */
+function saveRoadmapToIndexedDB(data) {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+
+        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
+        
+        const roadmapData = {
+            _id: 'roadmap_main',
+            type: 'roadmap',
+            channelName: data.channelName,
+            channelLogo: data.channelLogo,
+            videoPlaylist: data.videoPlaylist,
+            upcomingTopic: data.upcomingTopic,
+            updatedAt: new Date().toISOString()
+        };
+        
+        const request = objectStore.put(roadmapData);
+
+        request.onsuccess = function() {
+            console.log('✅ Roadmap saved to IndexedDB');
+            resolve(request.result);
+        };
+
+        request.onerror = function() {
+            console.error('❌ Error saving to IndexedDB:', request.error);
+            reject(request.error);
+        };
+    });
+}
+
+/**
+ * Load roadmap data from IndexedDB
+ * @returns {Promise<Object|null>}
+ */
+function loadRoadmapFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+
+        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
+        const request = objectStore.get('roadmap_main');
+
+        request.onsuccess = function() {
+            resolve(request.result || null);
+        };
+
+        request.onerror = function() {
+            reject(request.error);
+        };
+    });
+}
+
+/**
+ * Clear roadmap data from IndexedDB
+ * @returns {Promise}
+ */
+function clearRoadmapFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+
+        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
+        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
+        const request = objectStore.delete('roadmap_main');
+
+        request.onsuccess = function() {
+            resolve();
+        };
+
+        request.onerror = function() {
+            reject(request.error);
+        };
+    });
+}
 
 // Fetch playlist videos from YouTube API
 async function fetchPlaylistVideos() {
@@ -149,6 +292,9 @@ function formatRelativeTime(dateString) {
 // Load existing data from server and merge with YouTube data
 async function loadData() {
     try {
+        // Initialize IndexedDB first
+        await initializeIndexedDB();
+        
         // Fetch YouTube videos first
         youtubeVideos = await fetchPlaylistVideos();
         
@@ -156,83 +302,129 @@ async function loadData() {
             showToast(`Loaded ${youtubeVideos.length} videos from YouTube`, 'success');
         }
 
-        // Fetch local JSON data
+        // Try to load from IndexedDB first
+        let indexedDBData = null;
         try {
-            const response = await fetch(API_URL);
+            indexedDBData = await loadRoadmapFromIndexedDB();
+        } catch (dbError) {
+            console.error('Error loading from IndexedDB:', dbError);
+        }
+
+        if (indexedDBData && indexedDBData.videoPlaylist && indexedDBData.videoPlaylist.length > 0) {
+            // Use IndexedDB data
+            console.log('✅ Loading data from IndexedDB');
+            videoPlaylistData.channelName = indexedDBData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
+            videoPlaylistData.channelLogo = indexedDBData.channelLogo || APP_CONFIG.ASSETS.LOGO;
             
-            if (response.ok) {
-                const jsonData = await response.json();
-                
-                // Merge YouTube data with local JSON data
-                videoPlaylistData.channelName = jsonData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
-                videoPlaylistData.channelLogo = jsonData.channelLogo || APP_CONFIG.ASSETS.LOGO;
-                
-                // Handle upcoming topic - ensure interview questions are in correct format
-                if (jsonData.upcomingTopic) {
-                    videoPlaylistData.upcomingTopic = {
-                        ...jsonData.upcomingTopic,
-                        interviewQuestions: (jsonData.upcomingTopic.interviewQuestions || []).map(q => {
-                            // Convert string to object format if needed
-                            if (typeof q === 'string') {
-                                return { question: q, answer: '' };
-                            }
-                            return q;
-                        })
-                    };
-                }
-                
-                // Merge videoPlaylist: Match by array index (based on YouTube position)
-                videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
-                    // Match by array index - YouTube videos are already sorted by position
-                    const jsonVideo = jsonData.videoPlaylist[index] || {};
-                    
-                    // Ensure interview questions are in object format
-                    const interviewQuestions = (jsonVideo.interviewQuestions || []).map(q => {
+            // Handle upcoming topic
+            if (indexedDBData.upcomingTopic) {
+                videoPlaylistData.upcomingTopic = {
+                    ...indexedDBData.upcomingTopic,
+                    interviewQuestions: (indexedDBData.upcomingTopic.interviewQuestions || []).map(q => {
                         if (typeof q === 'string') {
                             return { question: q, answer: '' };
                         }
                         return q;
-                    });
-                    
-                    return {
-                        ...video,
-                        subtopics: jsonVideo.subtopics || [''],
-                        interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
-                    };
-                });
-                
-                showToast('✅ Data loaded successfully from server!', 'success');
-            } else if (response.status === 404) {
-                // JSON file doesn't exist yet - use YouTube data only
-                console.log('No saved data found, using YouTube data only');
-                videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
-                    ...video,
-                    subtopics: [''],
-                    interviewQuestions: [{ question: '', answer: '' }]
-                }));
-                showToast('ℹ️ No saved data found. Using YouTube data only.', 'info');
-            } else {
-                // Other HTTP error
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
-        } catch (fetchError) {
-            // Check if it's a network error (server not running)
-            if (fetchError.message.includes('fetch') || fetchError.name === 'TypeError') {
-                console.error('Server connection error:', fetchError);
-                showToast('⚠️ Could not connect to server. Make sure server is running on port 3000!', 'error');
-            } else {
-                console.error('Error loading data from server:', fetchError);
-                showToast(`⚠️ Error loading data: ${fetchError.message}`, 'error');
+                    })
+                };
             }
             
-            // Fallback: use only YouTube data if available
-            if (youtubeVideos.length > 0) {
-                videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
+            // Merge videoPlaylist with YouTube data
+            videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
+                const savedVideo = indexedDBData.videoPlaylist[index] || {};
+                
+                const interviewQuestions = (savedVideo.interviewQuestions || []).map(q => {
+                    if (typeof q === 'string') {
+                        return { question: q, answer: '' };
+                    }
+                    return q;
+                });
+                
+                return {
                     ...video,
-                    subtopics: [''],
-                    interviewQuestions: [{ question: '', answer: '' }]
-                }));
-                showToast('ℹ️ Using YouTube data only (server not available)', 'info');
+                    subtopics: savedVideo.subtopics || [''],
+                    interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
+                };
+            });
+            
+            showToast('✅ Data loaded from IndexedDB!', 'success');
+        } else {
+            // Try to fetch from JSON file (fallback)
+            try {
+                const response = await fetch(API_URL);
+                
+                if (response.ok) {
+                    const jsonData = await response.json();
+                    
+                    // Merge JSON data with YouTube data
+                    videoPlaylistData.channelName = jsonData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
+                    videoPlaylistData.channelLogo = jsonData.channelLogo || APP_CONFIG.ASSETS.LOGO;
+                    
+                    // Handle upcoming topic
+                    if (jsonData.upcomingTopic) {
+                        videoPlaylistData.upcomingTopic = {
+                            ...jsonData.upcomingTopic,
+                            interviewQuestions: (jsonData.upcomingTopic.interviewQuestions || []).map(q => {
+                                if (typeof q === 'string') {
+                                    return { question: q, answer: '' };
+                                }
+                                return q;
+                            })
+                        };
+                    }
+                    
+                    // Merge videoPlaylist
+                    videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
+                        const jsonVideo = jsonData.videoPlaylist[index] || {};
+                        
+                        const interviewQuestions = (jsonVideo.interviewQuestions || []).map(q => {
+                            if (typeof q === 'string') {
+                                return { question: q, answer: '' };
+                            }
+                            return q;
+                        });
+                        
+                        return {
+                            ...video,
+                            subtopics: jsonVideo.subtopics || [''],
+                            interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
+                        };
+                    });
+                    
+                    // Save to IndexedDB for future use
+                    await saveRoadmapToIndexedDB(videoPlaylistData);
+                    
+                    showToast('✅ Data loaded from JSON and saved to IndexedDB!', 'success');
+                } else if (response.status === 404) {
+                    // JSON file doesn't exist - use YouTube data only
+                    console.log('No saved data found, using YouTube data only');
+                    videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
+                        ...video,
+                        subtopics: [''],
+                        interviewQuestions: [{ question: '', answer: '' }]
+                    }));
+                    showToast('ℹ️ No saved data found. Using YouTube data only.', 'info');
+                } else {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+            } catch (fetchError) {
+                if (fetchError.message.includes('fetch') || fetchError.name === 'TypeError') {
+                    console.error('Server connection error:', fetchError);
+                    showToast('⚠️ Could not connect to server. Using IndexedDB/local data.', 'warning');
+                } else {
+                    console.error('Error loading data from server:', fetchError);
+                    showToast(`⚠️ Error loading data: ${fetchError.message}`, 'error');
+                }
+                
+                // Fallback: use only YouTube data if available
+                if (youtubeVideos.length > 0) {
+                    videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
+                        ...video,
+                        subtopics: [''],
+                        interviewQuestions: [{ question: '', answer: '' }]
+                    }));
+                    showToast('ℹ️ Using YouTube data only (server not available)', 'info');
+                }
             }
         }
     } catch (error) {
@@ -1272,15 +1464,21 @@ async function deleteVideo(index) {
 // Save to server (only save subtopics and interview questions, not YouTube data)
 async function saveToServer() {
     try {
-        // Prepare data to save (without YouTube-fetched fields)
-        // Only save entries that have at least one non-empty subtopic OR one non-empty interview question
+        // Save to IndexedDB first
+        try {
+            await saveRoadmapToIndexedDB(videoPlaylistData);
+            console.log('✅ Data saved to IndexedDB');
+        } catch (dbError) {
+            console.error('Error saving to IndexedDB:', dbError);
+            showToast('⚠️ Warning: Could not save to local database', 'warning');
+        }
+
+        // Prepare data to save to JSON (without YouTube-fetched fields)
         const validVideoPlaylistData = videoPlaylistData.videoPlaylist
             .map(video => {
-                // Filter out empty subtopics
                 const validSubtopics = (video.subtopics || [])
                     .filter(topic => topic && topic.trim() !== '');
                 
-                // Filter out empty interview questions - handle both string and object format
                 const validQuestions = (video.interviewQuestions || [])
                     .filter(q => {
                         if (!q) return false;
@@ -1289,7 +1487,6 @@ async function saveToServer() {
                         return false;
                     })
                     .map(q => {
-                        // Ensure all questions are in object format
                         if (typeof q === 'string') {
                             return { question: q, answer: '' };
                         }
@@ -1303,11 +1500,9 @@ async function saveToServer() {
                 };
             })
             .filter(video => 
-                // Only include if there's at least one valid subtopic OR one valid question
                 video.subtopics.length > 0 || video.interviewQuestions.length > 0
             );
 
-        // Clean up upcoming topic - remove empty fields but always keep the structure
         let cleanUpcomingTopic = {
             title: '',
             description: '',
@@ -1320,7 +1515,6 @@ async function saveToServer() {
             const validSubtopics = (videoPlaylistData.upcomingTopic.subtopics || [])
                 .filter(topic => topic && topic.trim() !== '');
             
-            // Handle upcoming topic questions - both string and object format
             const validQuestions = (videoPlaylistData.upcomingTopic.interviewQuestions || [])
                 .filter(q => {
                     if (!q) return false;
@@ -1329,14 +1523,12 @@ async function saveToServer() {
                     return false;
                 })
                 .map(q => {
-                    // Ensure all questions are in object format
                     if (typeof q === 'string') {
                         return { question: q, answer: '' };
                     }
                     return q;
                 });
             
-            // Update with valid data if any
             cleanUpcomingTopic = {
                 title: videoPlaylistData.upcomingTopic.title?.trim() || '',
                 description: videoPlaylistData.upcomingTopic.description?.trim() || '',
@@ -1353,7 +1545,7 @@ async function saveToServer() {
             upcomingTopic: cleanUpcomingTopic
         };
 
-        console.log('Saving data:', dataToSave); // Debug log
+        console.log('Saving data to JSON:', dataToSave);
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -1366,16 +1558,21 @@ async function saveToServer() {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Server response:', errorText);
-            throw new Error('Failed to save: ' + errorText);
+            throw new Error('Failed to save to JSON: ' + errorText);
         }
         
         const result = await response.json();
-        console.log('Save successful:', result);
+        console.log('JSON save successful:', result);
         
         return true;
     } catch (error) {
         console.error('Error saving data:', error);
-        showToast('Error saving to server! ' + error.message, 'error');
+        // Check if IndexedDB save was successful
+        if (error.message.includes('JSON')) {
+            showToast('⚠️ Data saved to IndexedDB but JSON save failed: ' + error.message, 'warning');
+            return false;
+        }
+        showToast('❌ Error saving data! ' + error.message, 'error');
         return false;
     }
 }
@@ -1388,16 +1585,54 @@ async function saveAllData() {
     }
 }
 
-// Download JSON (backup)
-function downloadJSON() {
-    const dataStr = JSON.stringify(videoPlaylistData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'codingterminal-backup.json';
-    a.click();
-    showToast('Backup downloaded!', 'success');
+// Download JSON (backup) - now includes option to export from IndexedDB
+async function downloadJSON() {
+    try {
+        // Get fresh data from IndexedDB
+        const indexedDBData = await loadRoadmapFromIndexedDB();
+        
+        const dataToExport = indexedDBData || videoPlaylistData;
+        
+        const dataStr = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `roadmap_backup_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ Backup downloaded from IndexedDB!', 'success');
+    } catch (error) {
+        console.error('Error downloading backup:', error);
+        // Fallback to current data
+        const dataStr = JSON.stringify(videoPlaylistData, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `roadmap_backup_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ Backup downloaded!', 'success');
+    }
+}
+
+// Clear all data from IndexedDB (useful for debugging/reset)
+async function clearIndexedDBData() {
+    if (!confirm('⚠️ This will clear all roadmap data from IndexedDB. Are you sure?')) {
+        return;
+    }
+    
+    try {
+        await clearRoadmapFromIndexedDB();
+        showToast('✅ IndexedDB data cleared successfully!', 'success');
+        
+        // Reload data from JSON
+        await loadData();
+    } catch (error) {
+        console.error('Error clearing IndexedDB:', error);
+        showToast('❌ Error clearing data: ' + error.message, 'error');
+    }
 }
 
 // Show toast notification

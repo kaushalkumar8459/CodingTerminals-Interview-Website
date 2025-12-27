@@ -15,7 +15,7 @@ async function loadStudyNotes() {
     showLoading(true);
     try {
         // Fetch notes from server API
-        const response = await fetch('http://localhost:3000/api/study-notes');
+        const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
         
         if (!response.ok) {
             throw new Error('Failed to load notes');

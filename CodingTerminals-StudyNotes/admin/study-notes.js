@@ -98,7 +98,7 @@ async function loadStudyNotes() {
  */
 async function loadStudyNotesFromJSON() {
     try {
-        const response = await fetch('../../assets/studyNotesData.json');
+        const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
         if (response.ok) {
             const jsonData = await response.json();
             studyNotesData = jsonData;

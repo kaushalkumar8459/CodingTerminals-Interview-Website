@@ -7,9 +7,12 @@
     <title>Daily Roadmap - Coding Terminals</title>
     
     <!-- Load Config First -->
-    <script src="../config/app.config.js"></script>
+    <script src="../../config/app.config.js"></script>
     
-    <link rel="stylesheet" href="CodingTerminals.css">
+    <!-- Font Awesome for Social Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <link rel="stylesheet" href="YouTubeRoadmap-viewer.css">
 </head>
 
 <body>
@@ -34,7 +37,7 @@
                     <button class="sort-btn" onclick="sortVideos('asc')" id="sortAsc">
                         ⬆️ Oldest First
                     </button>
-                    <a href="study-notes/study-notes-viewer.html" class="sort-btn study-notes-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                    <a href="../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html" class="sort-btn study-notes-btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
                         📚 Study Notes
                     </a>
                 </div>
@@ -47,7 +50,16 @@
         </div>
     </div>
 
-    <script src="CodingTerminals.js"></script>
+    <div class="social-links">
+        <a href="https://www.youtube.com/@codingTerminals" target="_blank" class="social-link youtube">
+            <i class="fab fa-youtube"></i>
+        </a>
+        <a href="https://github.com/ashutoshkrris" target="_blank" class="social-link github">
+            <i class="fab fa-github"></i>
+        </a>
+    </div>
+
+    <script src="YouTubeRoadmap-viewer.js"></script>
 </body>
 
 </html>

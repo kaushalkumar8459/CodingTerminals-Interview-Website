@@ -10,10 +10,10 @@ const PORT = APP_CONFIG.SERVER.PORT;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..'))); // Serve static files from parent directory (roadmap folder)
+app.use(express.static(path.join(__dirname, '..'))); // Serve static files from parent directory
 
-const JSON_FILE = path.join(__dirname, APP_CONFIG.SERVER.JSON_FILE_PATH); // JSON file from config
-const STUDY_NOTES_FILE = path.join(__dirname, '../assets/studyNotesData.json'); // Study notes JSON file
+const YOUTUBE_ROADMAP_FILE = path.join(__dirname, APP_CONFIG.SERVER.YOUTUBE_ROADMAP_FILE);
+const STUDY_NOTES_FILE = path.join(__dirname, APP_CONFIG.SERVER.STUDY_NOTES_FILE);
 
 // ============================================
 // AUTHENTICATION CONFIGURATION
@@ -63,11 +63,15 @@ app.post('/api/auth/login', (req, res) => {
     }
 });
 
-// API endpoint to get video playlist data
-app.get('/api/roadmap', (req, res) => {
+// ============================================
+// YOUTUBE ROADMAP API ENDPOINTS
+// ============================================
+
+// API endpoint to get YouTube roadmap data
+app.get('/api/youtube-roadmap', (req, res) => {
     try {
-        if (fs.existsSync(JSON_FILE)) {
-            const data = fs.readFileSync(JSON_FILE, 'utf8');
+        if (fs.existsSync(YOUTUBE_ROADMAP_FILE)) {
+            const data = fs.readFileSync(YOUTUBE_ROADMAP_FILE, 'utf8');
             res.json(JSON.parse(data));
         } else {
             res.json({
@@ -78,20 +82,20 @@ app.get('/api/roadmap', (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Error reading video playlist:', error);
+        console.error('Error reading YouTube roadmap:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// API endpoint to save video playlist data
-app.post('/api/roadmap', (req, res) => {
+// API endpoint to save YouTube roadmap data
+app.post('/api/youtube-roadmap', (req, res) => {
     try {
         const data = req.body;
-        fs.writeFileSync(JSON_FILE, JSON.stringify(data, null, 2), 'utf8');
-        console.log('✅ Video Playlist saved successfully!');
-        res.json({ message: 'Video Playlist saved successfully!' });
+        fs.writeFileSync(YOUTUBE_ROADMAP_FILE, JSON.stringify(data, null, 2), 'utf8');
+        console.log('✅ YouTube Roadmap saved successfully!');
+        res.json({ message: 'YouTube Roadmap saved successfully!' });
     } catch (error) {
-        console.error('Error saving video playlist:', error);
+        console.error('Error saving YouTube roadmap:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -134,16 +138,42 @@ app.post('/api/study-notes', (req, res) => {
     }
 });
 
+// ============================================
+// URL REDIRECTS & ALIASES
+// ============================================
+
+// Redirect short URLs to actual file paths
+app.get('/CodingTerminals-YouTubeRoadmap/viewer/CodingTerminals.html', (req, res) => {
+    res.redirect('/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html');
+});
+
+app.get('/roadmap', (req, res) => {
+    res.redirect('/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html');
+});
+
+app.get('/notes', (req, res) => {
+    res.redirect('/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html');
+});
+
+// Default route - redirect to YouTube Roadmap viewer
+app.get('/', (req, res) => {
+    res.redirect('/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html');
+});
+
 // Start server
 app.listen(PORT, () => {
-    console.log('\n🚀 Server is running!');
-    console.log(`🔐 Login Page: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-admin/login.html`);
-    console.log(`📝 Admin Panel: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-admin/admin.html`);
-    console.log(`📚 Study Notes: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-admin/study-notes/study-notes.html`);
-    console.log(`👁️  Video Playlist Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-viewer/CodingTerminals.html`);
-    console.log(`📡 API Endpoints:`);
-    console.log(`   - Video Playlist: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.ROADMAP}`);
-    console.log(`   - Study Notes: ${APP_CONFIG.API.BASE_URL}/api/study-notes`);
+    console.log('\n🚀 CodingTerminals Server is running!');
+    console.log(`\n📺 YouTube Roadmap:`);
+    console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
+    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html`);
+    console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html`);
+    console.log(`\n📚 Study Notes:`);
+    console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
+    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes.html`);
+    console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
+    console.log(`\n📡 API Endpoints:`);
+    console.log(`   - YouTube Roadmap: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP}`);
+    console.log(`   - Study Notes: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.STUDY_NOTES}`);
     console.log('\n✨ Ready to manage your content!\n');
     console.log('👤 Admin Credentials:');
     console.log(`Username: ${ADMIN_USERS[0].username}`);

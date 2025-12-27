@@ -115,7 +115,7 @@ async function loadVideoPlaylist() {
 
         if (playlistVideos && playlistVideos.length > 0) {
             // Load from local JSON to get subtopics
-            const jsonResponse = await fetch(APP_CONFIG.ASSETS.JSON_FILE);
+            const jsonResponse = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
             const jsonData = await jsonResponse.json();
 
             // Merge YouTube data with local subtopics
@@ -153,7 +153,7 @@ async function loadVideoPlaylist() {
             updateSearchInfo(allVideoPlaylistData.length - 1, allVideoPlaylistData.length - 1);
         } else {
             // Fallback to local JSON if API fails
-            const response = await fetch(APP_CONFIG.ASSETS.JSON_FILE);
+            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
             if (!response.ok) {
                 throw new Error('Failed to load video playlist data');
             }
@@ -193,7 +193,7 @@ async function loadVideoPlaylist() {
 
         // Try fallback to local JSON
         try {
-            const response = await fetch(APP_CONFIG.ASSETS.JSON_FILE);
+            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
             const data = await response.json();
             allVideoPlaylistData = data.videoPlaylist;
             displayHeader(data.channelName, data.channelLogo);

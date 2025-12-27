@@ -9,27 +9,17 @@
     <!-- Quill Rich Text Editor CSS -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <!-- Admin Panel CSS -->
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="YouTubeRoadmap-admin.css">
     <!-- Load Config First -->
-    <script src="../config/app.config.js"></script>
+    <script src="../../config/app.config.js"></script>
+    <!-- Load Auth Utilities -->
+    <script src="../../auth/auth.js"></script>
 </head>
 <body>
     <!-- Authentication Check Script (Must be first) -->
     <script>
-        // Check authentication before loading the page
-        (function() {
-            const isAuthenticated = sessionStorage.getItem('adminAuth');
-            const loginTime = sessionStorage.getItem('loginTime');
-            const currentTime = new Date().getTime();
-            const sessionTimeout = 24 * 60 * 60 * 1000; // 24 hours
-
-            // Check if not authenticated or session expired
-            if (isAuthenticated !== 'true' || !loginTime || (currentTime - parseInt(loginTime)) > sessionTimeout) {
-                // Clear session and redirect to login
-                sessionStorage.clear();
-                window.location.href = 'login.html';
-            }
-        })();
+        // Check authentication using centralized AuthUtils
+        AuthUtils.requireAuth(window.location.href);
     </script>
 
     <div class="container">
@@ -37,18 +27,21 @@
         <div class="header">
             <div class="header-top">
                 <h2>🎬 Admin Panel - Coding Terminals</h2>
-                <button class="btn btn-danger btn-sm" onclick="logout()">
-                    🚪 Logout
-                </button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div id="userInfo"></div>
+                    <button class="btn btn-danger btn-sm" onclick="logout()">
+                        🚪 Logout
+                    </button>
+                </div>
             </div>
             
             <!-- Navigation Menu -->
             <nav class="admin-nav">
-                <a href="admin.html" class="nav-link active">
+                <a href="YouTubeRoadmap-admin.html" class="nav-link active">
                     <span class="nav-icon">🎬</span>
                     <span class="nav-text">Video Playlist</span>
                 </a>
-                <a href="study-notes/study-notes.html" class="nav-link">
+                <a href="../../CodingTerminals-StudyNotes/admin/study-notes.html" class="nav-link">
                     <span class="nav-icon">📝</span>
                     <span class="nav-text">Study Notes</span>
                 </a>
@@ -69,7 +62,7 @@
                 <button class="btn btn-primary" onclick="downloadJSON()">
                     📥 Download JSON
                 </button>
-                <button class="btn btn-primary" onclick="window.open('../CodingTerminals-viewer/CodingTerminals.html', '_blank')">
+                <button class="btn btn-primary" onclick="window.open('../viewer/YouTubeRoadmap-viewer.html', '_blank')">
                     👁️ Preview Video Playlist
                 </button>
             </div>
@@ -124,21 +117,18 @@
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 
     <!-- Admin Panel JavaScript -->
-    <script src="admin.js"></script>
+    <script src="YouTubeRoadmap-admin.js"></script>
     
     <script>
+        // Display user info in header
+        AuthUtils.displayUserInfo('userInfo');
+        
         // Prevent back button after logout
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
                 window.location.reload();
             }
         });
-
-        // Logout function
-        function logout() {
-            sessionStorage.clear();
-            window.location.href = 'login.html';
-        }
     </script>
 </body>
 </html>

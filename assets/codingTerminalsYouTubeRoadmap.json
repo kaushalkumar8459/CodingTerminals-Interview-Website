@@ -1,6 +1,6 @@
 {
   "channelName": "Coding Terminals",
-  "channelLogo": "../assets/CT logo.jpg",
+  "channelLogo": "/assets/CT logo.jpg",
   "videoPlaylist": [
     {
       "title": "Angular 21 | Roadmap For 2026 |  CodingTerminals",
@@ -10,7 +10,7 @@
       "interviewQuestions": []
     },
     {
-      "title": "Angular 21 | Project Setup from Scratch | Step-by-Step | CodingTerminals",
+      "title": "Angular 21 Setup Guide: Create Your First Project from Scratch (Step-by-Step)",
       "subtopics": [
         "<p><strong style=\"color: rgb(13, 13, 13);\">इस वीडियो में आप सीखेंगे:</strong></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular project कैसे create करें  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular CLI क्या है और क्यों ज़रूरी है  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Project structure का overview  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Environment setup (Node, npm, Angular CLI)  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular development की सही शुरुआत कैसे करें  </span></p>"
       ],
@@ -70,7 +70,7 @@
       ]
     },
     {
-      "title": "Angular 21 | Files & Folder Structure overview | Step-by-Step | CodingTerminals",
+      "title": "Angular 21 Folder Structure Explained | Files & Project Overview | CodingTerminals",
       "subtopics": [
         "<p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉Angular project folder structure explained</p><p>👉Role of each important file &amp; folder</p><p>👉Real-world best practices</p><p>👉Interview-focused explanations</p><p>👉Common mistakes beginners make</p><p>👉How folder structure helps in scalable projects</p>"
       ],
@@ -138,7 +138,7 @@
       ]
     },
     {
-      "title": "Angular 21 | Application Flow | Step-by-Step | CodingTerminals",
+      "title": "Angular 21 | Application Flow Explained | Step-by-Step | CodingTerminals",
       "subtopics": [
         "<p><br></p><p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉 Angular application start होने का पूरा flow&nbsp;&nbsp;</p><p>👉 index.html का role&nbsp;&nbsp;</p><p>👉 &lt;app-root&gt; कैसे work करता है&nbsp;&nbsp;</p><p>👉 main.ts entry point&nbsp;&nbsp;</p><p>👉 Bootstrap process explained&nbsp;&nbsp;</p><p>👉 Root component कैसे load होता है&nbsp;&nbsp;</p><p>👉 Interview-focused explanation</p>"
       ],
