@@ -208,7 +208,7 @@ APP_CONFIG.URLS
   - Used in: Footer of all pages
   - Update frequency: Rarely (only if channel name changes)
 
-- **GITHUB**: https://github.com/ashutoshkrris
+- **GITHUB**: https://github.com/kaushalkumar8459/CodingTerminals-AngularV21-youtube-tutorial
   - Purpose: GitHub profile for open-source contributions
   - Used in: Footer of all pages
   - Update frequency: Never (unless profile changes)
