@@ -104,7 +104,7 @@ function logout() {
 ### Example 3: Dynamic Links
 ```html
 <!-- ❌ OLD WAY -->
-<a href="../../CodingTerminals-StudyNotes/admin/study-notes.html">Go to Study Notes</a>
+<a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html">Go to Study Notes</a>
 
 <!-- ✅ NEW WAY -->
 <a id="studyNotesLink">Go to Study Notes</a>

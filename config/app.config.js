@@ -70,9 +70,9 @@ const APP_CONFIG = {
         STUDY_NOTES: {
             // Admin Pages
             ADMIN: {
-                FROM_YOUTUBE_ADMIN: '../../CodingTerminals-StudyNotes/admin/study-notes.html',
-                FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/admin/study-notes.html',
-                FROM_ROOT: './CodingTerminals-StudyNotes/admin/study-notes.html',
+                FROM_YOUTUBE_ADMIN: '../../CodingTerminals-StudyNotes/admin/study-notes-admin.html',
+                FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/admin/study-notes-admin.html',
+                FROM_ROOT: './CodingTerminals-StudyNotes/admin/study-notes-admin.html',
             },
             
             // Viewer Pages

@@ -169,7 +169,7 @@ app.listen(PORT, () => {
     console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html`);
     console.log(`\n📚 Study Notes:`);
     console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
-    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes.html`);
+    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes-admin.html`);
     console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
     console.log(`\n📡 API Endpoints:`);
     console.log(`   - YouTube Roadmap: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP}`);

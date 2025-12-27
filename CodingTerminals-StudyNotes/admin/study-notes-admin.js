@@ -64,7 +64,7 @@ function initializeIndexedDB() {
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
         sessionStorage.clear();
-        window.location.href = '../login.html';
+        window.location.href = './../../auth/login.html';
     }
 }
 
