@@ -146,7 +146,7 @@ function loadRoadmapFromIndexedDB() {
 
         const transaction = db.transaction([ROADMAP_STORE_NAME], 'readonly');
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-        const request = objectStore.get('roadmap_main');
+        const request = objectStore.get('YoutubeRoadmap_main');
 
         request.onsuccess = function() {
             resolve(request.result || null);
@@ -171,7 +171,7 @@ function clearRoadmapFromIndexedDB() {
 
         const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-        const request = objectStore.delete('roadmap_main');
+        const request = objectStore.delete('YoutubeRoadmap_main');
 
         request.onsuccess = function() {
             resolve();
@@ -1499,7 +1499,7 @@ async function saveToServer() {
             showToast('⚠️ Warning: Could not save to local database', 'warning');
         }
 
-        // Prepare data to save to JSON (without YouTube-fetched fields)
+        // Prepare data to save to MongoDB/JSON - save ALL videos to maintain correct indexing
         const validVideoPlaylistData = videoPlaylistData.videoPlaylist
             .map(video => {
                 const validSubtopics = (video.subtopics || [])
@@ -1524,10 +1524,8 @@ async function saveToServer() {
                     subtopics: validSubtopics,
                     interviewQuestions: validQuestions
                 };
-            })
-            .filter(video => 
-                video.subtopics.length > 0 || video.interviewQuestions.length > 0
-            );
+            });
+            // Don't filter - save ALL videos even if empty to maintain correct indexing
 
         let cleanUpcomingTopic = {
             title: '',
@@ -1571,7 +1569,8 @@ async function saveToServer() {
             upcomingTopic: cleanUpcomingTopic
         };
 
-        console.log('Saving data to JSON:', dataToSave);
+        console.log('Saving data to MongoDB:', dataToSave);
+        console.log(`Saving ${validVideoPlaylistData.length} videos`);
 
         const response = await fetch(API_URL, {
             method: 'POST',

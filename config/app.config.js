@@ -19,10 +19,9 @@ const APP_CONFIG = {
 
     // Asset Paths
     ASSETS: {
-        YOUTUBE_ROADMAP_JSON: '../assets/codingTerminalsYouTubeRoadmap.json',
-        STUDY_NOTES_JSON: '../assets/codingTerminalsStudyNotes.json',
         LOGO: '../assets/CT logo.jpg',
         LOGO_WHITE_BG: '../assets/CT Logog white background.jpg'
+        // JSON files removed - using MongoDB + IndexedDB only
     },
 
     // YouTube Configuration
@@ -201,11 +200,10 @@ const APP_CONFIG = {
         }
     },
 
-    // Backend File Paths (for server.js)
+    // Backend Configuration (No longer uses JSON files)
     SERVER: {
-        YOUTUBE_ROADMAP_FILE: '../assets/codingTerminalsYouTubeRoadmap.json',
-        STUDY_NOTES_FILE: '../assets/codingTerminalsStudyNotes.json',
         PORT: 3000
+        // JSON file paths removed - using MongoDB only
     }
 };
 

@@ -1,0 +1,384 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backup Manager - Coding Terminals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#667eea',
+                        secondary: '#764ba2',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="backup-manager.css">
+    <script src="../config/app.config.js"></script>
+    <script src="../auth/auth.js"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 min-h-screen">
+    
+    <!-- Auth Check -->
+    <script>
+        AuthUtils.requireAuth(window.location.href);
+    </script>
+    
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+                    💾 Backup Manager
+                </h1>
+                <div class="flex items-center gap-4">
+                    <div id="userInfo"></div>
+                    <button onclick="logout()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all shadow-md">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex gap-3 border-t border-gray-200 pt-4 mt-4 flex-wrap">
+                <a href="../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                    <span>🎬</span>
+                    <span class="font-semibold text-sm">Video Playlist</span>
+                </a>
+                <a href="../CodingTerminals-StudyNotes/admin/study-notes-admin.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all">
+                    <span>📝</span>
+                    <span class="font-semibold text-sm">Study Notes</span>
+                </a>
+                <a href="backup-manager.html" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg">
+                    <span>💾</span>
+                    <span class="font-semibold text-sm">Backup Manager</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8 max-w-7xl">
+        
+        <!-- Hero Section with Simple Explanation -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800 mb-3">🛡️ Keep Your Data Safe!</h2>
+                <p class="text-lg text-gray-600">Simple 3-step backup system - Just like saving your work!</p>
+            </div>
+            
+            <!-- Visual Flow Diagram -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-green-400 to-green-600 text-white rounded-2xl p-6 shadow-lg">
+                        <div class="text-5xl mb-3">💻</div>
+                        <h3 class="text-xl font-bold mb-2">Working Copy</h3>
+                        <p class="text-sm">Your current work<br/>Edit here daily</p>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white rounded-2xl p-6 shadow-lg">
+                        <div class="text-5xl mb-3">📦</div>
+                        <h3 class="text-xl font-bold mb-2">Today's Backup</h3>
+                        <p class="text-sm">Yesterday's save<br/>Quick recovery</p>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <div class="bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-2xl p-6 shadow-lg">
+                        <div class="text-5xl mb-3">🏆</div>
+                        <h3 class="text-xl font-bold mb-2">Permanent Save</h3>
+                        <p class="text-sm">Long-term archive<br/>Monthly backup</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Simple Analogy -->
+            <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
+                <div class="flex items-start gap-4">
+                    <div class="text-4xl">💡</div>
+                    <div>
+                        <h4 class="font-bold text-lg text-blue-900 mb-2">Think of it like Google Docs:</h4>
+                        <ul class="text-blue-800 space-y-2">
+                            <li>✅ <strong>Working Copy</strong> = The document you're typing in right now</li>
+                            <li>✅ <strong>Today's Backup</strong> = Auto-save from yesterday (in case you delete something)</li>
+                            <li>✅ <strong>Permanent Save</strong> = Version you saved last month (for history)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Selector - Simplified -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">📂 What do you want to backup?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onclick="selectModule('studyNotes')" id="btnStudyNotes" class="group p-8 rounded-2xl border-4 border-purple-300 hover:border-purple-500 hover:bg-purple-50 transition-all text-left transform hover:scale-105 hover:shadow-2xl">
+                    <div class="flex items-center gap-6">
+                        <span class="text-7xl group-hover:animate-bounce">📝</span>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">Study Notes</h3>
+                            <p class="text-gray-600">Backup your written notes and documents</p>
+                            <div class="mt-3 text-sm text-purple-600 font-semibold">Click to manage →</div>
+                        </div>
+                    </div>
+                </button>
+                
+                <button onclick="selectModule('youtubeRoadmap')" id="btnYoutubeRoadmap" class="group p-8 rounded-2xl border-4 border-red-300 hover:border-red-500 hover:bg-red-50 transition-all text-left transform hover:scale-105 hover:shadow-2xl">
+                    <div class="flex items-center gap-6">
+                        <span class="text-7xl group-hover:animate-bounce">🎬</span>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-800 mb-2">Video Playlist</h3>
+                            <p class="text-gray-600">Backup your YouTube video collection</p>
+                            <div class="mt-3 text-sm text-red-600 font-semibold">Click to manage →</div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Backup Status Section - Simplified -->
+        <div id="backupSection" class="hidden">
+            
+            <!-- Current Status Cards -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800" id="moduleTitle">📊 Backup Status</h2>
+                    <button onclick="loadBackupStatus()" class="px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all shadow-lg flex items-center gap-2">
+                        <span>🔄</span>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Working Copy Status -->
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border-4 border-green-300">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-5xl">💻</span>
+                            <div>
+                                <h3 class="text-xl font-bold text-green-900">Working Copy</h3>
+                                <p class="text-sm text-green-700">Your current work</p>
+                            </div>
+                        </div>
+                        <div id="activeStatus" class="space-y-2 text-green-900">
+                            <div class="flex justify-between text-lg">
+                                <span>Items:</span>
+                                <span class="font-bold">--</span>
+                            </div>
+                            <div class="text-xs text-green-700">
+                                Last updated: <span class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Today's Backup Status -->
+                    <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 border-4 border-yellow-300">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-5xl">📦</span>
+                            <div>
+                                <h3 class="text-xl font-bold text-yellow-900">Today's Backup</h3>
+                                <p class="text-sm text-yellow-700">Quick recovery</p>
+                            </div>
+                        </div>
+                        <div id="tempStatus" class="space-y-2 text-yellow-900">
+                            <div class="flex justify-between text-lg">
+                                <span>Items:</span>
+                                <span class="font-bold">--</span>
+                            </div>
+                            <div class="text-xs text-yellow-700">
+                                Last backup: <span class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Save Status -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border-4 border-blue-300">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-5xl">🏆</span>
+                            <div>
+                                <h3 class="text-xl font-bold text-blue-900">Permanent Save</h3>
+                                <p class="text-sm text-blue-700">Long-term archive</p>
+                            </div>
+                        </div>
+                        <div id="finalStatus" class="space-y-2 text-blue-900">
+                            <div class="flex justify-between text-lg">
+                                <span>Items:</span>
+                                <span class="font-bold">--</span>
+                            </div>
+                            <div class="text-xs text-blue-700">
+                                Last archive: <span class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions - Beginner Friendly -->
+            <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">⚡ Quick Actions</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Save Actions -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-lg text-gray-700 flex items-center gap-2">
+                            <span>💾</span>
+                            <span>Save Your Work</span>
+                        </h3>
+                        
+                        <button onclick="copyData('active', 'temp')" class="w-full p-6 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left">
+                            <div class="flex items-center gap-4">
+                                <span class="text-4xl">💾</span>
+                                <div>
+                                    <div class="text-xl mb-1">Save Today's Backup</div>
+                                    <div class="text-sm opacity-90">Copies working copy → Today's backup</div>
+                                    <div class="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">Do this daily!</div>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button onclick="copyData('active', 'final')" class="w-full p-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left">
+                            <div class="flex items-center gap-4">
+                                <span class="text-4xl">🏆</span>
+                                <div>
+                                    <div class="text-xl mb-1">Save Permanent Archive</div>
+                                    <div class="text-sm opacity-90">Copies working copy → Permanent save</div>
+                                    <div class="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">Do this monthly!</div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Restore Actions -->
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-lg text-gray-700 flex items-center gap-2">
+                            <span>🔄</span>
+                            <span>Recover Your Work</span>
+                        </h3>
+                        
+                        <button onclick="copyData('temp', 'active')" class="w-full p-6 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left">
+                            <div class="flex items-center gap-4">
+                                <span class="text-4xl">⏪</span>
+                                <div>
+                                    <div class="text-xl mb-1">Restore Yesterday's Backup</div>
+                                    <div class="text-sm opacity-90">Undo mistakes, get back old work</div>
+                                    <div class="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">Use when needed</div>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <button onclick="copyData('final', 'active')" class="w-full p-6 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-105 text-left">
+                            <div class="flex items-center gap-4">
+                                <span class="text-4xl">📥</span>
+                                <div>
+                                    <div class="text-xl mb-1">Restore Old Archive</div>
+                                    <div class="text-sm opacity-90">Get back an old version</div>
+                                    <div class="text-xs mt-2 bg-white/20 rounded px-3 py-1 inline-block">Rarely used</div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Options (Collapsible) -->
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <button onclick="toggleAdvanced()" class="w-full flex items-center justify-between text-left">
+                    <h2 class="text-xl font-bold text-gray-800">🔧 Advanced Options</h2>
+                    <span id="advancedToggle" class="text-2xl transform transition-transform">▼</span>
+                </button>
+                
+                <div id="advancedSection" class="hidden mt-6 space-y-6">
+                    <!-- Export Options -->
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-700 mb-4">📤 Download Backups (for moving to another computer)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="exportCollection('temp')" class="p-4 bg-purple-100 border-2 border-purple-300 rounded-xl hover:bg-purple-200 transition-all text-left">
+                                <div class="font-bold text-purple-900 mb-1">📥 Download Today's Backup</div>
+                                <div class="text-sm text-purple-700">Get a file to transfer to another computer</div>
+                            </button>
+                            <button onclick="exportCollection('final')" class="p-4 bg-blue-100 border-2 border-blue-300 rounded-xl hover:bg-blue-200 transition-all text-left">
+                                <div class="font-bold text-blue-900 mb-1">📥 Download Permanent Archive</div>
+                                <div class="text-sm text-blue-700">Get your long-term backup file</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Clear Options -->
+                    <div>
+                        <h3 class="font-bold text-lg text-red-700 mb-4">⚠️ Delete Old Backups (be careful!)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="clearCollection('temp')" class="p-4 bg-yellow-100 border-2 border-yellow-400 rounded-xl hover:bg-yellow-200 transition-all">
+                                <div class="font-bold text-yellow-900 mb-1">🗑️ Delete Today's Backup</div>
+                                <div class="text-xs text-yellow-700">Clear temporary backup</div>
+                            </button>
+                            <button onclick="clearCollection('final')" class="p-4 bg-orange-100 border-2 border-orange-400 rounded-xl hover:bg-orange-200 transition-all">
+                                <div class="font-bold text-orange-900 mb-1">🗑️ Delete Old Archive</div>
+                                <div class="text-xs text-orange-700">Remove permanent backup</div>
+                            </button>
+                            <button onclick="clearCollection('active')" class="p-4 bg-red-100 border-2 border-red-500 rounded-xl hover:bg-red-200 transition-all">
+                                <div class="font-bold text-red-900 mb-1">⚠️ Delete Working Copy</div>
+                                <div class="text-xs text-red-700">⚠️ DANGER! Backup first!</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Help Section -->
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-xl p-8 text-white mt-8">
+            <div class="flex items-start gap-4">
+                <div class="text-5xl">🤔</div>
+                <div>
+                    <h3 class="text-2xl font-bold mb-3">Need Help?</h3>
+                    <div class="space-y-2 text-purple-100">
+                        <p><strong>💾 Save Today's Backup:</strong> Do this every day before you close your work</p>
+                        <p><strong>🏆 Save Permanent Archive:</strong> Do this once a month to keep long-term backup</p>
+                        <p><strong>⏪ Restore:</strong> Use when you accidentally delete something</p>
+                        <p><strong>📥 Download:</strong> Use when moving to a new computer</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <h3 id="confirmModalTitle" class="text-xl font-bold text-gray-800 mb-4">Confirm Action</h3>
+            <p id="confirmModalMessage" class="text-gray-600 mb-6">Are you sure?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-all">
+                    Cancel
+                </button>
+                <button id="confirmModalBtn" onclick="confirmAction()" class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="backup-manager.js"></script>
+    <script>
+        AuthUtils.displayUserInfo('userInfo');
+        
+        // Toggle advanced section
+        function toggleAdvanced() {
+            const section = document.getElementById('advancedSection');
+            const toggle = document.getElementById('advancedToggle');
+            section.classList.toggle('hidden');
+            toggle.style.transform = section.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    </script>
+</body>
+</html>
