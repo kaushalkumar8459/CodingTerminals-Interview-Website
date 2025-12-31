@@ -4,7 +4,7 @@ const studyNotesController = require('../controllers/studyNotesController');
 
 /**
  * Study Notes Routes
- * /api/study-notes
+ * /api/studynotes
  */
 
 // GET - Retrieve study notes data

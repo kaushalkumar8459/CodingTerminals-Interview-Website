@@ -107,101 +107,303 @@ async function fetchPlaylistVideos() {
     }
 }
 
-// Fetch and display video playlist data
+// Fetch and display video playlist data using OFFLINE-FIRST ARCHITECTURE
 async function loadVideoPlaylist() {
     try {
-        // Try to fetch from YouTube API first
-        let playlistVideos = await fetchPlaylistVideos();
+        console.log('🚀 Starting offline-first load...');
+        
+        // ==================== STEP 1: CHECK INDEXEDDB (CACHE-FIRST) ====================
+        const hasCache = await youtubeIndexedDB.hasData();
+        
+        if (hasCache) {
+            console.log('📂 Loading from IndexedDB cache...');
+            
+            // STEP 1A: Load videos from IndexedDB
+            const cachedVideos = await youtubeIndexedDB.getAllVideos();
+            
+            if (cachedVideos && cachedVideos.length > 0) {
+                // STEP 1B: Process cached videos
+                allVideoPlaylistData = cachedVideos.map(video => ({
+                    day: video.day,
+                    date: video.date || new Date().toISOString().split('T')[0],
+                    title: video.title,
+                    videoUrl: video.videoUrl || `https://www.youtube.com/watch?v=${video.videoId}`,
+                    videoId: video.videoId,
+                    description: video.description || '',
+                    thumbnail: video.thumbnail || '',
+                    subtopics: video.subtopics || [],
+                    interviewQuestions: [],
+                    status: video.status,
+                    isUpcoming: video.isUpcoming || video.status === 'upcoming',
+                    isTodaysTopic: video.isUpcoming || video.status === 'upcoming'
+                }));
 
-        if (playlistVideos && playlistVideos.length > 0) {
-            // Load from local JSON to get subtopics
-            const jsonResponse = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            const jsonData = await jsonResponse.json();
+                // STEP 1C: Load questions from IndexedDB for each video
+                const questionPromises = allVideoPlaylistData.map(async (video, index) => {
+                    if (!video.isUpcoming) {
+                        try {
+                            const cachedQuestions = await youtubeIndexedDB.getQuestionsByVideoId(video.videoId);
+                            allVideoPlaylistData[index].interviewQuestions = cachedQuestions.map(q => ({
+                                question: q.question,
+                                answer: q.answer,
+                                difficulty: q.difficulty
+                            }));
+                        } catch (error) {
+                            console.log(`No cached questions for ${video.videoId}`);
+                        }
+                    }
+                });
 
-            // Merge YouTube data with local subtopics
-            allVideoPlaylistData = playlistVideos.map((video, index) => ({
-                ...video,
-                subtopics: jsonData.videoPlaylist[index]?.subtopics || [
-                    "Watch the video to learn more",
-                    "Practice exercises included",
-                    "Code examples provided"
-                ],
-                interviewQuestions: jsonData.videoPlaylist[index]?.interviewQuestions || []
-            }));
+                await Promise.all(questionPromises);
 
-            // Add "Today's Topic" card from JSON at the end
-            if (jsonData.upcomingTopic) {
-                const todaysTopic = {
-                    day: 'Coming Soon',
-                    date: jsonData.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
-                    title: jsonData.upcomingTopic.title,
-                    videoUrl: '#',
-                    videoId: null,
-                    description: jsonData.upcomingTopic.description,
-                    subtopics: jsonData.upcomingTopic.subtopics,
-                    interviewQuestions: jsonData.upcomingTopic.interviewQuestions || [],
-                    isTodaysTopic: true
-                };
-                allVideoPlaylistData.push(todaysTopic);
+                // STEP 1D: Render UI INSTANTLY from cache
+                displayHeader('Coding Terminals', './../../assets/CT logo.jpg');
+                displayVideoPlaylist(allVideoPlaylistData);
+                updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+                
+                console.log(`✅ Rendered ${allVideoPlaylistData.length} videos from cache (INSTANT LOAD)`);
+                
+                // Show sync indicator
+                showSyncIndicator('Checking for updates...');
             }
-
-            // Display header
-            displayHeader(jsonData.channelName, jsonData.channelLogo);
-
-            // Display video playlist with YouTube data
-            displayVideoPlaylist(allVideoPlaylistData);
-            updateSearchInfo(allVideoPlaylistData.length - 1, allVideoPlaylistData.length - 1);
         } else {
-            // Fallback to local JSON if API fails
-            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            if (!response.ok) {
-                throw new Error('Failed to load video playlist data');
+            console.log('📭 No cache found, showing loading state...');
+            displayLoadingState();
+        }
+
+        // ==================== STEP 2: FETCH FROM MONGODB (BACKGROUND) ====================
+        console.log('🔄 Fetching latest data from MongoDB in background...');
+        
+        try {
+            // Fetch all videos from MongoDB API
+            const result = await youtubeAPI.getAllVideos({
+                limit: 100,
+                status: 'all',
+                sortBy: 'day',
+                order: currentSortOrder
+            });
+
+            if (result.success && result.videos.length > 0) {
+                console.log(`🌐 Fetched ${result.videos.length} videos from MongoDB`);
+                
+                // STEP 2A: Save to IndexedDB (background sync)
+                await youtubeIndexedDB.saveAllVideos(result.videos);
+                
+                // STEP 2B: Fetch and save questions
+                const allQuestions = [];
+                for (const video of result.videos) {
+                    if (video.status !== 'upcoming') {
+                        try {
+                            const questionsResult = await youtubeAPI.getQuestionsByVideo(video.videoId);
+                            if (questionsResult.questions && questionsResult.questions.length > 0) {
+                                questionsResult.questions.forEach(q => {
+                                    allQuestions.push({
+                                        videoId: video.videoId,
+                                        question: q.question,
+                                        answer: q.answer,
+                                        difficulty: q.difficulty
+                                    });
+                                });
+                            }
+                        } catch (error) {
+                            console.log(`No questions found for ${video.videoId}`);
+                        }
+                    }
+                }
+                
+                if (allQuestions.length > 0) {
+                    await youtubeIndexedDB.saveQuestions(allQuestions);
+                    console.log(`💾 Saved ${allQuestions.length} questions to IndexedDB`);
+                }
+
+                // STEP 2C: Update UI with fresh data (silent refresh)
+                allVideoPlaylistData = result.videos.map(video => ({
+                    day: video.day,
+                    date: video.date || new Date().toISOString().split('T')[0],
+                    title: video.title,
+                    videoUrl: video.videoUrl || `https://www.youtube.com/watch?v=${video.videoId}`,
+                    videoId: video.videoId,
+                    description: video.description || '',
+                    thumbnail: video.thumbnail || '',
+                    subtopics: video.subtopics || [],
+                    interviewQuestions: allQuestions.filter(q => q.videoId === video.videoId).map(q => ({
+                        question: q.question,
+                        answer: q.answer,
+                        difficulty: q.difficulty
+                    })),
+                    status: video.status,
+                    isUpcoming: video.isUpcoming || video.status === 'upcoming',
+                    isTodaysTopic: video.isUpcoming || video.status === 'upcoming'
+                }));
+
+                // STEP 2D: Try to fetch YouTube data for dates and thumbnails
+                try {
+                    const playlistVideos = await fetchPlaylistVideos();
+                    if (playlistVideos && playlistVideos.length > 0) {
+                        allVideoPlaylistData = allVideoPlaylistData.map((video) => {
+                            const youtubeVideo = playlistVideos.find(yv => yv.videoId === video.videoId);
+                            if (youtubeVideo) {
+                                return {
+                                    ...video,
+                                    date: youtubeVideo.date,
+                                    thumbnail: youtubeVideo.thumbnail || video.thumbnail,
+                                    description: youtubeVideo.description || video.description
+                                };
+                            }
+                            return video;
+                        });
+                    }
+                } catch (ytError) {
+                    console.log('YouTube API not available, using existing data');
+                }
+
+                // STEP 2E: Refresh UI silently with latest data
+                if (!hasCache) {
+                    // First load - render now
+                    displayHeader('Coding Terminals', './../../assets/CT logo.jpg');
+                }
+                displayVideoPlaylist(allVideoPlaylistData);
+                updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+                
+                console.log('✅ UI updated with latest data from MongoDB');
+                showSyncIndicator('✓ Up to date', true);
+                
+                // Hide sync indicator after 2 seconds
+                setTimeout(hideSyncIndicator, 2000);
+
+            } else {
+                throw new Error('No videos found in MongoDB');
             }
 
-            const data = await response.json();
-            allVideoPlaylistData = data.videoPlaylist;
-
-            // Add "Today's Topic" card from JSON
-            if (data.upcomingTopic) {
-                const todaysTopic = {
-                    day: 'Coming Soon',
-                    date: data.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
-                    title: data.upcomingTopic.title,
-                    videoUrl: '#',
-                    videoId: null,
-                    description: data.upcomingTopic.description,
-                    subtopics: data.upcomingTopic.subtopics,
-                    isTodaysTopic: true
-                };
-                allVideoPlaylistData.push(todaysTopic);
+        } catch (mongoError) {
+            console.warn('⚠️ MongoDB fetch failed:', mongoError.message);
+            
+            // If we had cache, we already showed it, just update sync indicator
+            if (hasCache) {
+                showSyncIndicator('⚠ Using cached data (offline)', false);
+                setTimeout(hideSyncIndicator, 3000);
+            } else {
+                // No cache and no MongoDB - try fallback JSON
+                console.log('🔄 Trying fallback JSON API...');
+                await loadFromFallbackJSON();
             }
-
-            displayHeader(data.channelName, data.channelLogo);
-            displayVideoPlaylist(allVideoPlaylistData);
-            updateSearchInfo(allVideoPlaylistData.length - 1, allVideoPlaylistData.length - 1);
         }
 
     } catch (error) {
-        console.error('Error loading video playlist:', error);
-        document.getElementById('header').innerHTML = `
-            <div class="error">
-                <h2>Error Loading Video Playlist</h2>
-                <p>${error.message}</p>
-                <p style="font-size: 0.9rem; margin-top: 10px;">Loading from local data as fallback...</p>
-            </div>
-        `;
-
-        // Try fallback to local JSON
+        console.error('❌ Error in loadVideoPlaylist:', error);
+        
+        // Last resort - try fallback JSON
         try {
-            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            const data = await response.json();
-            allVideoPlaylistData = data.videoPlaylist;
-            displayHeader(data.channelName, data.channelLogo);
-            displayVideoPlaylist(allVideoPlaylistData);
-            updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+            await loadFromFallbackJSON();
         } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
+            displayErrorState(error);
         }
+    }
+}
+
+// Helper function to load from fallback JSON (old API)
+async function loadFromFallbackJSON() {
+    try {
+        const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
+        if (!response.ok) {
+            throw new Error('Fallback JSON API failed');
+        }
+
+        const data = await response.json();
+        allVideoPlaylistData = data.videoPlaylist;
+
+        // Add upcoming topic if exists
+        if (data.upcomingTopic) {
+            const todaysTopic = {
+                day: 'Coming Soon',
+                date: data.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
+                title: data.upcomingTopic.title,
+                videoUrl: '#',
+                videoId: null,
+                description: data.upcomingTopic.description,
+                subtopics: data.upcomingTopic.subtopics,
+                interviewQuestions: data.upcomingTopic.interviewQuestions || [],
+                isTodaysTopic: true
+            };
+            allVideoPlaylistData.push(todaysTopic);
+        }
+
+        displayHeader(data.channelName, data.channelLogo);
+        displayVideoPlaylist(allVideoPlaylistData);
+        updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+        
+        console.log('✅ Loaded from fallback JSON API');
+    } catch (error) {
+        throw new Error('All data sources failed: ' + error.message);
+    }
+}
+
+// UI Helper Functions
+function displayLoadingState() {
+    const headerElement = document.getElementById('header');
+    const container = document.getElementById('roadmapContainer');
+    
+    headerElement.innerHTML = `
+        <div class="loading-state">
+            <h2>Loading Video Playlist...</h2>
+            <p>Please wait while we fetch the data</p>
+        </div>
+    `;
+    
+    container.innerHTML = `
+        <div class="loading-cards">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+    `;
+}
+
+function displayErrorState(error) {
+    document.getElementById('header').innerHTML = `
+        <div class="error">
+            <h2>Error Loading Video Playlist</h2>
+            <p>${error.message}</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">Please refresh the page or contact support.</p>
+        </div>
+    `;
+}
+
+function showSyncIndicator(message, success = true) {
+    let indicator = document.getElementById('syncIndicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'syncIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${success ? '#4caf50' : '#ff9800'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    indicator.textContent = message;
+    indicator.style.background = success ? '#4caf50' : '#ff9800';
+    indicator.style.display = 'block';
+}
+
+function hideSyncIndicator() {
+    const indicator = document.getElementById('syncIndicator');
+    if (indicator) {
+        indicator.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 300);
     }
 }
 

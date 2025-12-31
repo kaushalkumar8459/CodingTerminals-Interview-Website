@@ -28,10 +28,13 @@ const studyNotesSchema = new mongoose.Schema({
             type: String,
             required: true
         },
-        tags: [String],
+        tags: {
+            type: [String],
+            default: []
+        },
         content: {
             type: String,
-            required: true
+            default: ''
         },
         createdAt: String,
         updatedAt: String

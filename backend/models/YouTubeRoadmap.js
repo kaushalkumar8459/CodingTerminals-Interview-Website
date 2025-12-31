@@ -9,7 +9,6 @@ const mongoose = require('mongoose');
 const youtubeRoadmapSchema = new mongoose.Schema({
     channelName: {
         type: String,
-        required: true,
         default: 'Coding Terminals',
         trim: true
     },
@@ -28,16 +27,34 @@ const youtubeRoadmapSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
-            answer: String
+            answer: {
+                type: String,
+                default: ''
+            }
         }]
     }],
     upcomingTopic: {
-        title: String,
-        description: String,
-        subtopics: [String],
+        title: {
+            type: String,
+            default: ''
+        },
+        description: {
+            type: String,
+            default: ''
+        },
+        subtopics: {
+            type: [String],
+            default: []
+        },
         interviewQuestions: [{
-            question: String,
-            answer: String
+            question: {
+                type: String,
+                default: ''
+            },
+            answer: {
+                type: String,
+                default: ''
+            }
         }],
         estimatedDate: String
     },

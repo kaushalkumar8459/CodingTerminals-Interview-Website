@@ -1,49 +1,226 @@
-// ==================== STUDY NOTES VIEWER ====================
+// ==================== STUDY NOTES VIEWER WITH OFFLINE-FIRST ARCHITECTURE ====================
 // Global Variables
 let allNotes = [];
 let filteredNotes = [];
 let currentNoteIndex = null;
 let categories = [];
+let studyNotesDB = null; // IndexedDB instance
+
+// IndexedDB Configuration
+const STUDY_NOTES_DB_NAME = 'CodingTerminalsStudyNotesDB';
+const STUDY_NOTES_DB_VERSION = 1;
+const STUDY_NOTES_STORE = 'studyNotes';
+
+// ==================== INDEXEDDB SETUP ====================
+async function initializeStudyNotesDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(STUDY_NOTES_DB_NAME, STUDY_NOTES_DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+            studyNotesDB = event.target.result;
+            
+            if (!studyNotesDB.objectStoreNames.contains(STUDY_NOTES_STORE)) {
+                const store = studyNotesDB.createObjectStore(STUDY_NOTES_STORE, { keyPath: '_id' });
+                store.createIndex('category', 'category', { unique: false });
+                store.createIndex('createdAt', 'createdAt', { unique: false });
+                console.log('📦 Created Study Notes object store');
+            }
+        };
+
+        request.onsuccess = (event) => {
+            studyNotesDB = event.target.result;
+            console.log('✅ Study Notes IndexedDB initialized');
+            resolve(studyNotesDB);
+        };
+
+        request.onerror = () => {
+            console.error('❌ IndexedDB initialization failed:', request.error);
+            reject(request.error);
+        };
+    });
+}
+
+// Save notes to IndexedDB
+async function saveNotesToIndexedDB(notes) {
+    return new Promise((resolve, reject) => {
+        const transaction = studyNotesDB.transaction([STUDY_NOTES_STORE], 'readwrite');
+        const store = transaction.objectStore(STUDY_NOTES_STORE);
+        
+        // Clear existing data
+        store.clear();
+        
+        // Add all notes
+        notes.forEach(note => {
+            store.put({
+                ...note,
+                lastSyncedAt: new Date().toISOString()
+            });
+        });
+
+        transaction.oncomplete = () => {
+            console.log(`💾 Saved ${notes.length} notes to IndexedDB`);
+            resolve(true);
+        };
+
+        transaction.onerror = () => {
+            console.error('❌ Error saving to IndexedDB:', transaction.error);
+            reject(transaction.error);
+        };
+    });
+}
+
+// Load notes from IndexedDB
+async function loadNotesFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const transaction = studyNotesDB.transaction([STUDY_NOTES_STORE], 'readonly');
+        const store = transaction.objectStore(STUDY_NOTES_STORE);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            console.log(`📂 Loaded ${request.result.length} notes from IndexedDB`);
+            resolve(request.result || []);
+        };
+
+        request.onerror = () => {
+            console.error('❌ Error reading from IndexedDB:', request.error);
+            reject(request.error);
+        };
+    });
+}
 
 // ==================== INITIALIZATION ====================
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    await initializeStudyNotesDB();
     loadStudyNotes();
 });
 
-// ==================== LOAD NOTES FROM API ====================
+// ==================== LOAD NOTES WITH OFFLINE-FIRST ARCHITECTURE ====================
 async function loadStudyNotes() {
-    showLoading(true);
     try {
-        // Fetch notes from server API
-        const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
+        console.log('🚀 Starting offline-first load...');
         
-        if (!response.ok) {
-            throw new Error('Failed to load notes');
+        // ==================== STEP 1: CHECK INDEXEDDB (CACHE-FIRST) ====================
+        const cachedNotes = await loadNotesFromIndexedDB();
+        
+        if (cachedNotes && cachedNotes.length > 0) {
+            console.log('📂 Loading from IndexedDB cache...');
+            
+            // STEP 1A: Display cached data INSTANTLY
+            allNotes = cachedNotes;
+            filteredNotes = [...allNotes];
+            
+            // Extract categories from cached data
+            categories = [...new Set(allNotes.map(note => note.category).filter(Boolean))];
+            
+            populateCategoryFilter();
+            renderNotesList();
+            updateNotesCount();
+            
+            console.log(`✅ Rendered ${allNotes.length} notes from cache (INSTANT LOAD)`);
+            
+            // Show sync indicator
+            showSyncIndicator('Checking for updates...');
+        } else {
+            console.log('📭 No cache found, showing loading state...');
+            showLoading(true);
         }
 
-        const data = await response.json();
-        allNotes = data.notes || [];
-        filteredNotes = [...allNotes];
-        categories = data.categories || [];
+        // ==================== STEP 2: FETCH FROM API (BACKGROUND) ====================
+        console.log('🔄 Fetching latest data from API in background...');
+        
+        try {
+            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
+            
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
 
-        // Populate category filter
-        populateCategoryFilter();
-        
-        // Render notes list
-        renderNotesList();
-        
-        // Update count
-        updateNotesCount();
-        
-        showLoading(false);
-        
-        if (allNotes.length === 0) {
-            showEmptyState();
+            const data = await response.json();
+            const freshNotes = data.notes || [];
+            
+            if (freshNotes.length > 0) {
+                console.log(`🌐 Fetched ${freshNotes.length} notes from API`);
+                
+                // STEP 2A: Save to IndexedDB (background sync)
+                await saveNotesToIndexedDB(freshNotes);
+                
+                // STEP 2B: Update UI with fresh data (silent refresh)
+                allNotes = freshNotes;
+                filteredNotes = [...allNotes];
+                categories = data.categories || [...new Set(allNotes.map(note => note.category).filter(Boolean))];
+                
+                populateCategoryFilter();
+                renderNotesList();
+                updateNotesCount();
+                
+                console.log('✅ UI updated with latest data from API');
+                showSyncIndicator('✓ Up to date', true);
+                
+                // Hide sync indicator after 2 seconds
+                setTimeout(hideSyncIndicator, 2000);
+            } else {
+                throw new Error('No notes found in API');
+            }
+            
+            showLoading(false);
+            
+        } catch (apiError) {
+            console.warn('⚠️ API fetch failed:', apiError.message);
+            
+            // If we had cache, we already showed it
+            if (cachedNotes && cachedNotes.length > 0) {
+                showSyncIndicator('⚠ Using cached data (offline)', false);
+                setTimeout(hideSyncIndicator, 3000);
+            } else {
+                // No cache and no API - show error
+                showLoading(false);
+                showError('Failed to load study notes. Please check your connection and try again.');
+            }
         }
+        
     } catch (error) {
-        console.error('Error loading study notes:', error);
+        console.error('❌ Error loading study notes:', error);
         showLoading(false);
         showError('Failed to load study notes. Please make sure the server is running.');
+    }
+}
+
+// ==================== SYNC INDICATOR FUNCTIONS ====================
+function showSyncIndicator(message, success = true) {
+    let indicator = document.getElementById('syncIndicator');
+    
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'syncIndicator';
+        indicator.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${success ? '#4caf50' : '#ff9800'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            font-size: 14px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        `;
+        document.body.appendChild(indicator);
+    }
+    
+    indicator.textContent = message;
+    indicator.style.background = success ? '#4caf50' : '#ff9800';
+    indicator.style.display = 'block';
+}
+
+function hideSyncIndicator() {
+    const indicator = document.getElementById('syncIndicator');
+    if (indicator) {
+        indicator.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 300);
     }
 }
 

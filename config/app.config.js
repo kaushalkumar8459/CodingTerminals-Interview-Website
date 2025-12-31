@@ -6,12 +6,19 @@
 // ==============================================
 
 const APP_CONFIG = {
-    // API Configuration
+    // API Configuration - NEW OPTIMIZED ENDPOINTS
     API: {
         BASE_URL: 'http://localhost:3000',
         ENDPOINTS: {
-            YOUTUBE_ROADMAP: '/api/youtube-roadmap',
-            STUDY_NOTES: '/api/study-notes',
+            // NEW OPTIMIZED ENDPOINTS (MongoDB: youtubeVideos & interviewQuestions)
+            VIDEOS: '/api/videos',
+            QUESTIONS: '/api/questions',
+            VIDEO_STATS: '/api/videos/stats',
+            UPCOMING_VIDEOS: '/api/videos/upcoming',
+            SEARCH_QUESTIONS: '/api/questions/search',
+            
+            // Other endpoints
+            STUDY_NOTES: '/api/studynotes',
             LOGIN: '/api/auth/login',
             AUTH_CONFIG: '/api/auth-config'
         }
@@ -29,6 +36,20 @@ const APP_CONFIG = {
         API_KEY: 'AIzaSyAhpyVPDCMaMUrNSVUfcYmevleEr3wVXS4',
         PLAYLIST_ID: 'PLHX7ZNz5nHXkWJpmDn6lY1Zz6ghSeOs1I',
         CHANNEL_URL: 'https://www.youtube.com/@codingterminals'
+    },
+    
+    // ========================================
+    // 📺 CHANNEL INFO (Hardcoded - No DB Storage Needed)
+    // ========================================
+    // YouTube API provides all channel details dynamically
+    // This is just for fallback/display purposes
+    CHANNEL: {
+        NAME: 'Coding Terminals',
+        LOGO: '/assets/CT logo.jpg',
+        LOGO_WHITE_BG: '/assets/CT Logog white background.jpg',
+        URL: 'https://www.youtube.com/@codingterminals',
+        DESCRIPTION: 'Complete Angular tutorial series in Hindi',
+        PLAYLIST_ID: 'PLHX7ZNz5nHXkWJpmDn6lY1Zz6ghSeOs1I'
     },
 
     // ==============================================

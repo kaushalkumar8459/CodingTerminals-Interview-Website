@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const connectDB = require('./config/database');
-const { youtubeRoadmapRoutes, studyNotesRoutes, authRoutes } = require('./routes');
+const { studyNotesRoutes, authRoutes, youtubeVideosRoutes } = require('./routes');
 const APP_CONFIG = require('../config/app.config.js');
 
 const app = express();
@@ -18,19 +18,18 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..'))); // Serve static files
 
-// API Routes
-app.use('/api/youtube-roadmap', youtubeRoadmapRoutes);
-app.use('/api/study-notes', studyNotesRoutes);
-app.use('/api/auth', authRoutes);
+// API Routes - NEW OPTIMIZED ONLY
+app.use('/api', youtubeVideosRoutes); // Videos and Questions
+app.use('/api/studynotes', studyNotesRoutes); // Study Notes
+app.use('/api/auth', authRoutes); // Authentication
 
-// Legacy auth endpoints (for backward compatibility)
-app.get('/api/auth-config', (req, res) => {
-    res.redirect('/api/auth/config');
-});
-
-app.post('/api/auth/login', (req, res, next) => {
-    // Handled by auth routes
-    next();
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok',
+        message: 'API is running',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // ============================================
@@ -84,9 +83,10 @@ app.listen(PORT, () => {
     console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
     console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes-admin.html`);
     console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
-    console.log(`\n📡 API Endpoints:`);
-    console.log(`   - YouTube Roadmap: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP}`);
-    console.log(`   - Study Notes: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.STUDY_NOTES}`);
+    console.log(`\n📡 NEW API Endpoints:`);
+    console.log(`   - Videos: ${APP_CONFIG.API.BASE_URL}/api/videos`);
+    console.log(`   - Questions: ${APP_CONFIG.API.BASE_URL}/api/questions`);
+    console.log(`   - Study Notes: ${APP_CONFIG.API.BASE_URL}/api/studynotes`);
     console.log(`   - Authentication: ${APP_CONFIG.API.BASE_URL}/api/auth/login`);
-    console.log('\n✨ Ready to manage your content!\n');
+    console.log('\n✨ Using optimized MongoDB collections: youtubeVideos & interviewQuestions\n');
 });

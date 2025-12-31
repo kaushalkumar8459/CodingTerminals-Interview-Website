@@ -1,5 +1,7 @@
 // ==================== CENTRALIZED BACKUP MANAGER ====================
 // Handles backup operations for both Study Notes and YouTube Roadmap
+// Purpose: Move data between MongoDB collections (Active, Temp, Final)
+// This is an ADMIN tool - no need for IndexedDB caching
 
 let currentModule = null;
 let currentEndpoint = null;
@@ -9,13 +11,13 @@ let confirmCallback = null;
 const MODULE_CONFIG = {
     studyNotes: {
         name: 'Study Notes',
-        endpoint: '/api/study-notes',
+        endpoint: '/api/studynotes',
         icon: '📝',
         itemLabel: 'Notes'
     },
     youtubeRoadmap: {
         name: 'YouTube Roadmap',
-        endpoint: '/api/youtube-roadmap',
+        endpoint: '/api/videos',
         icon: '🎬',
         itemLabel: 'Videos'
     }
@@ -55,6 +57,7 @@ function selectModule(moduleName) {
 
 /**
  * Load backup status for all collections
+ * Direct API call - no caching needed for admin tool
  */
 async function loadBackupStatus() {
     if (!currentModule) {
@@ -117,6 +120,7 @@ function updateStatusCard(elementId, statusData, itemLabel) {
 
 /**
  * Copy data between collections
+ * Direct MongoDB operations - no IndexedDB needed
  */
 async function copyData(from, to) {
     if (!currentModule) {
@@ -157,7 +161,7 @@ async function copyData(from, to) {
                 const itemCount = data.noteCount || data.videoCount || 0;
                 showToast(`✅ Successfully copied ${itemCount} items from ${collectionNames[from]} to ${collectionNames[to]}!`, 'success');
                 
-                // Reload backup status
+                // Reload backup status to show updated counts
                 await loadBackupStatus();
             } catch (error) {
                 console.error('Error copying data:', error);
