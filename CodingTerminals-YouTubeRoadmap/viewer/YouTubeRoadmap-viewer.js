@@ -109,8 +109,12 @@ async function fetchPlaylistVideos() {
 
 // Fetch and display video playlist data
 async function loadVideoPlaylist() {
+    // Show loader
+    GlobalLoader.show('Loading Videos', 'Fetching playlist from server...');
+    
     try {
         // Try to fetch from backend API first
+        GlobalLoader.updateMessage('Loading Videos', 'Connecting to database...');
         const apiResponse = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
         
         if (apiResponse.ok) {
@@ -118,6 +122,8 @@ async function loadVideoPlaylist() {
             
             // Check if we got data from the API
             if (apiData.success && apiData.data && apiData.data.length > 0) {
+                GlobalLoader.updateMessage('Loading Videos', 'Processing video data...');
+                
                 // Use data from MongoDB - separate published and upcoming videos
                 const publishedVideos = [];
                 const upcomingVideos = [];
@@ -150,11 +156,15 @@ async function loadVideoPlaylist() {
                 displayHeader(APP_CONFIG.APP.CHANNEL_NAME, APP_CONFIG.CHANNEL.LOGO);
                 displayVideoPlaylist(allVideoPlaylistData);
                 updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+                
+                // Hide loader after successful load
+                GlobalLoader.hide();
                 return;
             }
         }
 
         // Fallback: Try to fetch from YouTube API
+        GlobalLoader.updateMessage('Loading Videos', 'Fetching from YouTube API...');
         let playlistVideos = await fetchPlaylistVideos();
 
         if (playlistVideos && playlistVideos.length > 0) {
@@ -221,10 +231,12 @@ async function loadVideoPlaylist() {
 
             displayVideoPlaylist(allVideoPlaylistData);
             updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+            GlobalLoader.hide();
             return;
         }
 
         // Last resort: Load from local JSON file
+        GlobalLoader.updateMessage('Loading Videos', 'Loading from local cache...');
         const localResponse = await fetch('/assets/codingTerminalsYouTubeRoadmap.json');
         if (!localResponse.ok) {
             throw new Error('Failed to load video playlist data from all sources');
@@ -253,9 +265,13 @@ async function loadVideoPlaylist() {
                      localData.channelLogo || APP_CONFIG.CHANNEL.LOGO);
         displayVideoPlaylist(allVideoPlaylistData);
         updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
+        
+        // Hide loader after successful load
+        GlobalLoader.hide();
 
     } catch (error) {
         console.error('Error loading video playlist:', error);
+        GlobalLoader.hide();
         document.getElementById('header').innerHTML = `
             <div class="error">
                 <h2>Error Loading Video Playlist</h2>

@@ -394,10 +394,14 @@ async function loadData() {
     try {
         console.log('🚀 Starting offline-first load...');
 
+        // Show loader
+        GlobalLoader.show('Loading Data', 'Fetching videos from YouTube...');
+
         // Initialize IndexedDB first
         await initializeIndexedDB();
 
         // Fetch YouTube videos for merging
+        GlobalLoader.updateMessage('Loading Data', 'Fetching videos from YouTube API...');
         youtubeVideos = await fetchPlaylistVideos();
         if (youtubeVideos.length > 0) {
             console.log(`📹 Loaded ${youtubeVideos.length} videos from YouTube API`);
@@ -406,6 +410,7 @@ async function loadData() {
         // ==================== STEP 1: CHECK INDEXEDDB ====================
         let indexedDBData = null;
         try {
+            GlobalLoader.updateMessage('Loading Data', 'Checking local cache...');
             indexedDBData = await loadRoadmapFromIndexedDB();
         } catch (dbError) {
             console.error('Error loading from IndexedDB:', dbError);
@@ -453,6 +458,7 @@ async function loadData() {
 
         // ==================== STEP 3: CALL MONGODB API (BACKGROUND) ====================
         console.log('🔄 Syncing with MongoDB in background...');
+        GlobalLoader.updateMessage('Syncing', 'Fetching data from MongoDB...');
 
         try {
             // Check if adminAPI is available
@@ -508,8 +514,13 @@ async function loadData() {
             } else {
                 throw new Error('Admin API not loaded');
             }
+
+            // Hide loader after successful sync
+            GlobalLoader.hide();
+            
         } catch (mongoError) {
             console.warn('⚠️ MongoDB sync failed:', mongoError.message);
+            GlobalLoader.hide();
 
             // If we had cache, we already showed it
             if (indexedDBData) {
@@ -531,6 +542,7 @@ async function loadData() {
         }
     } catch (error) {
         console.error('❌ Error in loadData:', error);
+        GlobalLoader.hide();
         showToast('❌ Error loading data: ' + error.message, 'error');
 
         // If we have any data at all, render it
@@ -1875,25 +1887,18 @@ async function deleteUpcomingTopic() {
  * Shows loader during sync and toast notification on completion
  */
 async function manualSyncWithMongoDB() {
-    const syncStatus = document.getElementById('syncStatus');
-    const syncStatusText = document.getElementById('syncStatusText');
+    // Show global loader instead of sync status indicator
+    GlobalLoader.show('Syncing with MongoDB', 'Fetching latest data from server...');
 
     try {
-        // Show syncing status
-        if (syncStatus) {
-            syncStatus.style.display = 'flex';
-            syncStatus.className = 'sync-status syncing';
-        }
-        if (syncStatusText) {
-            syncStatusText.textContent = 'Syncing with MongoDB...';
-        }
-
         console.log('🔄 Manual sync initiated...');
 
         // Check if adminAPI is available
         if (typeof adminAPI === 'undefined') {
             throw new Error('Admin API not loaded');
         }
+
+        GlobalLoader.updateMessage('Syncing with MongoDB', 'Loading videos and topics...');
 
         // Fetch complete roadmap including upcomingTopic
         const roadmapData = await adminAPI.getCompleteRoadmap();
@@ -1937,46 +1942,21 @@ async function manualSyncWithMongoDB() {
         }
 
         // Update IndexedDB with fresh data
+        GlobalLoader.updateMessage('Syncing with MongoDB', 'Updating local cache...');
         await saveRoadmapToIndexedDB(videoPlaylistData);
         console.log('💾 IndexedDB updated with MongoDB data');
 
         // Refresh UI
         renderVideoList();
 
-        // Show success status
-        if (syncStatus) {
-            syncStatus.className = 'sync-status success';
-        }
-        if (syncStatusText) {
-            syncStatusText.textContent = '✓ Synced successfully!';
-        }
+        // Hide loader and show success
+        GlobalLoader.hide();
         showToast('✅ Successfully synced with MongoDB', 'success');
-
-        // Hide status after 3 seconds
-        setTimeout(() => {
-            if (syncStatus) {
-                syncStatus.style.display = 'none';
-            }
-        }, 3000);
 
     } catch (error) {
         console.error('❌ Manual sync failed:', error);
-
-        // Show error status
-        if (syncStatus) {
-            syncStatus.className = 'sync-status error';
-        }
-        if (syncStatusText) {
-            syncStatusText.textContent = '✕ Sync failed';
-        }
+        GlobalLoader.hide();
         showToast('❌ Sync failed: ' + error.message, 'error');
-
-        // Hide status after 5 seconds
-        setTimeout(() => {
-            if (syncStatus) {
-                syncStatus.style.display = 'none';
-            }
-        }, 5000);
     }
 }
 
