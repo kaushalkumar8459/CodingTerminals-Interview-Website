@@ -1,35 +1,89 @@
 // ==================== CENTRALIZED BACKUP MANAGER ====================
 // Handles backup operations for both Study Notes and YouTube Roadmap
+// UPDATED: Works with modern individual document API endpoints
 
 let currentModule = null;
 let currentEndpoint = null;
 let confirmCallback = null;
 
-// Module Configuration
+// Module Configuration - UPDATED to use new endpoints
 const MODULE_CONFIG = {
     studyNotes: {
         name: 'Study Notes',
-        endpoint: '/api/study-notes',
+        endpoint: '/api/notes',
         icon: '📝',
-        itemLabel: 'Notes'
+        itemLabel: 'Notes',
+        backupCollections: {
+            active: 'notes_backup_active',
+            temp: 'notes_backup_temp',
+            final: 'notes_backup_final'
+        }
     },
     youtubeRoadmap: {
         name: 'YouTube Roadmap',
-        endpoint: '/api/youtube-roadmap',
+        endpoint: '/api/videos',
         icon: '🎬',
-        itemLabel: 'Videos'
+        itemLabel: 'Videos',
+        backupCollections: {
+            active: 'videos_backup_active',
+            temp: 'videos_backup_temp',
+            final: 'videos_backup_final'
+        }
     }
 };
+
+// IndexedDB Configuration for backups
+const BACKUP_DB_NAME = 'CodingTerminalsBackupDB';
+const BACKUP_DB_VERSION = 1;
+let backupDB = null;
+
+// ==================== INDEXEDDB INITIALIZATION ====================
+
+/**
+ * Initialize IndexedDB for backup storage
+ */
+function initializeBackupDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(BACKUP_DB_NAME, BACKUP_DB_VERSION);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            backupDB = request.result;
+            resolve(backupDB);
+        };
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            
+            // Create object stores for each backup collection
+            const collections = [
+                'notes_backup_active', 'notes_backup_temp', 'notes_backup_final',
+                'videos_backup_active', 'videos_backup_temp', 'videos_backup_final'
+            ];
+            
+            collections.forEach(storeName => {
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName, { keyPath: '_id' });
+                }
+            });
+        };
+    });
+}
 
 // ==================== MODULE SELECTION ====================
 
 /**
  * Select which module to manage (Study Notes or YouTube Roadmap)
  */
-function selectModule(moduleName) {
+async function selectModule(moduleName) {
     currentModule = moduleName;
     const config = MODULE_CONFIG[moduleName];
     currentEndpoint = config.endpoint;
+    
+    // Initialize backup DB if not already done
+    if (!backupDB) {
+        await initializeBackupDB();
+    }
     
     // Update UI
     document.getElementById('moduleTitle').innerHTML = `${config.icon} ${config.name} - Backup Status`;
@@ -46,7 +100,7 @@ function selectModule(moduleName) {
     }
     
     // Load backup status
-    loadBackupStatus();
+    await loadBackupStatus();
     
     showToast(`✅ Switched to ${config.name}`, 'success');
 }
@@ -65,23 +119,36 @@ async function loadBackupStatus() {
     try {
         showToast('🔄 Loading backup status...', 'info');
         
-        const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/backup/status`);
-        
-        if (!response.ok) {
-            throw new Error('Failed to load backup status');
-        }
-        
-        const data = await response.json();
         const config = MODULE_CONFIG[currentModule];
         
-        // Update Active Collection Status
-        updateStatusCard('activeStatus', data.status.active, config.itemLabel);
+        // Get counts from IndexedDB backup stores
+        const activeData = await getBackupData('active');
+        const tempData = await getBackupData('temp');
+        const finalData = await getBackupData('final');
+        
+        // Update Active Collection Status (from live MongoDB)
+        const liveData = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}`);
+        const liveItems = liveData.ok ? await liveData.json() : [];
+        
+        updateStatusCard('activeStatus', {
+            exists: liveItems.length > 0,
+            count: liveItems.length,
+            lastUpdated: liveItems[0]?.updatedAt || new Date().toISOString()
+        }, config.itemLabel);
         
         // Update Temp Collection Status
-        updateStatusCard('tempStatus', data.status.temp, config.itemLabel);
+        updateStatusCard('tempStatus', {
+            exists: tempData.length > 0,
+            count: tempData.length,
+            lastUpdated: tempData[0]?.backedUpAt || null
+        }, config.itemLabel);
         
         // Update Final Collection Status
-        updateStatusCard('finalStatus', data.status.final, config.itemLabel);
+        updateStatusCard('finalStatus', {
+            exists: finalData.length > 0,
+            count: finalData.length,
+            lastUpdated: finalData[0]?.backedUpAt || null
+        }, config.itemLabel);
         
         showToast('✅ Backup status loaded!', 'success');
     } catch (error) {
@@ -97,20 +164,88 @@ function updateStatusCard(elementId, statusData, itemLabel) {
     const element = document.getElementById(elementId);
     
     if (statusData.exists) {
-        const itemCount = statusData.noteCount || statusData.videoCount || 0;
         element.innerHTML = `
-            <div class="flex justify-between">
-                <span class="text-blue-100">${itemLabel}:</span>
-                <span class="font-semibold">${itemCount}</span>
+            <div class="flex justify-between text-lg">
+                <span>Items:</span>
+                <span class="font-bold">${statusData.count}</span>
             </div>
-            <div class="flex justify-between">
-                <span class="text-blue-100">Last Updated:</span>
-                <span class="font-semibold text-xs">${statusData.lastUpdated ? new Date(statusData.lastUpdated).toLocaleString() : 'N/A'}</span>
+            <div class="text-xs ${elementId === 'activeStatus' ? 'text-green-700' : elementId === 'tempStatus' ? 'text-yellow-700' : 'text-blue-700'}">
+                Last updated: <span class="font-semibold">${statusData.lastUpdated ? new Date(statusData.lastUpdated).toLocaleString() : 'N/A'}</span>
             </div>
         `;
     } else {
-        element.innerHTML = `<div class="text-yellow-200 text-sm">No data</div>`;
+        const color = elementId === 'activeStatus' ? 'text-green-700' : elementId === 'tempStatus' ? 'text-yellow-700' : 'text-blue-700';
+        element.innerHTML = `<div class="${color} text-sm">No data</div>`;
     }
+}
+
+// ==================== INDEXEDDB BACKUP OPERATIONS ====================
+
+/**
+ * Get backup data from IndexedDB
+ */
+async function getBackupData(collectionType) {
+    if (!backupDB) await initializeBackupDB();
+    
+    const config = MODULE_CONFIG[currentModule];
+    const storeName = config.backupCollections[collectionType];
+    
+    return new Promise((resolve, reject) => {
+        const transaction = backupDB.transaction([storeName], 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.getAll();
+        
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
+ * Save backup data to IndexedDB
+ */
+async function saveBackupData(collectionType, data) {
+    if (!backupDB) await initializeBackupDB();
+    
+    const config = MODULE_CONFIG[currentModule];
+    const storeName = config.backupCollections[collectionType];
+    
+    return new Promise((resolve, reject) => {
+        const transaction = backupDB.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        // Clear existing data
+        store.clear();
+        
+        // Add new data with backup timestamp
+        data.forEach(item => {
+            store.add({
+                ...item,
+                backedUpAt: new Date().toISOString()
+            });
+        });
+        
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+    });
+}
+
+/**
+ * Clear backup data from IndexedDB
+ */
+async function clearBackupData(collectionType) {
+    if (!backupDB) await initializeBackupDB();
+    
+    const config = MODULE_CONFIG[currentModule];
+    const storeName = config.backupCollections[collectionType];
+    
+    return new Promise((resolve, reject) => {
+        const transaction = backupDB.transaction([storeName], 'readwrite');
+        const store = transaction.objectStore(storeName);
+        const request = store.clear();
+        
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
 }
 
 // ==================== DATA MIGRATION ====================
@@ -125,9 +260,9 @@ async function copyData(from, to) {
     }
     
     const collectionNames = {
-        'active': 'Active',
-        'temp': 'Temp',
-        'final': 'Final'
+        'active': 'Working Copy',
+        'temp': "Today's Backup",
+        'final': 'Permanent Save'
     };
     
     const config = MODULE_CONFIG[currentModule];
@@ -140,22 +275,40 @@ async function copyData(from, to) {
             try {
                 showToast(`⏳ Copying data from ${collectionNames[from]} to ${collectionNames[to]}...`, 'info');
                 
-                const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/backup/copy`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ from, to })
-                });
+                let sourceData;
                 
-                const data = await response.json();
-                
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Failed to copy data');
+                // Get source data
+                if (from === 'active') {
+                    // Fetch from live MongoDB
+                    const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}`);
+                    if (!response.ok) throw new Error('Failed to fetch live data');
+                    sourceData = await response.json();
+                } else {
+                    // Get from IndexedDB backup
+                    sourceData = await getBackupData(from);
                 }
                 
-                const itemCount = data.noteCount || data.videoCount || 0;
-                showToast(`✅ Successfully copied ${itemCount} items from ${collectionNames[from]} to ${collectionNames[to]}!`, 'success');
+                if (!sourceData || sourceData.length === 0) {
+                    throw new Error(`No data found in ${collectionNames[from]}`);
+                }
+                
+                // Save to destination
+                if (to === 'active') {
+                    // Restore to live MongoDB using bulk upsert
+                    const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/bulk`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(sourceData)
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to restore to MongoDB');
+                    const result = await response.json();
+                    showToast(`✅ Successfully restored ${result.upsertedCount || sourceData.length} items to ${collectionNames[to]}!`, 'success');
+                } else {
+                    // Save to IndexedDB backup
+                    await saveBackupData(to, sourceData);
+                    showToast(`✅ Successfully copied ${sourceData.length} items from ${collectionNames[from]} to ${collectionNames[to]}!`, 'success');
+                }
                 
                 // Reload backup status
                 await loadBackupStatus();
@@ -170,7 +323,7 @@ async function copyData(from, to) {
 // ==================== EXPORT OPERATIONS ====================
 
 /**
- * Export collection data with Base64 images
+ * Export collection data as JSON file
  */
 async function exportCollection(collectionType) {
     if (!currentModule) {
@@ -180,15 +333,29 @@ async function exportCollection(collectionType) {
     
     try {
         const config = MODULE_CONFIG[currentModule];
-        showToast(`📥 Exporting ${collectionType} collection...`, 'info');
+        const collectionNames = {
+            'active': 'working',
+            'temp': 'temp',
+            'final': 'final'
+        };
         
-        const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/export?collectionType=${collectionType}`);
+        showToast(`📥 Exporting ${collectionNames[collectionType]} collection...`, 'info');
         
-        if (!response.ok) {
-            throw new Error('Failed to export data');
+        let data;
+        if (collectionType === 'active') {
+            // Export from live MongoDB
+            const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}`);
+            if (!response.ok) throw new Error('Failed to fetch data');
+            data = await response.json();
+        } else {
+            // Export from IndexedDB backup
+            data = await getBackupData(collectionType);
         }
         
-        const data = await response.json();
+        if (!data || data.length === 0) {
+            showToast('⚠️ No data to export', 'warning');
+            return;
+        }
         
         // Download as JSON file
         const dataStr = JSON.stringify(data, null, 2);
@@ -196,12 +363,11 @@ async function exportCollection(collectionType) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${currentModule}_${collectionType}_backup_${Date.now()}.json`;
+        a.download = `${currentModule}_${collectionNames[collectionType]}_backup_${Date.now()}.json`;
         a.click();
         URL.revokeObjectURL(url);
         
-        const itemCount = (data.notes?.length || data.videos?.length || 0);
-        showToast(`✅ ${collectionType} collection exported with images! (${itemCount} items)`, 'success');
+        showToast(`✅ Exported ${data.length} items!`, 'success');
     } catch (error) {
         console.error('Error exporting collection:', error);
         showToast('❌ Error exporting collection', 'error');
@@ -220,41 +386,41 @@ async function clearCollection(collectionType) {
     }
     
     const collectionNames = {
-        'active': 'Active',
-        'temp': 'Temp',
-        'final': 'Final'
+        'active': 'Working Copy',
+        'temp': "Today's Backup",
+        'final': 'Permanent Save'
     };
     
     const config = MODULE_CONFIG[currentModule];
     const warningLevel = collectionType === 'active' ? '⚠️ DANGER' : '⚠️ Warning';
     const message = collectionType === 'active' 
-        ? `🚨 THIS WILL DELETE ALL YOUR CURRENT ${config.name.toUpperCase()} DATA! 🚨\n\nAre you absolutely sure you want to clear the Active collection?\n\nThis action cannot be undone!\n\nConsider backing up to Temp or Final first.`
-        : `Are you sure you want to clear the ${collectionNames[collectionType]} collection for ${config.name}?\n\nThis action cannot be undone.`;
+        ? `🚨 THIS WILL DELETE ALL YOUR CURRENT ${config.name.toUpperCase()} DATA! 🚨\n\nAre you absolutely sure you want to clear the Working Copy?\n\nThis action cannot be undone!\n\nConsider backing up first.`
+        : `Are you sure you want to clear the ${collectionNames[collectionType]} for ${config.name}?\n\nThis action cannot be undone.`;
     
     showConfirmModal(
-        `${warningLevel}: Clear ${collectionNames[collectionType]} Collection`,
+        `${warningLevel}: Clear ${collectionNames[collectionType]}`,
         message,
         async () => {
             try {
-                showToast(`⏳ Clearing ${collectionNames[collectionType]} collection...`, 'info');
+                showToast(`⏳ Clearing ${collectionNames[collectionType]}...`, 'info');
                 
-                const requestBody = collectionType === 'active' ? { confirmed: true } : {};
-                
-                const response = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/collection/${collectionType}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok || !data.success) {
-                    throw new Error(data.error || 'Failed to clear collection');
+                if (collectionType === 'active') {
+                    // Clear live MongoDB - delete all documents
+                    const fetchResponse = await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}`);
+                    const items = await fetchResponse.json();
+                    
+                    // Delete each document
+                    for (const item of items) {
+                        await fetch(`${APP_CONFIG.API.BASE_URL}${currentEndpoint}/${item._id}`, {
+                            method: 'DELETE'
+                        });
+                    }
+                    showToast(`✅ ${collectionNames[collectionType]} cleared! (${items.length} items deleted)`, 'success');
+                } else {
+                    // Clear IndexedDB backup
+                    await clearBackupData(collectionType);
+                    showToast(`✅ ${collectionNames[collectionType]} cleared!`, 'success');
                 }
-                
-                showToast(`✅ ${collectionNames[collectionType]} collection cleared!`, 'success');
                 
                 // Reload backup status
                 await loadBackupStatus();
@@ -355,7 +521,8 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Show instruction on page load
-window.addEventListener('load', () => {
+// Initialize backup DB on page load
+window.addEventListener('load', async () => {
+    await initializeBackupDB();
     showToast('👋 Welcome! Please select a module to begin', 'info');
 });

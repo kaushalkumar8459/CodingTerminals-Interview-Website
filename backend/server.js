@@ -3,7 +3,8 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const connectDB = require('./config/database');
-const { youtubeRoadmapRoutes, studyNotesRoutes, authRoutes } = require('./routes');
+const { authRoutes, videoRoutes, noteRoutes } = require('./routes');
+const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const APP_CONFIG = require('../config/app.config.js');
 
 const app = express();
@@ -18,19 +19,32 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..'))); // Serve static files
 
-// API Routes
-app.use('/api/youtube-roadmap', youtubeRoadmapRoutes);
-app.use('/api/study-notes', studyNotesRoutes);
+// ============================================
+// API ROUTES (MODERN ARCHITECTURE)
+// ============================================
+
+// Individual video documents API
+app.use('/api/videos', videoRoutes);
+
+// YouTube Roadmap bulk save (for admin panel compatibility)
+app.post('/api/youtube-roadmap', require('./controllers/videoController').saveYouTubeRoadmap);
+
+// Individual note documents API
+app.use('/api/notes', noteRoutes);
+
+// Interview Questions API (linked to videos by videoId)
+app.use('/api/interview-questions', interviewQuestionRoutes);
+
+// Authentication API
 app.use('/api/auth', authRoutes);
 
-// Legacy auth endpoints (for backward compatibility)
-app.get('/api/auth-config', (req, res) => {
-    res.redirect('/api/auth/config');
-});
-
-app.post('/api/auth/login', (req, res, next) => {
-    // Handled by auth routes
-    next();
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
 });
 
 // ============================================
@@ -85,8 +99,9 @@ app.listen(PORT, () => {
     console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes-admin.html`);
     console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
     console.log(`\n📡 API Endpoints:`);
-    console.log(`   - YouTube Roadmap: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP}`);
-    console.log(`   - Study Notes: ${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS.STUDY_NOTES}`);
+    console.log(`   - Videos: ${APP_CONFIG.API.BASE_URL}/api/videos`);
+    console.log(`   - Notes: ${APP_CONFIG.API.BASE_URL}/api/notes`);
+    console.log(`   - Interview Questions: ${APP_CONFIG.API.BASE_URL}/api/interview-questions`);
     console.log(`   - Authentication: ${APP_CONFIG.API.BASE_URL}/api/auth/login`);
     console.log('\n✨ Ready to manage your content!\n');
 });

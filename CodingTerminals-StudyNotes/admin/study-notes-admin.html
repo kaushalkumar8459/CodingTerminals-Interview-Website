@@ -95,6 +95,10 @@
                 💾 Save All Notes
             </button>
             
+            <button onclick="syncWithMongoDB()" class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                🔄 Sync with MongoDB
+            </button>
+            
             <button onclick="window.open('../viewer/study-notes-viewer.html', '_blank')" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                 👁️ Preview Study Notes
             </button>
@@ -196,6 +200,9 @@
     <!-- Hidden File Input for Import -->
     <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="handleFileImport(event)">
 
+    <!-- Study Notes API Service (NEW - MongoDB integration) -->
+    <script src="study-notes-api-service.js"></script>
+    
     <!-- Study Notes JavaScript -->
     <script src="study-notes-admin.js"></script>
     

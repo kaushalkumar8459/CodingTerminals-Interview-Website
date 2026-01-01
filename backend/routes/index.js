@@ -3,12 +3,12 @@
  * Central export point for all routes
  */
 
-const youtubeRoadmapRoutes = require('./youtubeRoadmap.routes');
-const studyNotesRoutes = require('./studyNotes.routes');
 const authRoutes = require('./auth.routes');
+const videoRoutes = require('./video.routes');
+const noteRoutes = require('./note.routes');
 
 module.exports = {
-    youtubeRoadmapRoutes,
-    studyNotesRoutes,
-    authRoutes
+    authRoutes,
+    videoRoutes,
+    noteRoutes
 };

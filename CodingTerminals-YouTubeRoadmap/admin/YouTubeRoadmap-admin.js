@@ -315,20 +315,29 @@ function formatRelativeTime(dateString) {
     return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
 }
 
-// Load existing data from server and merge with YouTube data
+// ==================== OFFLINE-FIRST LOAD DATA ====================
+/**
+ * FETCH FLOW: UI → IndexedDB → MongoDB
+ * 1. Check IndexedDB
+ * 2. If data exists → render UI instantly
+ * 3. Call MongoDB API in background
+ * 4. Update IndexedDB
+ * 5. Refresh UI silently
+ */
 async function loadData() {
     try {
+        console.log('🚀 Starting offline-first load...');
+        
         // Initialize IndexedDB first
         await initializeIndexedDB();
         
-        // Fetch YouTube videos first
+        // Fetch YouTube videos for merging
         youtubeVideos = await fetchPlaylistVideos();
-        
         if (youtubeVideos.length > 0) {
-            showToast(`Loaded ${youtubeVideos.length} videos from YouTube`, 'success');
+            console.log(`📹 Loaded ${youtubeVideos.length} videos from YouTube API`);
         }
 
-        // Try to load from IndexedDB first
+        // ==================== STEP 1: CHECK INDEXEDDB ====================
         let indexedDBData = null;
         try {
             indexedDBData = await loadRoadmapFromIndexedDB();
@@ -336,128 +345,133 @@ async function loadData() {
             console.error('Error loading from IndexedDB:', dbError);
         }
 
+        // ==================== STEP 2: IF DATA EXISTS → RENDER UI INSTANTLY ====================
         if (indexedDBData && indexedDBData.videoPlaylist && indexedDBData.videoPlaylist.length > 0) {
-            // Use IndexedDB data
-            console.log('✅ Loading data from IndexedDB');
+            console.log('📂 Found data in IndexedDB - Rendering instantly...');
+            
+            // Merge IndexedDB data with YouTube data
             videoPlaylistData.channelName = indexedDBData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
             videoPlaylistData.channelLogo = indexedDBData.channelLogo || APP_CONFIG.ASSETS.LOGO;
             
-            // Handle upcoming topic
             if (indexedDBData.upcomingTopic) {
                 videoPlaylistData.upcomingTopic = {
                     ...indexedDBData.upcomingTopic,
                     interviewQuestions: (indexedDBData.upcomingTopic.interviewQuestions || []).map(q => {
-                        if (typeof q === 'string') {
-                            return { question: q, answer: '' };
-                        }
+                        if (typeof q === 'string') return { question: q, answer: '' };
                         return q;
                     })
                 };
             }
             
-            // Merge videoPlaylist with YouTube data
             videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
                 const savedVideo = indexedDBData.videoPlaylist[index] || {};
-                
                 const interviewQuestions = (savedVideo.interviewQuestions || []).map(q => {
-                    if (typeof q === 'string') {
-                        return { question: q, answer: '' };
-                    }
+                    if (typeof q === 'string') return { question: q, answer: '' };
                     return q;
                 });
                 
                 return {
                     ...video,
+                    _id: savedVideo._id,
                     subtopics: savedVideo.subtopics || [''],
                     interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
                 };
             });
             
-            showToast('✅ Data loaded from IndexedDB!', 'success');
+            // ✅ RENDER UI INSTANTLY
+            renderVideoList();
+            showToast('✅ Loaded instantly from cache', 'success');
         } else {
-            // Try to fetch from JSON file (fallback)
-            try {
-                const response = await fetch(API_URL);
+            console.log('📭 No cache found');
+        }
+
+        // ==================== STEP 3: CALL MONGODB API (BACKGROUND) ====================
+        console.log('🔄 Syncing with MongoDB in background...');
+        
+        try {
+            // Check if adminAPI is available
+            if (typeof adminAPI !== 'undefined') {
+                // Fetch complete roadmap including upcomingTopic
+                const roadmapData = await adminAPI.getCompleteRoadmap();
+                const apiVideos = roadmapData.videoPlaylist || [];
                 
-                if (response.ok) {
-                    const jsonData = await response.json();
+                if (apiVideos && apiVideos.length > 0) {
+                    console.log(`🌐 Fetched ${apiVideos.length} videos from MongoDB`);
                     
-                    // Merge JSON data with YouTube data
-                    videoPlaylistData.channelName = jsonData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
-                    videoPlaylistData.channelLogo = jsonData.channelLogo || APP_CONFIG.ASSETS.LOGO;
-                    
-                    // Handle upcoming topic
-                    if (jsonData.upcomingTopic) {
-                        videoPlaylistData.upcomingTopic = {
-                            ...jsonData.upcomingTopic,
-                            interviewQuestions: (jsonData.upcomingTopic.interviewQuestions || []).map(q => {
-                                if (typeof q === 'string') {
-                                    return { question: q, answer: '' };
-                                }
-                                return q;
-                            })
-                        };
-                    }
-                    
-                    // Merge videoPlaylist
+                    // Merge MongoDB data with YouTube data
                     videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
-                        const jsonVideo = jsonData.videoPlaylist[index] || {};
-                        
-                        const interviewQuestions = (jsonVideo.interviewQuestions || []).map(q => {
-                            if (typeof q === 'string') {
-                                return { question: q, answer: '' };
-                            }
+                        const apiVideo = apiVideos.find(v => v.videoId === video.videoId) || apiVideos[index] || {};
+                        const interviewQuestions = (apiVideo.interviewQuestions || []).map(q => {
+                            if (typeof q === 'string') return { question: q, answer: '' };
                             return q;
                         });
                         
                         return {
                             ...video,
-                            subtopics: jsonVideo.subtopics || [''],
+                            _id: apiVideo._id,
+                            subtopics: apiVideo.subtopics || [''],
                             interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
                         };
                     });
                     
-                    // Save to IndexedDB for future use
-                    await saveRoadmapToIndexedDB(videoPlaylistData);
+                    // Load upcomingTopic from MongoDB
+                    if (roadmapData.upcomingTopic) {
+                        console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
+                        videoPlaylistData.upcomingTopic = {
+                            ...roadmapData.upcomingTopic,
+                            interviewQuestions: (roadmapData.upcomingTopic.interviewQuestions || []).map(q => {
+                                if (typeof q === 'string') return { question: q, answer: '' };
+                                return q;
+                            })
+                        };
+                    } else {
+                        console.log('📭 No upcoming topic found in MongoDB');
+                        videoPlaylistData.upcomingTopic = null;
+                    }
                     
-                    showToast('✅ Data loaded from JSON and saved to IndexedDB!', 'success');
-                } else if (response.status === 404) {
-                    // JSON file doesn't exist - use YouTube data only
-                    console.log('No saved data found, using YouTube data only');
-                    videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
-                        ...video,
-                        subtopics: [''],
-                        interviewQuestions: [{ question: '', answer: '' }]
-                    }));
-                    showToast('ℹ️ No saved data found. Using YouTube data only.', 'info');
+                    // ==================== STEP 4: UPDATE INDEXEDDB ====================
+                    await saveRoadmapToIndexedDB(videoPlaylistData);
+                    console.log('💾 IndexedDB updated with latest data');
+                    
+                    // ==================== STEP 5: REFRESH UI SILENTLY ====================
+                    renderVideoList();
+                    showToast('✓ Synced with MongoDB', 'success');
                 } else {
-                    throw new Error(`Server responded with status: ${response.status}`);
+                    throw new Error('No videos found in MongoDB');
                 }
-            } catch (fetchError) {
-                if (fetchError.message.includes('fetch') || fetchError.name === 'TypeError') {
-                    console.error('Server connection error:', fetchError);
-                    showToast('⚠️ Could not connect to server. Using IndexedDB/local data.', 'warning');
-                } else {
-                    console.error('Error loading data from server:', fetchError);
-                    showToast(`⚠️ Error loading data: ${fetchError.message}`, 'error');
-                }
-                
-                // Fallback: use only YouTube data if available
+            } else {
+                throw new Error('Admin API not loaded');
+            }
+        } catch (mongoError) {
+            console.warn('⚠️ MongoDB sync failed:', mongoError.message);
+            
+            // If we had cache, we already showed it
+            if (indexedDBData) {
+                showToast('⚠ Using cached data (offline)', 'warning');
+            } else {
+                // No cache and no MongoDB - use YouTube data only
                 if (youtubeVideos.length > 0) {
                     videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
                         ...video,
                         subtopics: [''],
                         interviewQuestions: [{ question: '', answer: '' }]
                     }));
-                    showToast('ℹ️ Using YouTube data only (server not available)', 'info');
+                    renderVideoList();
+                    showToast('ℹ️ Using YouTube data only', 'info');
+                } else {
+                    showToast('❌ Cannot load data: No connection', 'error');
                 }
             }
         }
     } catch (error) {
-        console.error('Error in loadData:', error);
+        console.error('❌ Error in loadData:', error);
         showToast('❌ Error loading data: ' + error.message, 'error');
+        
+        // If we have any data at all, render it
+        if (videoPlaylistData.videoPlaylist.length > 0) {
+            renderVideoList();
+        }
     }
-    renderVideoList();
 }
 
 // Render video list
@@ -1644,20 +1658,36 @@ async function downloadJSON() {
 
 // Clear all data from IndexedDB (useful for debugging/reset)
 async function clearIndexedDBData() {
-    if (!confirm('⚠️ This will clear all roadmap data from IndexedDB. Are you sure?')) {
-        return;
-    }
-    
-    try {
-        await clearRoadmapFromIndexedDB();
-        showToast('✅ IndexedDB data cleared successfully!', 'success');
-        
-        // Reload data from JSON
-        await loadData();
-    } catch (error) {
-        console.error('Error clearing IndexedDB:', error);
-        showToast('❌ Error clearing data: ' + error.message, 'error');
-    }
+    showConfirmModal(
+        `<div style="text-align: left;">
+            <p><strong>This will:</strong></p>
+            <ul style="margin: 15px 0;">
+                <li>Clear all cached data from IndexedDB</li>
+                <li>Reload fresh data from MongoDB</li>
+                <li>Fix any sync issues</li>
+            </ul>
+            <p style="color: #666; margin-top: 15px;">
+                ℹ️ This is useful if you're seeing outdated data or the "Coming Soon" section is missing.
+            </p>
+        </div>`,
+        async () => {
+            try {
+                await clearRoadmapFromIndexedDB();
+                showToast('🔄 Cache cleared! Reloading fresh data...', 'success');
+                
+                // Reload data from MongoDB
+                await loadData();
+            } catch (error) {
+                console.error('Error clearing IndexedDB:', error);
+                showToast('❌ Error clearing data: ' + error.message, 'error');
+            }
+        },
+        {
+            title: '🗑️ Clear Cache & Reload',
+            buttonText: 'Clear & Reload',
+            buttonClass: 'btn btn-warning'
+        }
+    );
 }
 
 // Show toast notification
@@ -1774,6 +1804,109 @@ async function deleteUpcomingTopic() {
         buttonText: 'Ok',
         buttonClass: 'btn btn-danger'
     });
+}
+
+// ==================== MANUAL SYNC WITH MONGODB ====================
+/**
+ * Manual sync button function - allows users to manually trigger MongoDB sync
+ * Shows loader during sync and toast notification on completion
+ */
+async function manualSyncWithMongoDB() {
+    const syncButton = document.getElementById('syncButton');
+    const syncStatus = document.getElementById('syncStatus');
+    const syncStatusText = document.getElementById('syncStatusText');
+    
+    try {
+        // Disable button and show syncing status
+        syncButton.disabled = true;
+        syncButton.classList.add('syncing');
+        syncStatus.style.display = 'flex';
+        syncStatus.className = 'sync-status syncing';
+        syncStatusText.textContent = 'Syncing with MongoDB...';
+        
+        console.log('🔄 Manual sync initiated...');
+        
+        // Check if adminAPI is available
+        if (typeof adminAPI === 'undefined') {
+            throw new Error('Admin API not loaded');
+        }
+        
+        // Fetch complete roadmap including upcomingTopic
+        const roadmapData = await adminAPI.getCompleteRoadmap();
+        const apiVideos = roadmapData.videoPlaylist || [];
+        
+        if (!apiVideos || apiVideos.length === 0) {
+            throw new Error('No videos found in MongoDB');
+        }
+        
+        console.log(`🌐 Fetched ${apiVideos.length} videos from MongoDB`);
+        
+        // Merge MongoDB data with YouTube data
+        videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
+            const apiVideo = apiVideos.find(v => v.videoId === video.videoId) || apiVideos[index] || {};
+            const interviewQuestions = (apiVideo.interviewQuestions || []).map(q => {
+                if (typeof q === 'string') return { question: q, answer: '' };
+                return q;
+            });
+            
+            return {
+                ...video,
+                _id: apiVideo._id,
+                subtopics: apiVideo.subtopics || [''],
+                interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
+            };
+        });
+        
+        // Load upcomingTopic from MongoDB
+        if (roadmapData.upcomingTopic) {
+            console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
+            videoPlaylistData.upcomingTopic = {
+                ...roadmapData.upcomingTopic,
+                interviewQuestions: (roadmapData.upcomingTopic.interviewQuestions || []).map(q => {
+                    if (typeof q === 'string') return { question: q, answer: '' };
+                    return q;
+                })
+            };
+        } else {
+            console.log('📭 No upcoming topic found in MongoDB');
+            videoPlaylistData.upcomingTopic = null;
+        }
+        
+        // Update IndexedDB with fresh data
+        await saveRoadmapToIndexedDB(videoPlaylistData);
+        console.log('💾 IndexedDB updated with MongoDB data');
+        
+        // Refresh UI
+        renderVideoList();
+        
+        // Show success status
+        syncStatus.className = 'sync-status success';
+        syncStatusText.textContent = '✓ Synced successfully!';
+        showToast('✅ Successfully synced with MongoDB', 'success');
+        
+        // Hide status after 3 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ Manual sync failed:', error);
+        
+        // Show error status
+        syncStatus.className = 'sync-status error';
+        syncStatusText.textContent = '✕ Sync failed';
+        showToast('❌ Sync failed: ' + error.message, 'error');
+        
+        // Hide status after 5 seconds
+        setTimeout(() => {
+            syncStatus.style.display = 'none';
+        }, 5000);
+        
+    } finally {
+        // Re-enable button
+        syncButton.disabled = false;
+        syncButton.classList.remove('syncing');
+    }
 }
 
 // Initialize

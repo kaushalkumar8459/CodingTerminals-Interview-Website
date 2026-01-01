@@ -2,10 +2,73 @@
 const YOUTUBE_API_KEY = APP_CONFIG.YOUTUBE.API_KEY;
 const PLAYLIST_ID = APP_CONFIG.YOUTUBE.PLAYLIST_ID;
 
+// IndexedDB Configuration
+const DB_NAME = APP_CONFIG.INDEXEDDB.DB_NAME;
+const DB_VERSION = APP_CONFIG.INDEXEDDB.DB_VERSION;
+const ROADMAP_STORE_NAME = APP_CONFIG.INDEXEDDB.STORES.YOUTUBE_ROADMAP;
+let db = null;
+
 // Global variable to store all video playlist data
 let allVideoPlaylistData = [];
 let searchTimeout = null; // For debouncing search
 let currentSortOrder = APP_CONFIG.APP.DEFAULT_SORT_ORDER; // Default sort order from config
+
+// ==================== INDEXEDDB SETUP ====================
+/**
+ * Initialize IndexedDB
+ */
+function initializeIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = function(event) {
+            db = event.target.result;
+            
+            // Create roadmap object store if it doesn't exist
+            if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
+                const objectStore = db.createObjectStore(ROADMAP_STORE_NAME, { keyPath: '_id' });
+                objectStore.createIndex('type', 'type', { unique: false });
+                objectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+                console.log('✅ IndexedDB roadmap store created');
+            }
+        };
+
+        request.onsuccess = function(event) {
+            db = event.target.result;
+            console.log('✅ IndexedDB initialized');
+            resolve(db);
+        };
+
+        request.onerror = function(event) {
+            console.error('❌ IndexedDB initialization failed:', event.target.error);
+            reject(event.target.error);
+        };
+    });
+}
+
+/**
+ * Load roadmap data from IndexedDB
+ */
+function loadRoadmapFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error('Database not initialized'));
+            return;
+        }
+
+        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readonly');
+        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
+        const request = objectStore.get('YoutubeRoadmap_main');
+
+        request.onsuccess = function() {
+            resolve(request.result || null);
+        };
+
+        request.onerror = function() {
+            reject(request.error);
+        };
+    });
+}
 
 // Helper function to preserve line breaks in text
 function preserveLineBreaks(text) {
@@ -107,101 +170,74 @@ async function fetchPlaylistVideos() {
     }
 }
 
-// Fetch and display video playlist data
+// Fetch and display video playlist data - OFFLINE-FIRST APPROACH
 async function loadVideoPlaylist() {
     try {
-        // Try to fetch from YouTube API first
-        let playlistVideos = await fetchPlaylistVideos();
-
-        if (playlistVideos && playlistVideos.length > 0) {
-            // Load from local JSON to get subtopics
-            const jsonResponse = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            const jsonData = await jsonResponse.json();
-
-            // Merge YouTube data with local subtopics
-            allVideoPlaylistData = playlistVideos.map((video, index) => ({
-                ...video,
-                subtopics: jsonData.videoPlaylist[index]?.subtopics || [
-                    "Watch the video to learn more",
-                    "Practice exercises included",
-                    "Code examples provided"
-                ],
-                interviewQuestions: jsonData.videoPlaylist[index]?.interviewQuestions || []
-            }));
-
-            // Add "Today's Topic" card from JSON at the end
-            if (jsonData.upcomingTopic) {
-                const todaysTopic = {
+        // Step 1: Initialize IndexedDB
+        await initializeIndexedDB();
+        
+        // Step 2: Load from IndexedDB FIRST (instant display)
+        console.log('📂 Loading from IndexedDB...');
+        const cachedData = await loadRoadmapFromIndexedDB();
+        
+        if (cachedData && cachedData.videoPlaylist && cachedData.videoPlaylist.length > 0) {
+            console.log('✅ Loaded from IndexedDB:', cachedData.videoPlaylist.length, 'videos');
+            
+            // Display cached data immediately
+            allVideoPlaylistData = cachedData.videoPlaylist;
+            
+            // Add "Coming Soon" card if available
+            if (cachedData.upcomingTopic) {
+                const comingSoonCard = {
                     day: 'Coming Soon',
-                    date: jsonData.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
-                    title: jsonData.upcomingTopic.title,
+                    date: cachedData.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
+                    title: cachedData.upcomingTopic.title,
                     videoUrl: '#',
                     videoId: null,
-                    description: jsonData.upcomingTopic.description,
-                    subtopics: jsonData.upcomingTopic.subtopics,
-                    interviewQuestions: jsonData.upcomingTopic.interviewQuestions || [],
+                    description: cachedData.upcomingTopic.description || '',
+                    subtopics: cachedData.upcomingTopic.subtopics || [],
+                    interviewQuestions: cachedData.upcomingTopic.interviewQuestions || [],
                     isTodaysTopic: true
                 };
-                allVideoPlaylistData.push(todaysTopic);
+                allVideoPlaylistData.push(comingSoonCard);
             }
-
-            // Display header
-            displayHeader(jsonData.channelName, jsonData.channelLogo);
-
-            // Display video playlist with YouTube data
-            displayVideoPlaylist(allVideoPlaylistData);
-            updateSearchInfo(allVideoPlaylistData.length - 1, allVideoPlaylistData.length - 1);
-        } else {
-            // Fallback to local JSON if API fails
-            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            if (!response.ok) {
-                throw new Error('Failed to load video playlist data');
-            }
-
-            const data = await response.json();
-            allVideoPlaylistData = data.videoPlaylist;
-
-            // Add "Today's Topic" card from JSON
-            if (data.upcomingTopic) {
-                const todaysTopic = {
-                    day: 'Coming Soon',
-                    date: data.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
-                    title: data.upcomingTopic.title,
-                    videoUrl: '#',
-                    videoId: null,
-                    description: data.upcomingTopic.description,
-                    subtopics: data.upcomingTopic.subtopics,
-                    isTodaysTopic: true
-                };
-                allVideoPlaylistData.push(todaysTopic);
-            }
-
-            displayHeader(data.channelName, data.channelLogo);
-            displayVideoPlaylist(allVideoPlaylistData);
-            updateSearchInfo(allVideoPlaylistData.length - 1, allVideoPlaylistData.length - 1);
-        }
-
-    } catch (error) {
-        console.error('Error loading video playlist:', error);
-        document.getElementById('header').innerHTML = `
-            <div class="error">
-                <h2>Error Loading Video Playlist</h2>
-                <p>${error.message}</p>
-                <p style="font-size: 0.9rem; margin-top: 10px;">Loading from local data as fallback...</p>
-            </div>
-        `;
-
-        // Try fallback to local JSON
-        try {
-            const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADMAP);
-            const data = await response.json();
-            allVideoPlaylistData = data.videoPlaylist;
-            displayHeader(data.channelName, data.channelLogo);
+            
+            // Display immediately with HARDCODED channel info from config
+            displayHeader(APP_CONFIG.CHANNEL.NAME, APP_CONFIG.CHANNEL.LOGO);
             displayVideoPlaylist(allVideoPlaylistData);
             updateSearchInfo(allVideoPlaylistData.length, allVideoPlaylistData.length);
-        } catch (fallbackError) {
-            console.error('Fallback also failed:', fallbackError);
+            
+            console.log('✅ Page rendered from IndexedDB cache');
+        } else {
+            console.log('⚠️ No cached data found in IndexedDB');
+            
+            // Show loading state with hardcoded channel info
+            displayHeader(APP_CONFIG.CHANNEL.NAME, APP_CONFIG.CHANNEL.LOGO);
+            document.getElementById('roadmapContainer').innerHTML = `
+                <div class="loading" style="text-align: center; padding: 40px; color: #666;">
+                    <h2>📂 No Data Available</h2>
+                    <p>Please use the admin panel to add videos first.</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">
+                        <a href="../admin/YouTubeRoadmap-admin.html">Go to Admin Panel</a>
+                    </p>
+                </div>
+            `;
         }
+        
+    } catch (error) {
+        console.error('❌ Error in loadVideoPlaylist:', error);
+        
+        // Show error message with hardcoded channel info
+        displayHeader(APP_CONFIG.CHANNEL.NAME, APP_CONFIG.CHANNEL.LOGO);
+        document.getElementById('roadmapContainer').innerHTML = `
+            <div class="error" style="text-align: center; padding: 40px; color: #e74c3c;">
+                <h2>⚠️ Error Loading Video Playlist</h2>
+                <p>${error.message}</p>
+                <p style="font-size: 0.9rem; margin-top: 10px; color: #666;">
+                    Please check the browser console for more details.
+                </p>
+            </div>
+        `;
     }
 }
 

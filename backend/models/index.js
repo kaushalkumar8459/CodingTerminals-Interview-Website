@@ -3,10 +3,12 @@
  * Central export point for all database models
  */
 
-const YouTubeRoadmap = require('./YouTubeRoadmap');
-const StudyNotes = require('./StudyNotes');
+const Video = require('./Video');
+const InterviewQuestion = require('./InterviewQuestion');
+const Note = require('./Note');
 
 module.exports = {
-    YouTubeRoadmap,
-    StudyNotes
+    Video,
+    InterviewQuestion,
+    Note
 };

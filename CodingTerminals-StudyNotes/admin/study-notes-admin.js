@@ -97,18 +97,54 @@ function logout() {
 
 // ==================== DATA MANAGEMENT ====================
 /**
- * Load study notes from IndexedDB
- * If empty, load sample data from JSON file
+ * Load study notes - Try MongoDB first, fallback to IndexedDB
  */
 async function loadStudyNotes() {
     try {
+        // Check if API service is available
+        if (typeof studyNotesAPI !== 'undefined') {
+            console.log('🔄 Attempting to load from MongoDB...');
+            try {
+                const mongoNotes = await studyNotesAPI.getAllNotes();
+                
+                if (mongoNotes && mongoNotes.length > 0) {
+                    // Map MongoDB notes to IndexedDB format (_id = noteId)
+                    studyNotesData.notes = mongoNotes.map(note => ({
+                        _id: note.noteId,          // Use noteId as _id for IndexedDB
+                        noteId: note.noteId,
+                        title: note.title,
+                        content: note.content,
+                        category: note.category,
+                        tags: note.tags,
+                        type: note.type,
+                        date: note.date,
+                        isPinned: note.isPinned,
+                        isFavorite: note.isFavorite,
+                        createdAt: note.createdAt,
+                        updatedAt: note.updatedAt
+                    }));
+                    
+                    // Save to IndexedDB for offline access
+                    for (const note of studyNotesData.notes) {
+                        await saveNoteToIndexedDB(note);
+                    }
+                    
+                    renderNotesList();
+                    showToast('📚 Notes loaded from MongoDB!', 'success');
+                    return;
+                }
+            } catch (mongoError) {
+                console.warn('⚠️ MongoDB unavailable, loading from IndexedDB:', mongoError);
+            }
+        }
+        
+        // Fallback to IndexedDB
         const notes = await getAllNotesFromIndexedDB();
         
         if (notes.length > 0) {
-            // Load from IndexedDB
             studyNotesData.notes = notes;
             renderNotesList();
-            showToast('📚 Notes loaded from IndexedDB', 'info');
+            showToast('📚 Notes loaded from IndexedDB (offline)', 'info');
         } else {
             // First time - load sample data from JSON
             await loadStudyNotesFromJSON();
@@ -733,6 +769,48 @@ async function handleFileImport(event) {
     
     // Reset file input
     event.target.value = '';
+}
+
+// ==================== MONGODB SYNC ====================
+/**
+ * Sync all notes with MongoDB
+ * Saves current state to MongoDB and updates IndexedDB cache
+ */
+async function syncWithMongoDB() {
+    try {
+        if (typeof studyNotesAPI === 'undefined') {
+            showToast('❌ MongoDB API service not available', 'error');
+            return;
+        }
+
+        // Save current note first
+        if (currentEditingNoteIndex !== null) {
+            const currentNote = studyNotesData.notes[currentEditingNoteIndex];
+            if (noteQuillEditor) {
+                currentNote.content = noteQuillEditor.root.innerHTML;
+            }
+            currentNote.updatedAt = new Date().toISOString();
+        }
+
+        showToast('🔄 Syncing with MongoDB...', 'info');
+
+        // Sync all notes using the API service
+        const syncedNotes = await studyNotesAPI.syncNotesWithMongoDB(studyNotesData.notes);
+        
+        // Update local data
+        studyNotesData.notes = syncedNotes;
+        
+        // Update IndexedDB cache
+        for (const note of syncedNotes) {
+            await saveNoteToIndexedDB(note);
+        }
+        
+        renderNotesList();
+        showToast(`✅ Successfully synced ${syncedNotes.length} notes with MongoDB!`, 'success');
+    } catch (error) {
+        console.error('Error syncing with MongoDB:', error);
+        showToast('❌ Failed to sync with MongoDB. Changes saved locally.', 'error');
+    }
 }
 
 // ==================== TOAST NOTIFICATIONS ====================

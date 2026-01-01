@@ -24,6 +24,14 @@ const APP_CONFIG = {
         // JSON files removed - using MongoDB + IndexedDB only
     },
 
+    // Channel Information (Hardcoded - No MongoDB fetch needed)
+    CHANNEL: {
+        NAME: 'Coding Terminals',
+        TAGLINE: 'Your Complete Learning Video Playlist',
+        LOGO: '../../assets/CT logo.jpg', // Relative path from viewer/admin folders (two levels up)
+        LOGO_FROM_ROOT: './assets/CT logo.jpg', // Relative path from root
+    },
+
     // YouTube Configuration
     YOUTUBE: {
         API_KEY: 'AIzaSyAhpyVPDCMaMUrNSVUfcYmevleEr3wVXS4',
