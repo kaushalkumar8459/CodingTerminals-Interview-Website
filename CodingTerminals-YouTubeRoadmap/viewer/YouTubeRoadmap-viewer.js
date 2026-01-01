@@ -346,7 +346,24 @@ function displayVideoPlaylist(playlist) {
     const container = document.getElementById('roadmapContainer');
     container.innerHTML = ''; // Clear all existing cards before displaying new ones
 
+    let upcomingSectionAdded = false;
+
     playlist.forEach((day, index) => {
+        // Add section divider before the first upcoming video
+        if (day.isTodaysTopic && !upcomingSectionAdded) {
+            const sectionDivider = document.createElement('div');
+            sectionDivider.className = 'upcoming-section-divider';
+            sectionDivider.innerHTML = `
+                <div class="section-divider-content">
+                    <span class="divider-line"></span>
+                    <span class="divider-label">🔔 UPCOMING VIDEOS</span>
+                    <span class="divider-line"></span>
+                </div>
+            `;
+            container.appendChild(sectionDivider);
+            upcomingSectionAdded = true;
+        }
+
         const card = document.createElement('div');
         card.className = `day-card ${day.isTodaysTopic ? 'todays-topic-card' : ''}`;
         card.style.animationDelay = `${index * 0.1}s`;
