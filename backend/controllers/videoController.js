@@ -11,10 +11,23 @@ const InterviewQuestion = require('../models/InterviewQuestion');
 // @access  Public
 exports.getAllVideos = async (req, res) => {
     try {
-        // Fetch all videos including upcoming ones
-        const videos = await Video.find()
+        // Fetch all videos excluding dummy/test videos
+        // Only include videos with valid YouTube video IDs (11 characters) or upcoming videos
+        const videos = await Video.find({
+            $or: [
+                { isUpcoming: true }, // Include upcoming videos
+                { 
+                    videoId: { 
+                        $not: /^video_day_/i, // Exclude fake IDs like "video_day_1"
+                        $not: /^test/i // Exclude test IDs
+                    }
+                }
+            ]
+        })
             .sort({ isUpcoming: 1, day: 1 }) // Published videos first, then upcoming
             .select('-__v');
+        
+        console.log(`📹 Found ${videos.length} videos (excluding dummy data)`);
         
         // Fetch interview questions for all videos
         const videosWithQuestions = await Promise.all(
@@ -461,7 +474,7 @@ exports.saveYouTubeRoadmap = async (req, res) => {
         if (upcomingTopic && upcomingTopic.title && upcomingTopic.title.trim() !== '') {
             console.log(`💾 Saving upcoming topic: ${upcomingTopic.title}`);
             
-            const upcomingVideoId = 'upcoming-1';
+            const upcomingVideoId = 'upcoming_topic';
             
             // Upsert upcoming topic
             await Video.findOneAndUpdate(
