@@ -386,7 +386,7 @@ exports.bulkUpsertVideos = async (req, res) => {
 // @access  Private (Admin)
 exports.saveYouTubeRoadmap = async (req, res) => {
     try {
-        const { videoPlaylist, upcomingTopic, upcomingTopics, channelName, channelLogo } = req.body;
+        const { videoPlaylist, upcomingTopic, channelName, channelLogo } = req.body;
         
         if (!Array.isArray(videoPlaylist)) {
             return res.status(400).json({
@@ -414,7 +414,7 @@ exports.saveYouTubeRoadmap = async (req, res) => {
                         ...updateData,
                         videoId,
                         day: index + 1,
-                        isUpcoming: false // Ensure published videos are not marked as upcoming
+                        isUpcoming: false
                     },
                     { 
                         upsert: true, 
@@ -425,10 +425,8 @@ exports.saveYouTubeRoadmap = async (req, res) => {
                 
                 // Update interview questions if provided
                 if (interviewQuestions && interviewQuestions.length > 0) {
-                    // Delete existing questions
                     await InterviewQuestion.deleteMany({ videoId });
                     
-                    // Filter out empty questions and insert new ones
                     const validQuestions = interviewQuestions.filter(q => {
                         const question = typeof q === 'object' ? q.question : q;
                         return question && question.trim() !== '';
@@ -454,94 +452,66 @@ exports.saveYouTubeRoadmap = async (req, res) => {
         const savedCount = results.filter(r => r !== null).length;
         console.log(`✅ Successfully saved ${savedCount} videos`);
         
-        // ==================== SAVE UPCOMING TOPICS (MULTIPLE SUPPORT) ====================
-        // First, clear all existing upcoming videos
+        // ==================== SAVE SINGLE UPCOMING TOPIC ====================
         console.log('🗑️ Clearing existing upcoming videos...');
         await Video.deleteMany({ isUpcoming: true });
         await InterviewQuestion.deleteMany({ videoId: { $regex: '^upcoming-' } });
         
-        // Support both single upcomingTopic (legacy) and multiple upcomingTopics (new)
-        const topicsToSave = [];
-        
-        // Check for new format (multiple upcoming topics)
-        if (upcomingTopics && Array.isArray(upcomingTopics) && upcomingTopics.length > 0) {
-            topicsToSave.push(...upcomingTopics);
-        } 
-        // Check for legacy format (single upcoming topic)
-        else if (upcomingTopic && upcomingTopic.title && upcomingTopic.title.trim() !== '') {
-            topicsToSave.push(upcomingTopic);
-        }
-        
-        // Save all upcoming topics
         let upcomingCount = 0;
-        if (topicsToSave.length > 0) {
-            console.log(`💾 Saving ${topicsToSave.length} upcoming topic(s)...`);
+        if (upcomingTopic && upcomingTopic.title && upcomingTopic.title.trim() !== '') {
+            console.log(`💾 Saving upcoming topic: ${upcomingTopic.title}`);
             
-            await Promise.all(
-                topicsToSave.map(async (topic, index) => {
-                    if (!topic.title || topic.title.trim() === '') {
-                        console.warn(`⚠️ Skipping upcoming topic at index ${index}: missing title`);
-                        return;
-                    }
-                    
-                    // Generate unique videoId for each upcoming topic
-                    const upcomingVideoId = `upcoming-${index + 1}`;
-                    
-                    console.log(`  💾 Saving: ${topic.title} (${upcomingVideoId})`);
-                    
-                    // Upsert upcoming topic
-                    await Video.findOneAndUpdate(
-                        { videoId: upcomingVideoId },
-                        {
-                            videoId: upcomingVideoId,
-                            title: topic.title,
-                            description: topic.description || '',
-                            subtopics: topic.subtopics || [],
-                            estimatedDate: topic.estimatedDate || new Date().toISOString().split('T')[0],
-                            isUpcoming: true,
-                            status: 'upcoming',
-                            day: index + 1 // Simple numbering: 1, 2, 3...
-                        },
-                        {
-                            upsert: true,
-                            new: true,
-                            setDefaultsOnInsert: true
-                        }
-                    );
-                    
-                    // Save upcoming topic interview questions
-                    if (topic.interviewQuestions && topic.interviewQuestions.length > 0) {
-                        // Filter out empty questions
-                        const validQuestions = topic.interviewQuestions.filter(q => {
-                            const question = typeof q === 'object' ? q.question : q;
-                            return question && question.trim() !== '';
-                        });
-                        
-                        if (validQuestions.length > 0) {
-                            const questionsData = validQuestions.map((q, qIndex) => ({
-                                videoId: upcomingVideoId,
-                                question: typeof q === 'object' ? q.question : q,
-                                answer: typeof q === 'object' ? (q.answer || '') : '',
-                                difficulty: typeof q === 'object' ? (q.difficulty || '') : '',
-                                orderIndex: qIndex
-                            }));
-                            
-                            await InterviewQuestion.insertMany(questionsData);
-                        }
-                    }
-                    
-                    upcomingCount++;
-                })
+            const upcomingVideoId = 'upcoming-1';
+            
+            // Upsert upcoming topic
+            await Video.findOneAndUpdate(
+                { videoId: upcomingVideoId },
+                {
+                    videoId: upcomingVideoId,
+                    title: upcomingTopic.title,
+                    description: upcomingTopic.description || '',
+                    subtopics: upcomingTopic.subtopics || [],
+                    estimatedDate: upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0],
+                    isUpcoming: true,
+                    status: 'upcoming',
+                    day: 1
+                },
+                {
+                    upsert: true,
+                    new: true,
+                    setDefaultsOnInsert: true
+                }
             );
             
-            console.log(`✅ Successfully saved ${upcomingCount} upcoming topic(s)`);
+            // Save upcoming topic interview questions
+            if (upcomingTopic.interviewQuestions && upcomingTopic.interviewQuestions.length > 0) {
+                const validQuestions = upcomingTopic.interviewQuestions.filter(q => {
+                    const question = typeof q === 'object' ? q.question : q;
+                    return question && question.trim() !== '';
+                });
+                
+                if (validQuestions.length > 0) {
+                    const questionsData = validQuestions.map((q, qIndex) => ({
+                        videoId: upcomingVideoId,
+                        question: typeof q === 'object' ? q.question : q,
+                        answer: typeof q === 'object' ? (q.answer || '') : '',
+                        difficulty: typeof q === 'object' ? (q.difficulty || '') : '',
+                        orderIndex: qIndex
+                    }));
+                    
+                    await InterviewQuestion.insertMany(questionsData);
+                }
+            }
+            
+            upcomingCount = 1;
+            console.log(`✅ Successfully saved upcoming topic`);
         } else {
-            console.log('ℹ️ No upcoming topics to save');
+            console.log('ℹ️ No upcoming topic to save');
         }
         
         res.status(200).json({
             success: true,
-            message: `Successfully saved ${savedCount} videos and ${upcomingCount} upcoming topic(s)`,
+            message: `Successfully saved ${savedCount} videos${upcomingCount ? ' and 1 upcoming topic' : ''}`,
             count: savedCount,
             upcomingCount: upcomingCount
         });

@@ -1513,62 +1513,40 @@ async function saveToServer() {
             showToast('⚠️ Warning: Could not save to local database', 'warning');
         }
 
-        // ==================== SEPARATE PUBLISHED & UPCOMING VIDEOS ====================
-        // Videos WITH videoId = Published (from YouTube)
-        // Videos WITHOUT videoId = Upcoming (manually added)
-        
+        // Prepare published videos data
         const publishedVideos = [];
-        const upcomingVideos = [];
         
         videoPlaylistData.videoPlaylist.forEach((video) => {
-            const validSubtopics = (video.subtopics || [])
-                .filter(topic => topic && topic.trim() !== '');
-            
-            const validQuestions = (video.interviewQuestions || [])
-                .filter(q => {
-                    if (!q) return false;
-                    if (typeof q === 'string') return q.trim() !== '';
-                    if (typeof q === 'object') return q.question && q.question.trim() !== '';
-                    return false;
-                })
-                .map(q => {
-                    if (typeof q === 'string') {
-                        return { question: q, answer: '' };
-                    }
-                    return q;
-                });
-            
-            const videoData = {
-                videoId: video.videoId,
-                title: video.title,
-                subtopics: validSubtopics,
-                interviewQuestions: validQuestions,
-                ...(video.estimatedDate && { estimatedDate: video.estimatedDate })
-            };
-            
-            // Check if this is a published video (has videoId from YouTube) or upcoming (manually added)
-            if (video.videoId && !video.videoId.startsWith('upcoming-')) {
-                // Published video from YouTube
-                publishedVideos.push(videoData);
-            } else {
-                // Upcoming video (manually added, no real YouTube ID)
-                upcomingVideos.push({
-                    title: video.title || 'Untitled Topic',
-                    description: video.description || '',
+            // Only include videos with valid YouTube videoId
+            if (video.videoId && !video.videoId.startsWith('upcoming-') && !video.videoId.startsWith('draft-')) {
+                const validSubtopics = (video.subtopics || [])
+                    .filter(topic => topic && topic.trim() !== '');
+                
+                const validQuestions = (video.interviewQuestions || [])
+                    .filter(q => {
+                        if (!q) return false;
+                        if (typeof q === 'string') return q.trim() !== '';
+                        if (typeof q === 'object') return q.question && q.question.trim() !== '';
+                        return false;
+                    })
+                    .map(q => {
+                        if (typeof q === 'string') {
+                            return { question: q, answer: '' };
+                        }
+                        return q;
+                    });
+                
+                publishedVideos.push({
+                    videoId: video.videoId,
+                    title: video.title,
                     subtopics: validSubtopics,
-                    interviewQuestions: validQuestions,
-                    estimatedDate: video.estimatedDate || new Date().toISOString().split('T')[0]
+                    interviewQuestions: validQuestions
                 });
             }
         });
 
-        // ==================== COLLECT UPCOMING TOPICS ====================
-        const upcomingTopics = [];
-        
-        // Add manually added videos as upcoming topics
-        upcomingTopics.push(...upcomingVideos);
-        
-        // Add the main upcomingTopic if it exists and has content
+        // Prepare upcoming topic data (single topic only)
+        let upcomingTopicData = null;
         if (videoPlaylistData.upcomingTopic && videoPlaylistData.upcomingTopic.title?.trim()) {
             const validSubtopics = (videoPlaylistData.upcomingTopic.subtopics || [])
                 .filter(topic => topic && topic.trim() !== '');
@@ -1587,26 +1565,28 @@ async function saveToServer() {
                     return q;
                 });
             
-            upcomingTopics.push({
+            upcomingTopicData = {
                 title: videoPlaylistData.upcomingTopic.title.trim(),
                 description: videoPlaylistData.upcomingTopic.description?.trim() || '',
                 subtopics: validSubtopics,
                 interviewQuestions: validQuestions,
                 estimatedDate: videoPlaylistData.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0]
-            });
+            };
         }
 
-        // ==================== PREPARE DATA TO SEND ====================
+        // Prepare data to send
         const dataToSave = {
             channelName: videoPlaylistData.channelName,
             channelLogo: videoPlaylistData.channelLogo,
-            videoPlaylist: publishedVideos, // Only published videos
-            upcomingTopics: upcomingTopics  // Array of upcoming topics (NEW)
+            videoPlaylist: publishedVideos,
+            upcomingTopic: upcomingTopicData,
+            draftVideos: videoPlaylistData.draftVideos || []
         };
 
         console.log('💾 Saving to MongoDB:', {
             publishedVideos: publishedVideos.length,
-            upcomingTopics: upcomingTopics.length
+            upcomingTopic: upcomingTopicData ? upcomingTopicData.title : 'None',
+            draftVideos: (videoPlaylistData.draftVideos || []).length
         });
 
         const response = await fetch(API_URL, {
@@ -1850,7 +1830,7 @@ async function manualSyncWithMongoDB() {
             throw new Error('Admin API not loaded');
         }
         
-        // Fetch complete roadmap including upcomingTopics
+        // Fetch complete roadmap including upcomingTopic
         const roadmapData = await adminAPI.getCompleteRoadmap();
         const apiVideos = roadmapData.videoPlaylist || [];
         
@@ -1876,22 +1856,19 @@ async function manualSyncWithMongoDB() {
             };
         });
         
-        // Load upcomingTopics from MongoDB (now an array)
-        if (roadmapData.upcomingTopics && roadmapData.upcomingTopics.length > 0) {
-            console.log(`🔔 Loading ${roadmapData.upcomingTopics.length} upcoming topics from MongoDB`);
-            // For backward compatibility, store the first upcoming topic in upcomingTopic
+        // Load single upcomingTopic from MongoDB
+        if (roadmapData.upcomingTopic && roadmapData.upcomingTopic.title) {
+            console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
             videoPlaylistData.upcomingTopic = {
-                ...roadmapData.upcomingTopics[0],
-                interviewQuestions: (roadmapData.upcomingTopics[0].interviewQuestions || []).map(q => {
+                ...roadmapData.upcomingTopic,
+                interviewQuestions: (roadmapData.upcomingTopic.interviewQuestions || []).map(q => {
                     if (typeof q === 'string') return { question: q, answer: '' };
                     return q;
                 })
             };
-            videoPlaylistData.upcomingTopics = roadmapData.upcomingTopics;
         } else {
-            console.log('📭 No upcoming topics found in MongoDB');
+            console.log('📭 No upcoming topic found in MongoDB');
             videoPlaylistData.upcomingTopic = null;
-            videoPlaylistData.upcomingTopics = [];
         }
         
         // Update IndexedDB with fresh data
