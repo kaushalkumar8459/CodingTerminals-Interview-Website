@@ -30,22 +30,22 @@ function initializeIndexedDB() {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
         // Handle database upgrade (first time or version change)
-        request.onupgradeneeded = function(event) {
+        request.onupgradeneeded = function (event) {
             db = event.target.result;
-            
+
             console.log('🔄 Upgrading database to version', DB_VERSION);
-            
+
             // Create roadmap object store if it doesn't exist
             if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
                 const objectStore = db.createObjectStore(ROADMAP_STORE_NAME, { keyPath: '_id' });
-                
+
                 // Create indexes for better query performance
                 objectStore.createIndex('type', 'type', { unique: false });
                 objectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-                
+
                 console.log('✅ IndexedDB roadmap store created:', ROADMAP_STORE_NAME);
             }
-            
+
             // Create study notes store if it doesn't exist (for compatibility)
             const studyNotesStore = APP_CONFIG.INDEXEDDB.STORES.STUDY_NOTES;
             if (!db.objectStoreNames.contains(studyNotesStore)) {
@@ -58,36 +58,36 @@ function initializeIndexedDB() {
         };
 
         // Handle success
-        request.onsuccess = function(event) {
+        request.onsuccess = function (event) {
             db = event.target.result;
-            
+
             // Check if the required object store exists
             if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
                 console.error('❌ Object store not found:', ROADMAP_STORE_NAME);
                 console.log('Available stores:', Array.from(db.objectStoreNames));
-                
+
                 // Close and delete the database, then retry
                 db.close();
                 console.log('⚠️ Recreating database with correct object store...');
-                
+
                 const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-                deleteRequest.onsuccess = function() {
+                deleteRequest.onsuccess = function () {
                     console.log('🗑️ Old database deleted, reinitializing...');
                     setTimeout(() => initializeIndexedDB(), 500);
                 };
-                deleteRequest.onerror = function() {
+                deleteRequest.onerror = function () {
                     console.error('❌ Failed to delete database');
                 };
                 return;
             }
-            
+
             console.log('✅ IndexedDB initialized successfully');
             console.log('Available stores:', Array.from(db.objectStoreNames));
             resolve(db);
         };
 
         // Handle error
-        request.onerror = function(event) {
+        request.onerror = function (event) {
             console.error('❌ IndexedDB initialization failed:', event.target.error);
             reject(event.target.error);
         };
@@ -108,7 +108,7 @@ function saveRoadmapToIndexedDB(data) {
 
         const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-        
+
         const YoutubeRoadmapData = {
             _id: 'YoutubeRoadmap_main',
             type: 'YoutubeRoadmap',
@@ -118,15 +118,15 @@ function saveRoadmapToIndexedDB(data) {
             upcomingTopic: data.upcomingTopic,
             updatedAt: new Date().toISOString()
         };
-        
+
         const request = objectStore.put(YoutubeRoadmapData);
 
-        request.onsuccess = function() {
+        request.onsuccess = function () {
             console.log('✅ Roadmap saved to IndexedDB');
             resolve(request.result);
         };
 
-        request.onerror = function() {
+        request.onerror = function () {
             console.error('❌ Error saving to IndexedDB:', request.error);
             reject(request.error);
         };
@@ -148,11 +148,11 @@ function loadRoadmapFromIndexedDB() {
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
         const request = objectStore.get('YoutubeRoadmap_main');
 
-        request.onsuccess = function() {
+        request.onsuccess = function () {
             resolve(request.result || null);
         };
 
-        request.onerror = function() {
+        request.onerror = function () {
             reject(request.error);
         };
     });
@@ -173,11 +173,11 @@ function clearRoadmapFromIndexedDB() {
         const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
         const request = objectStore.delete('YoutubeRoadmap_main');
 
-        request.onsuccess = function() {
+        request.onsuccess = function () {
             resolve();
         };
 
-        request.onerror = function() {
+        request.onerror = function () {
             reject(request.error);
         };
     });
@@ -209,50 +209,114 @@ async function fetchPlaylistVideos() {
             description: item.snippet.description,
             thumbnail: item.snippet.thumbnails.medium.url
         }));
+        
+        // Fetch statistics AND privacy status for all videos
+        const publicVideos = await fetchVideoStatisticsAndFilter(videos);
 
-        // Fetch statistics (views, likes, comments) for all videos
-        await fetchVideoStatistics(videos);
-
-        return videos;
+        return publicVideos;
     } catch (error) {
-        console.error('Error fetching YouTube playlist:', error);
         return [];
     }
 }
 
-// Fetch video statistics (views, likes, comment count) from YouTube API
-async function fetchVideoStatistics(videos) {
+// Fetch video statistics (views, likes, comment count) and filter by privacy status
+async function fetchVideoStatisticsAndFilter(videos) {
     try {
-        if (videos.length === 0) return;
+        if (videos.length === 0) return [];
 
         // Get all video IDs
         const videoIds = videos.map(v => v.videoId).join(',');
 
-        // Fetch statistics for all videos in one API call
+        console.log('🔍 Fetching video details for:', videoIds.substring(0, 100) + '...');
+
+        // Fetch statistics AND status for all videos in one API call
         const response = await fetch(
-            `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds}&key=${YOUTUBE_API_KEY}`
+            `https://www.googleapis.com/youtube/v3/videos?part=statistics,status&id=${videoIds}&key=${YOUTUBE_API_KEY}`
         );
 
         if (!response.ok) {
-            throw new Error('Failed to fetch video statistics');
+            throw new Error('Failed to fetch video statistics and status');
         }
 
         const data = await response.json();
 
-        // Map statistics to videos
+        // Create a map of valid (public) video IDs
+        const publicVideoIds = new Set();
+        const videoDetails = [];
+
+        // Map statistics to videos and track public videos
         data.items.forEach(item => {
             const video = videos.find(v => v.videoId === item.id);
-            if (video) {
-                video.viewCount = parseInt(item.statistics.viewCount || 0);
-                video.likeCount = parseInt(item.statistics.likeCount || 0);
-                video.commentCount = parseInt(item.statistics.commentCount || 0);
+            if (video && item.status) {
+                // Check if video is public
+                const privacyStatus = item.status.privacyStatus;
+                const uploadStatus = item.status.uploadStatus;
+
+                const videoInfo = {
+                    videoId: item.id,
+                    title: video.title,
+                    privacyStatus: privacyStatus,
+                    uploadStatus: uploadStatus,
+                    embeddable: item.status.embeddable,
+                    publicStatsViewable: item.status.publicStatsViewable,
+                    viewCount: parseInt(item.statistics.viewCount || 0),
+                    likeCount: parseInt(item.statistics.likeCount || 0),
+                    commentCount: parseInt(item.statistics.commentCount || 0)
+                };
+
+                videoDetails.push(videoInfo);
+
+                // Only include videos that are public and successfully processed
+                if (privacyStatus === 'public' && uploadStatus === 'processed') {
+                    publicVideoIds.add(item.id);
+
+                    // Add statistics
+                    video.viewCount = parseInt(item.statistics.viewCount || 0);
+                    video.likeCount = parseInt(item.statistics.likeCount || 0);
+                    video.commentCount = parseInt(item.statistics.commentCount || 0);
+                    video.privacyStatus = privacyStatus;
+
+                    console.log(`✅ Public video: "${video.title.substring(0, 50)}..." (Views: ${formatNumber(video.viewCount)})`);
+                } else {
+                    console.log(`🚫 Excluding video: "${video.title}" (Status: ${privacyStatus}, Upload: ${uploadStatus})`);
+                }
             }
         });
 
-        console.log('✅ Fetched statistics for all videos');
+        console.log('📋 Video Details Summary:', videoDetails);
+
+        // Filter to only include public videos
+        const publicVideos = videos.filter(v => publicVideoIds.has(v.videoId));
+
+        // Re-number the days for public videos only
+        publicVideos.forEach((video, index) => {
+            video.day = index + 1;
+        });
+
+        console.log(`✅ Fetched ${publicVideos.length} public videos (filtered from ${videos.length} total)`);
+        console.log('📹 Final public videos list:', publicVideos.map(v => ({
+            day: v.day,
+            videoId: v.videoId,
+            title: v.title.substring(0, 50) + '...',
+            views: formatNumber(v.viewCount),
+            likes: formatNumber(v.likeCount),
+            privacyStatus: v.privacyStatus
+        })));
+
+        return publicVideos;
     } catch (error) {
-        console.error('Error fetching video statistics:', error);
+        console.error('❌ Error fetching video statistics and status:', error);
+        // Return all videos if filtering fails (fallback)
+        return videos;
     }
+}
+
+// Fetch video statistics (views, likes, comment count) from YouTube API
+// This function is kept for backward compatibility but now uses the combined function
+async function fetchVideoStatistics(videos) {
+    // This function is now handled by fetchVideoStatisticsAndFilter
+    // Keeping it for backward compatibility
+    return;
 }
 
 // Fetch latest comments for a specific video
@@ -327,10 +391,10 @@ function formatRelativeTime(dateString) {
 async function loadData() {
     try {
         console.log('🚀 Starting offline-first load...');
-        
+
         // Initialize IndexedDB first
         await initializeIndexedDB();
-        
+
         // Fetch YouTube videos for merging
         youtubeVideos = await fetchPlaylistVideos();
         if (youtubeVideos.length > 0) {
@@ -348,11 +412,11 @@ async function loadData() {
         // ==================== STEP 2: IF DATA EXISTS → RENDER UI INSTANTLY ====================
         if (indexedDBData && indexedDBData.videoPlaylist && indexedDBData.videoPlaylist.length > 0) {
             console.log('📂 Found data in IndexedDB - Rendering instantly...');
-            
+
             // Merge IndexedDB data with YouTube data
             videoPlaylistData.channelName = indexedDBData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
             videoPlaylistData.channelLogo = indexedDBData.channelLogo || APP_CONFIG.ASSETS.LOGO;
-            
+
             if (indexedDBData.upcomingTopic) {
                 videoPlaylistData.upcomingTopic = {
                     ...indexedDBData.upcomingTopic,
@@ -362,14 +426,14 @@ async function loadData() {
                     })
                 };
             }
-            
+
             videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
                 const savedVideo = indexedDBData.videoPlaylist[index] || {};
                 const interviewQuestions = (savedVideo.interviewQuestions || []).map(q => {
                     if (typeof q === 'string') return { question: q, answer: '' };
                     return q;
                 });
-                
+
                 return {
                     ...video,
                     _id: savedVideo._id,
@@ -377,7 +441,7 @@ async function loadData() {
                     interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
                 };
             });
-            
+
             // ✅ RENDER UI INSTANTLY
             renderVideoList();
             showToast('✅ Loaded instantly from cache', 'success');
@@ -387,17 +451,17 @@ async function loadData() {
 
         // ==================== STEP 3: CALL MONGODB API (BACKGROUND) ====================
         console.log('🔄 Syncing with MongoDB in background...');
-        
+
         try {
             // Check if adminAPI is available
             if (typeof adminAPI !== 'undefined') {
                 // Fetch complete roadmap including upcomingTopic
                 const roadmapData = await adminAPI.getCompleteRoadmap();
                 const apiVideos = roadmapData.videoPlaylist || [];
-                
+
                 if (apiVideos && apiVideos.length > 0) {
                     console.log(`🌐 Fetched ${apiVideos.length} videos from MongoDB`);
-                    
+
                     // Merge MongoDB data with YouTube data
                     videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
                         const apiVideo = apiVideos.find(v => v.videoId === video.videoId) || apiVideos[index] || {};
@@ -405,7 +469,7 @@ async function loadData() {
                             if (typeof q === 'string') return { question: q, answer: '' };
                             return q;
                         });
-                        
+
                         return {
                             ...video,
                             _id: apiVideo._id,
@@ -413,7 +477,7 @@ async function loadData() {
                             interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
                         };
                     });
-                    
+
                     // Load upcomingTopic from MongoDB
                     if (roadmapData.upcomingTopic) {
                         console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
@@ -428,11 +492,11 @@ async function loadData() {
                         console.log('📭 No upcoming topic found in MongoDB');
                         videoPlaylistData.upcomingTopic = null;
                     }
-                    
+
                     // ==================== STEP 4: UPDATE INDEXEDDB ====================
                     await saveRoadmapToIndexedDB(videoPlaylistData);
                     console.log('💾 IndexedDB updated with latest data');
-                    
+
                     // ==================== STEP 5: REFRESH UI SILENTLY ====================
                     renderVideoList();
                     showToast('✓ Synced with MongoDB', 'success');
@@ -444,7 +508,7 @@ async function loadData() {
             }
         } catch (mongoError) {
             console.warn('⚠️ MongoDB sync failed:', mongoError.message);
-            
+
             // If we had cache, we already showed it
             if (indexedDBData) {
                 showToast('⚠ Using cached data (offline)', 'warning');
@@ -466,7 +530,7 @@ async function loadData() {
     } catch (error) {
         console.error('❌ Error in loadData:', error);
         showToast('❌ Error loading data: ' + error.message, 'error');
-        
+
         // If we have any data at all, render it
         if (videoPlaylistData.videoPlaylist.length > 0) {
             renderVideoList();
@@ -477,7 +541,7 @@ async function loadData() {
 // Render video list
 function renderVideoList() {
     const container = document.getElementById('videoListContainer');
-    
+
     if (videoPlaylistData.videoPlaylist.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center;">No videos added yet</p>';
         return;
@@ -521,13 +585,13 @@ async function editVideo(index) {
     renderVideoList();
 
     const editorPanel = document.getElementById('editorPanel');
-    
+
     // Prepare subtopics HTML - handle both plain text and HTML content
     let subtopicsHTML = '';
     if (video.subtopics && video.subtopics.length > 0) {
         // Check if subtopics contain HTML or plain text
         const hasHTML = video.subtopics.some(topic => topic.includes('<') && topic.includes('>'));
-        
+
         if (hasHTML) {
             // Join HTML content directly
             subtopicsHTML = video.subtopics.join('');
@@ -595,10 +659,10 @@ async function editVideo(index) {
             <h3>💼 Interview Questions</h3>
             <div class="list-items" id="questionsList">
                 ${(video.interviewQuestions && video.interviewQuestions.length > 0 ? video.interviewQuestions : [{ question: '', answer: '' }]).map((item, i) => {
-                    const question = typeof item === 'object' ? item.question : item;
-                    const answer = typeof item === 'object' ? (item.answer || '') : '';
-                    
-                    return `
+        const question = typeof item === 'object' ? item.question : item;
+        const answer = typeof item === 'object' ? (item.answer || '') : '';
+
+        return `
                         <div class="qa-container">
                             <div class="qa-reorder-buttons">
                                 <button class="btn-reorder" onclick="moveQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
@@ -616,7 +680,7 @@ async function editVideo(index) {
                             <button class="qa-delete-btn" onclick="removeQuestion(${i})">✕</button>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             <button class="btn-add" onclick="addQuestion()">➕ Add Question</button>
             <button class="btn-clear-all" onclick="clearAllQuestions()">🗑️ Clear All Questions</button>
@@ -666,18 +730,18 @@ A: TypeScript adds static typing to JS...</div>
         modules: {
             toolbar: [
                 ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'color': [] }, { 'background': [] }],
                 ['clean']
             ]
         }
     });
-    
+
     // Set initial content - directly set the HTML content
     if (subtopicsHTML) {
         subtopicsEditor.root.innerHTML = subtopicsHTML;
     }
-    
+
     // Save changes on text change
     subtopicsEditor.on('text-change', () => {
         const htmlContent = subtopicsEditor.root.innerHTML;
@@ -686,7 +750,7 @@ A: TypeScript adds static typing to JS...</div>
         tempDiv.innerHTML = htmlContent;
         const listItems = tempDiv.querySelectorAll('li');
         videoPlaylistData.videoPlaylist[currentEditingIndex].subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
-        
+
         // If no list items, save the entire content as a single item
         if (videoPlaylistData.videoPlaylist[currentEditingIndex].subtopics.length === 0) {
             const textContent = subtopicsEditor.getText().trim();
@@ -695,7 +759,7 @@ A: TypeScript adds static typing to JS...</div>
             }
         }
     });
-    
+
     quillEditors['subtopicsEditor'] = subtopicsEditor;
 
     // Initialize Quill editors for questions and answers
@@ -712,7 +776,7 @@ A: TypeScript adds static typing to JS...</div>
                 ]
             }
         });
-        
+
         quillEditors[questionEditorId].on('text-change', () => {
             updateQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
         });
@@ -725,14 +789,14 @@ A: TypeScript adds static typing to JS...</div>
                 toolbar: [
                     ['bold', 'italic', 'underline', 'strike'],
                     [{ 'header': [1, 2, 3, false] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                     [{ 'color': [] }, { 'background': [] }],
                     ['link', 'code-block'],
                     ['clean']
                 ]
             }
         });
-        
+
         quillEditors[answerEditorId].on('text-change', () => {
             updateQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
         });
@@ -755,16 +819,16 @@ function editUpcomingTopic() {
     }
 
     const topic = videoPlaylistData.upcomingTopic;
-    
+
     // Get current date in YYYY-MM-DD format
     const currentDate = new Date().toISOString().split('T')[0];
-    
+
     // Prepare subtopics HTML - handle both plain text and HTML content
     let subtopicsHTML = '';
     if (topic.subtopics && topic.subtopics.length > 0) {
         // Check if subtopics contain HTML or plain text
         const hasHTML = topic.subtopics.some(t => t.includes('<') && t.includes('>'));
-        
+
         if (hasHTML) {
             // Join HTML content directly
             subtopicsHTML = topic.subtopics.join('');
@@ -773,7 +837,7 @@ function editUpcomingTopic() {
             subtopicsHTML = `<ul>${topic.subtopics.map(t => `<li>${t}</li>`).join('')}</ul>`;
         }
     }
-    
+
     const editorPanel = document.getElementById('editorPanel');
     editorPanel.innerHTML = `
         <h2>🔔 Edit Upcoming Topic</h2>
@@ -800,10 +864,10 @@ function editUpcomingTopic() {
             <h3>💼 Interview Questions</h3>
             <div class="list-items" id="upcomingQuestions">
                 ${(topic.interviewQuestions || [{ question: '', answer: '' }]).map((item, i) => {
-                    const question = typeof item === 'object' ? item.question : item;
-                    const answer = typeof item === 'object' ? item.answer : '';
-                    
-                    return `
+        const question = typeof item === 'object' ? item.question : item;
+        const answer = typeof item === 'object' ? item.answer : '';
+
+        return `
                         <div class="qa-container">
                             <div class="qa-reorder-buttons">
                                 <button class="btn-reorder" onclick="moveUpcomingQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
@@ -821,7 +885,7 @@ function editUpcomingTopic() {
                             <button class="qa-delete-btn" onclick="removeUpcomingQuestion(${i})">✕</button>
                         </div>
                     `;
-                }).join('')}
+    }).join('')}
             </div>
             <button class="btn-add" onclick="addUpcomingQuestion()">➕ Add Question</button>
             <button class="btn-clear-all" onclick="clearAllUpcomingQuestions()" style="margin-left: 10px;">🗑️ Clear All Questions</button>
@@ -876,18 +940,18 @@ A: TypeScript adds static typing to JS...</div>
         modules: {
             toolbar: [
                 ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'color': [] }, { 'background': [] }],
                 ['clean']
             ]
         }
     });
-    
+
     // Set initial content - directly set the HTML content
     if (subtopicsHTML) {
         upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
     }
-    
+
     // Save changes on text change
     upcomingSubtopicsEditor.on('text-change', () => {
         const htmlContent = upcomingSubtopicsEditor.root.innerHTML;
@@ -896,7 +960,7 @@ A: TypeScript adds static typing to JS...</div>
         tempDiv.innerHTML = htmlContent;
         const listItems = tempDiv.querySelectorAll('li');
         videoPlaylistData.upcomingTopic.subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
-        
+
         // If no list items, save the entire content as a single item
         if (videoPlaylistData.upcomingTopic.subtopics.length === 0) {
             const textContent = upcomingSubtopicsEditor.getText().trim();
@@ -905,7 +969,7 @@ A: TypeScript adds static typing to JS...</div>
             }
         }
     });
-    
+
     quillEditors['upcomingSubtopicsEditor'] = upcomingSubtopicsEditor;
 
     // Initialize Quill editors for upcoming questions and answers
@@ -922,7 +986,7 @@ A: TypeScript adds static typing to JS...</div>
                 ]
             }
         });
-        
+
         quillEditors[questionEditorId].on('text-change', () => {
             updateUpcomingQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
         });
@@ -935,14 +999,14 @@ A: TypeScript adds static typing to JS...</div>
                 toolbar: [
                     ['bold', 'italic', 'underline', 'strike'],
                     [{ 'header': [1, 2, 3, false] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                     [{ 'color': [] }, { 'background': [] }],
                     ['link', 'code-block'],
                     ['clean']
                 ]
             }
         });
-        
+
         quillEditors[answerEditorId].on('text-change', () => {
             updateUpcomingQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
         });
@@ -953,11 +1017,11 @@ A: TypeScript adds static typing to JS...</div>
 function toggleBulkAdd(type) {
     const container = document.getElementById(type === 'subtopics' ? 'bulkSubtopics' : type === 'questions' ? 'bulkQuestions' : 'bulkUpcomingQuestions');
     container.classList.toggle('show');
-    
+
     // Initialize Quill editor for bulk add if showing
     if (container.classList.contains('show')) {
         const editorId = type === 'questions' ? 'bulkQuestionsEditor' : 'bulkUpcomingQuestionsEditor';
-        
+
         // Only initialize if not already initialized
         if (!quillEditors[editorId]) {
             quillEditors[editorId] = new Quill(`#${editorId}`, {
@@ -965,7 +1029,7 @@ function toggleBulkAdd(type) {
                 modules: {
                     toolbar: [
                         ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                         [{ 'color': [] }, { 'background': [] }],
                         ['clean']
                     ]
@@ -973,12 +1037,12 @@ function toggleBulkAdd(type) {
                 placeholder: 'Type or paste your questions here...\n\nExample:\nQ: What is JavaScript?\nA: JavaScript is a programming language...\n\nOr one question per line'
             });
         }
-        
+
         // Pre-populate editor with existing questions
         const editor = quillEditors[editorId];
         if (editor) {
             let existingQuestions = [];
-            
+
             if (type === 'questions') {
                 // Get existing questions from current video
                 existingQuestions = videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions || [];
@@ -986,7 +1050,7 @@ function toggleBulkAdd(type) {
                 // Get existing questions from upcoming topic
                 existingQuestions = videoPlaylistData.upcomingTopic.interviewQuestions || [];
             }
-            
+
             // Filter out empty questions and format them
             const formattedText = existingQuestions
                 .filter(q => {
@@ -999,11 +1063,11 @@ function toggleBulkAdd(type) {
                     if (typeof q === 'object') {
                         const question = q.question || '';
                         const answer = q.answer || '';
-                        
+
                         // Remove HTML tags for plain text display in bulk editor
                         const plainQuestion = question.replace(/<[^>]*>/g, '').trim();
                         const plainAnswer = answer.replace(/<[^>]*>/g, '').trim();
-                        
+
                         if (plainAnswer) {
                             return `Q: ${plainQuestion}\nA: ${plainAnswer}`;
                         } else {
@@ -1013,7 +1077,7 @@ function toggleBulkAdd(type) {
                     return q;
                 })
                 .join('\n\n');
-            
+
             // Set the existing content in the editor
             if (formattedText) {
                 editor.setText(formattedText);
@@ -1050,13 +1114,13 @@ function applyBulkQuestions() {
 
     // Check if using Q:/A: format
     const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
-    
+
     const formattedQuestions = [];
 
     if (hasQAFormat) {
         // Parse Q: and A: format - preserve HTML formatting
         let currentQuestion = null;
-        
+
         lines.forEach(line => {
             if (line.startsWith('Q:')) {
                 // Save previous question if exists
@@ -1064,9 +1128,9 @@ function applyBulkQuestions() {
                     formattedQuestions.push(currentQuestion);
                 }
                 // Start new question
-                currentQuestion = { 
-                    question: line.substring(2).trim(), 
-                    answer: '' 
+                currentQuestion = {
+                    question: line.substring(2).trim(),
+                    answer: ''
                 };
             } else if (line.startsWith('A:')) {
                 // Add answer to current question
@@ -1081,7 +1145,7 @@ function applyBulkQuestions() {
                 currentQuestion.question += '<br>' + line;
             }
         });
-        
+
         // Don't forget the last question
         if (currentQuestion) {
             formattedQuestions.push(currentQuestion);
@@ -1089,9 +1153,9 @@ function applyBulkQuestions() {
     } else {
         // Simple format: one question per line
         lines.forEach(line => {
-            formattedQuestions.push({ 
-                question: line, 
-                answer: '' 
+            formattedQuestions.push({
+                question: line,
+                answer: ''
             });
         });
     }
@@ -1105,14 +1169,14 @@ function applyBulkQuestions() {
     if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
         videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
     }
-    
+
     videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push(...formattedQuestions);
-    
+
     showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
-    
+
     // Clear the editor
     editor.setText('');
-    
+
     editVideo(currentEditingIndex);
 }
 
@@ -1138,13 +1202,13 @@ function applyBulkUpcomingQuestions() {
 
     // Check if using Q:/A: format
     const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
-    
+
     const formattedQuestions = [];
 
     if (hasQAFormat) {
         // Parse Q: and A: format
         let currentQuestion = null;
-        
+
         lines.forEach(line => {
             if (line.startsWith('Q:')) {
                 // Save previous question if exists
@@ -1152,9 +1216,9 @@ function applyBulkUpcomingQuestions() {
                     formattedQuestions.push(currentQuestion);
                 }
                 // Start new question
-                currentQuestion = { 
-                    question: line.substring(2).trim(), 
-                    answer: '' 
+                currentQuestion = {
+                    question: line.substring(2).trim(),
+                    answer: ''
                 };
             } else if (line.startsWith('A:')) {
                 // Add answer to current question
@@ -1169,7 +1233,7 @@ function applyBulkUpcomingQuestions() {
                 currentQuestion.question += '<br>' + line;
             }
         });
-        
+
         // Don't forget the last question
         if (currentQuestion) {
             formattedQuestions.push(currentQuestion);
@@ -1177,9 +1241,9 @@ function applyBulkUpcomingQuestions() {
     } else {
         // Simple format: one question per line
         lines.forEach(line => {
-            formattedQuestions.push({ 
-                question: line, 
-                answer: '' 
+            formattedQuestions.push({
+                question: line,
+                answer: ''
             });
         });
     }
@@ -1193,14 +1257,14 @@ function applyBulkUpcomingQuestions() {
     if (!videoPlaylistData.upcomingTopic.interviewQuestions) {
         videoPlaylistData.upcomingTopic.interviewQuestions = [];
     }
-    
+
     videoPlaylistData.upcomingTopic.interviewQuestions.push(...formattedQuestions);
-    
+
     showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
-    
+
     // Clear the editor
     editor.setText('');
-    
+
     editUpcomingTopic();
 }
 
@@ -1379,7 +1443,7 @@ async function copyUpcomingToLatestVideo() {
     const questionsCount = videoPlaylistData.upcomingTopic.interviewQuestions?.filter(q => q.question?.trim()).length || 0;
 
     // Create video selection dropdown
-    const videoOptions = videoPlaylistData.videoPlaylist.map((video, index) => 
+    const videoOptions = videoPlaylistData.videoPlaylist.map((video, index) =>
         `<option value="${index}">Day ${index + 1}: ${video.title || 'Untitled'}</option>`
     ).join('');
 
@@ -1387,11 +1451,11 @@ async function copyUpcomingToLatestVideo() {
     const modalBody = document.getElementById('confirmModalBody');
     const modalTitle = document.getElementById('confirmModalLabel');
     const confirmBtn = document.getElementById('confirmModalBtn');
-    
+
     modalTitle.textContent = '📋 Copy "Coming Soon" Content';
     confirmBtn.textContent = 'Copy';
     confirmBtn.className = 'btn btn-primary';
-    
+
     modalBody.innerHTML = `
         <div style="text-align: left;">
             <p style="margin-bottom: 15px;">This will copy:</p>
@@ -1414,22 +1478,22 @@ async function copyUpcomingToLatestVideo() {
     `;
 
     const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-    
+
     // Remove old event listeners by cloning the button
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
+
     // Add new event listener
     newConfirmBtn.addEventListener('click', async () => {
         const selectedIndex = parseInt(document.getElementById('targetVideoSelect').value);
         const targetVideo = videoPlaylistData.videoPlaylist[selectedIndex];
-        
+
         modal.hide();
-        
+
         // Copy subtopics (filter out empty ones)
         const upcomingSubtopics = (videoPlaylistData.upcomingTopic.subtopics || [])
             .filter(topic => topic && topic.trim() !== '');
-        
+
         // Copy interview questions (filter out empty ones)
         const upcomingQuestions = (videoPlaylistData.upcomingTopic.interviewQuestions || [])
             .filter(q => {
@@ -1456,18 +1520,18 @@ async function copyUpcomingToLatestVideo() {
 
         // Save to server
         const success = await saveToServer();
-        
+
         if (success) {
             showToast(
                 `✅ Successfully copied ${upcomingSubtopics.length} subtopics and ${upcomingQuestions.length} questions to Day ${selectedIndex + 1}!`,
                 'success'
             );
-            
+
             // Switch to the selected video to show the changes
             editVideo(selectedIndex);
         }
     });
-    
+
     modal.show();
 }
 
@@ -1483,9 +1547,9 @@ async function deleteVideo(index) {
     showConfirmModal('Are you sure you want to delete this video?', async () => {
         videoPlaylistData.videoPlaylist.splice(index, 1);
         currentEditingIndex = null;
-        
+
         await saveToServer();
-        
+
         renderVideoList();
         document.getElementById('editorPanel').innerHTML = `
             <div class="empty-state">
@@ -1515,13 +1579,13 @@ async function saveToServer() {
 
         // Prepare published videos data
         const publishedVideos = [];
-        
+
         videoPlaylistData.videoPlaylist.forEach((video) => {
             // Only include videos with valid YouTube videoId
             if (video.videoId && !video.videoId.startsWith('upcoming-')) {
                 const validSubtopics = (video.subtopics || [])
                     .filter(topic => topic && topic.trim() !== '');
-                
+
                 const validQuestions = (video.interviewQuestions || [])
                     .filter(q => {
                         if (!q) return false;
@@ -1535,7 +1599,7 @@ async function saveToServer() {
                         }
                         return q;
                     });
-                
+
                 publishedVideos.push({
                     videoId: video.videoId,
                     title: video.title,
@@ -1550,7 +1614,7 @@ async function saveToServer() {
         if (videoPlaylistData.upcomingTopic && videoPlaylistData.upcomingTopic.title?.trim()) {
             const validSubtopics = (videoPlaylistData.upcomingTopic.subtopics || [])
                 .filter(topic => topic && topic.trim() !== '');
-            
+
             const validQuestions = (videoPlaylistData.upcomingTopic.interviewQuestions || [])
                 .filter(q => {
                     if (!q) return false;
@@ -1564,7 +1628,7 @@ async function saveToServer() {
                     }
                     return q;
                 });
-            
+
             upcomingTopicData = {
                 title: videoPlaylistData.upcomingTopic.title.trim(),
                 description: videoPlaylistData.upcomingTopic.description?.trim() || '',
@@ -1594,16 +1658,16 @@ async function saveToServer() {
             },
             body: JSON.stringify(dataToSave)
         });
-        
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Server response:', errorText);
             throw new Error('Failed to save to server: ' + errorText);
         }
-        
+
         const result = await response.json();
         console.log('✅ Save successful:', result);
-        
+
         return true;
     } catch (error) {
         console.error('Error saving data:', error);
@@ -1625,9 +1689,9 @@ async function downloadJSON() {
     try {
         // Get fresh data from IndexedDB
         const indexedDBData = await loadRoadmapFromIndexedDB();
-        
+
         const dataToExport = indexedDBData || videoPlaylistData;
-        
+
         const dataStr = JSON.stringify(dataToExport, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1670,7 +1734,7 @@ async function clearIndexedDBData() {
             try {
                 await clearRoadmapFromIndexedDB();
                 showToast('🔄 Cache cleared! Reloading fresh data...', 'success');
-                
+
                 // Reload data from MongoDB
                 await loadData();
             } catch (error) {
@@ -1702,26 +1766,26 @@ function showConfirmModal(message, onConfirm, options = {}) {
     const modalBody = document.getElementById('confirmModalBody');
     const modalTitle = document.getElementById('confirmModalLabel');
     const confirmBtn = document.getElementById('confirmModalBtn');
-    
+
     // Set custom title and button text, or use defaults
     modalTitle.textContent = options.title || '⚠️ Confirm Action';
     confirmBtn.textContent = options.buttonText || 'Confirm';
     confirmBtn.className = options.buttonClass || 'btn btn-danger';
-    
-    modalBody.innerHTML = typeof message === 'string' 
-        ? `<p>${message}</p>` 
+
+    modalBody.innerHTML = typeof message === 'string'
+        ? `<p>${message}</p>`
         : message;
-    
+
     // Remove old event listeners by cloning the button
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
+
     // Add new event listener
     newConfirmBtn.addEventListener('click', () => {
         modal.hide();
         onConfirm();
     });
-    
+
     modal.show();
 }
 
@@ -1729,18 +1793,18 @@ function showConfirmModal(message, onConfirm, options = {}) {
 async function toggleComments(index) {
     const commentsSection = document.getElementById(`commentsSection${index}`);
     const button = document.getElementById(`btnComments${index}`);
-    
+
     if (commentsSection.style.display === 'none') {
         // Show comments section
         commentsSection.style.display = 'block';
         button.textContent = '🔼 Hide Comments';
         button.classList.add('active');
-        
+
         // Fetch comments if not already loaded
         if (commentsSection.innerHTML.includes('Loading')) {
             const video = videoPlaylistData.videoPlaylist[index];
             const comments = await fetchVideoComments(video.videoId, 10);
-            
+
             if (comments.length > 0) {
                 commentsSection.innerHTML = `
                     <h4 style="margin-bottom: 15px; color: #667eea;">💬 Latest Comments (${comments.length})</h4>
@@ -1786,14 +1850,14 @@ async function deleteUpcomingTopic() {
             interviewQuestions: [{ question: '', answer: '' }],
             estimatedDate: new Date().toISOString().split('T')[0]
         };
-        
+
         await saveToServer();
-        
+
         renderVideoList();
-        
+
         // Reload the empty upcoming topic form
         editUpcomingTopic();
-        
+
         showToast('Upcoming topic cleared successfully', 'success');
     }, {
         title: '🗑️ Clear Upcoming Topic',
@@ -1810,7 +1874,7 @@ async function deleteUpcomingTopic() {
 async function manualSyncWithMongoDB() {
     const syncStatus = document.getElementById('syncStatus');
     const syncStatusText = document.getElementById('syncStatusText');
-    
+
     try {
         // Show syncing status
         if (syncStatus) {
@@ -1820,24 +1884,24 @@ async function manualSyncWithMongoDB() {
         if (syncStatusText) {
             syncStatusText.textContent = 'Syncing with MongoDB...';
         }
-        
+
         console.log('🔄 Manual sync initiated...');
-        
+
         // Check if adminAPI is available
         if (typeof adminAPI === 'undefined') {
             throw new Error('Admin API not loaded');
         }
-        
+
         // Fetch complete roadmap including upcomingTopic
         const roadmapData = await adminAPI.getCompleteRoadmap();
         const apiVideos = roadmapData.videoPlaylist || [];
-        
+
         if (!apiVideos || apiVideos.length === 0) {
             throw new Error('No videos found in MongoDB');
         }
-        
+
         console.log(`🌐 Fetched ${apiVideos.length} videos from MongoDB`);
-        
+
         // Merge MongoDB data with YouTube data
         videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
             const apiVideo = apiVideos.find(v => v.videoId === video.videoId) || apiVideos[index] || {};
@@ -1845,7 +1909,7 @@ async function manualSyncWithMongoDB() {
                 if (typeof q === 'string') return { question: q, answer: '' };
                 return q;
             });
-            
+
             return {
                 ...video,
                 _id: apiVideo._id,
@@ -1853,7 +1917,7 @@ async function manualSyncWithMongoDB() {
                 interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
             };
         });
-        
+
         // Load single upcomingTopic from MongoDB
         if (roadmapData.upcomingTopic && roadmapData.upcomingTopic.title) {
             console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
@@ -1868,14 +1932,14 @@ async function manualSyncWithMongoDB() {
             console.log('📭 No upcoming topic found in MongoDB');
             videoPlaylistData.upcomingTopic = null;
         }
-        
+
         // Update IndexedDB with fresh data
         await saveRoadmapToIndexedDB(videoPlaylistData);
         console.log('💾 IndexedDB updated with MongoDB data');
-        
+
         // Refresh UI
         renderVideoList();
-        
+
         // Show success status
         if (syncStatus) {
             syncStatus.className = 'sync-status success';
@@ -1884,17 +1948,17 @@ async function manualSyncWithMongoDB() {
             syncStatusText.textContent = '✓ Synced successfully!';
         }
         showToast('✅ Successfully synced with MongoDB', 'success');
-        
+
         // Hide status after 3 seconds
         setTimeout(() => {
             if (syncStatus) {
                 syncStatus.style.display = 'none';
             }
         }, 3000);
-        
+
     } catch (error) {
         console.error('❌ Manual sync failed:', error);
-        
+
         // Show error status
         if (syncStatus) {
             syncStatus.className = 'sync-status error';
@@ -1903,7 +1967,7 @@ async function manualSyncWithMongoDB() {
             syncStatusText.textContent = '✕ Sync failed';
         }
         showToast('❌ Sync failed: ' + error.message, 'error');
-        
+
         // Hide status after 5 seconds
         setTimeout(() => {
             if (syncStatus) {
