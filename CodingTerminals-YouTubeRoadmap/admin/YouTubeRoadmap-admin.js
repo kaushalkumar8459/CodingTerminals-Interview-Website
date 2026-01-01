@@ -1518,7 +1518,7 @@ async function saveToServer() {
         
         videoPlaylistData.videoPlaylist.forEach((video) => {
             // Only include videos with valid YouTube videoId
-            if (video.videoId && !video.videoId.startsWith('upcoming-') && !video.videoId.startsWith('draft-')) {
+            if (video.videoId && !video.videoId.startsWith('upcoming-')) {
                 const validSubtopics = (video.subtopics || [])
                     .filter(topic => topic && topic.trim() !== '');
                 
@@ -1579,14 +1579,12 @@ async function saveToServer() {
             channelName: videoPlaylistData.channelName,
             channelLogo: videoPlaylistData.channelLogo,
             videoPlaylist: publishedVideos,
-            upcomingTopic: upcomingTopicData,
-            draftVideos: videoPlaylistData.draftVideos || []
+            upcomingTopic: upcomingTopicData
         };
 
         console.log('💾 Saving to MongoDB:', {
             publishedVideos: publishedVideos.length,
-            upcomingTopic: upcomingTopicData ? upcomingTopicData.title : 'None',
-            draftVideos: (videoPlaylistData.draftVideos || []).length
+            upcomingTopic: upcomingTopicData ? upcomingTopicData.title : 'None'
         });
 
         const response = await fetch(API_URL, {
