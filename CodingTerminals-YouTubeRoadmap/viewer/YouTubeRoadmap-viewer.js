@@ -125,7 +125,7 @@ async function loadVideoPlaylist() {
                 apiData.data.forEach((video, index) => {
                     const videoData = {
                         day: video.day || (index + 1),
-                        date: video.date || new Date().toISOString().split('T')[0],
+                        date: video.isUpcoming ? (video.estimatedDate || new Date().toISOString().split('T')[0]) : (video.date || video.createdAt || new Date().toISOString().split('T')[0]),
                         title: video.title,
                         videoUrl: video.videoUrl || `https://www.youtube.com/watch?v=${video.videoId}`,
                         videoId: video.videoId,

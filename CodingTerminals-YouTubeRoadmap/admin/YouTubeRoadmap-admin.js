@@ -210,6 +210,8 @@ async function fetchPlaylistVideos() {
             thumbnail: item.snippet.thumbnails.medium.url
         }));
         
+        console.log('----',videos);
+        
         // Fetch statistics AND privacy status for all videos
         const publicVideos = await fetchVideoStatisticsAndFilter(videos);
 
@@ -1603,6 +1605,7 @@ async function saveToServer() {
                 publishedVideos.push({
                     videoId: video.videoId,
                     title: video.title,
+                    date: video.date, // ✅ Include YouTube publish date from playlist API
                     subtopics: validSubtopics,
                     interviewQuestions: validQuestions
                 });
