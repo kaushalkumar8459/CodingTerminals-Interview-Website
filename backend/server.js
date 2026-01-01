@@ -29,6 +29,9 @@ app.use('/api/videos', videoRoutes);
 // YouTube Roadmap bulk save (for admin panel compatibility)
 app.post('/api/youtube-roadmap', require('./controllers/videoController').saveYouTubeRoadmap);
 
+// YouTube Roadmap GET endpoint (for viewer to fetch data)
+app.get('/api/youtube-roadmap', require('./controllers/videoController').getAllVideos);
+
 // Individual note documents API
 app.use('/api/notes', noteRoutes);
 

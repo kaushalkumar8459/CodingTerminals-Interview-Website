@@ -11,8 +11,9 @@ const InterviewQuestion = require('../models/InterviewQuestion');
 // @access  Public
 exports.getAllVideos = async (req, res) => {
     try {
+        // Fetch all videos including upcoming ones
         const videos = await Video.find()
-            .sort({ day: 1 })
+            .sort({ isUpcoming: 1, day: 1 }) // Published videos first, then upcoming
             .select('-__v');
         
         // Fetch interview questions for all videos
@@ -39,6 +40,43 @@ exports.getAllVideos = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Server error while fetching videos'
+        });
+    }
+};
+
+// @desc    Get only upcoming videos
+// @route   GET /api/videos/upcoming
+// @access  Public
+exports.getUpcomingVideos = async (req, res) => {
+    try {
+        const upcomingVideos = await Video.find({ isUpcoming: true })
+            .sort({ day: 1 })
+            .select('-__v');
+        
+        // Fetch interview questions for upcoming videos
+        const videosWithQuestions = await Promise.all(
+            upcomingVideos.map(async (video) => {
+                const questions = await InterviewQuestion.find({ videoId: video.videoId })
+                    .sort({ orderIndex: 1 })
+                    .select('-__v');
+                
+                return {
+                    ...video.toObject(),
+                    interviewQuestions: questions
+                };
+            })
+        );
+        
+        res.status(200).json({
+            success: true,
+            count: videosWithQuestions.length,
+            data: videosWithQuestions
+        });
+    } catch (error) {
+        console.error('Error fetching upcoming videos:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Server error while fetching upcoming videos'
         });
     }
 };
@@ -348,7 +386,7 @@ exports.bulkUpsertVideos = async (req, res) => {
 // @access  Private (Admin)
 exports.saveYouTubeRoadmap = async (req, res) => {
     try {
-        const { videoPlaylist, upcomingTopic, channelName, channelLogo } = req.body;
+        const { videoPlaylist, upcomingTopic, upcomingTopics, channelName, channelLogo } = req.body;
         
         if (!Array.isArray(videoPlaylist)) {
             return res.status(400).json({
@@ -369,13 +407,14 @@ exports.saveYouTubeRoadmap = async (req, res) => {
                     return null;
                 }
                 
-                // Upsert video
+                // Upsert video - mark as published
                 const video = await Video.findOneAndUpdate(
                     { videoId },
                     { 
                         ...updateData,
                         videoId,
-                        day: index + 1
+                        day: index + 1,
+                        isUpcoming: false // Ensure published videos are not marked as upcoming
                     },
                     { 
                         upsert: true, 
@@ -415,13 +454,96 @@ exports.saveYouTubeRoadmap = async (req, res) => {
         const savedCount = results.filter(r => r !== null).length;
         console.log(`✅ Successfully saved ${savedCount} videos`);
         
-        // Note: upcomingTopic is stored in IndexedDB only, not in MongoDB
-        // We could add a separate collection for it if needed
+        // ==================== SAVE UPCOMING TOPICS (MULTIPLE SUPPORT) ====================
+        // First, clear all existing upcoming videos
+        console.log('🗑️ Clearing existing upcoming videos...');
+        await Video.deleteMany({ isUpcoming: true });
+        await InterviewQuestion.deleteMany({ videoId: { $regex: '^upcoming-' } });
+        
+        // Support both single upcomingTopic (legacy) and multiple upcomingTopics (new)
+        const topicsToSave = [];
+        
+        // Check for new format (multiple upcoming topics)
+        if (upcomingTopics && Array.isArray(upcomingTopics) && upcomingTopics.length > 0) {
+            topicsToSave.push(...upcomingTopics);
+        } 
+        // Check for legacy format (single upcoming topic)
+        else if (upcomingTopic && upcomingTopic.title && upcomingTopic.title.trim() !== '') {
+            topicsToSave.push(upcomingTopic);
+        }
+        
+        // Save all upcoming topics
+        let upcomingCount = 0;
+        if (topicsToSave.length > 0) {
+            console.log(`💾 Saving ${topicsToSave.length} upcoming topic(s)...`);
+            
+            await Promise.all(
+                topicsToSave.map(async (topic, index) => {
+                    if (!topic.title || topic.title.trim() === '') {
+                        console.warn(`⚠️ Skipping upcoming topic at index ${index}: missing title`);
+                        return;
+                    }
+                    
+                    // Generate unique videoId for each upcoming topic
+                    const upcomingVideoId = `upcoming-${index + 1}`;
+                    
+                    console.log(`  💾 Saving: ${topic.title} (${upcomingVideoId})`);
+                    
+                    // Upsert upcoming topic
+                    await Video.findOneAndUpdate(
+                        { videoId: upcomingVideoId },
+                        {
+                            videoId: upcomingVideoId,
+                            title: topic.title,
+                            description: topic.description || '',
+                            subtopics: topic.subtopics || [],
+                            estimatedDate: topic.estimatedDate || new Date().toISOString().split('T')[0],
+                            isUpcoming: true,
+                            status: 'upcoming',
+                            day: index + 1 // Simple numbering: 1, 2, 3...
+                        },
+                        {
+                            upsert: true,
+                            new: true,
+                            setDefaultsOnInsert: true
+                        }
+                    );
+                    
+                    // Save upcoming topic interview questions
+                    if (topic.interviewQuestions && topic.interviewQuestions.length > 0) {
+                        // Filter out empty questions
+                        const validQuestions = topic.interviewQuestions.filter(q => {
+                            const question = typeof q === 'object' ? q.question : q;
+                            return question && question.trim() !== '';
+                        });
+                        
+                        if (validQuestions.length > 0) {
+                            const questionsData = validQuestions.map((q, qIndex) => ({
+                                videoId: upcomingVideoId,
+                                question: typeof q === 'object' ? q.question : q,
+                                answer: typeof q === 'object' ? (q.answer || '') : '',
+                                difficulty: typeof q === 'object' ? (q.difficulty || '') : '',
+                                orderIndex: qIndex
+                            }));
+                            
+                            await InterviewQuestion.insertMany(questionsData);
+                        }
+                    }
+                    
+                    upcomingCount++;
+                })
+            );
+            
+            console.log(`✅ Successfully saved ${upcomingCount} upcoming topic(s)`);
+        } else {
+            console.log('ℹ️ No upcoming topics to save');
+        }
         
         res.status(200).json({
             success: true,
-            message: `Successfully saved ${savedCount} videos`,
-            count: savedCount
+            message: `Successfully saved ${savedCount} videos and ${upcomingCount} upcoming topic(s)`,
+            count: savedCount,
+            upcomingCount: upcomingCount
         });
     } catch (error) {
         console.error('❌ Error saving YouTube roadmap:', error);

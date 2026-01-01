@@ -33,9 +33,20 @@
                         <div class="sync-loader"></div>
                         <span id="syncStatusText">Syncing...</span>
                     </div>
-                    <button class="btn btn-info btn-sm" id="syncButton" onclick="manualSyncWithMongoDB()" title="Sync with MongoDB">
-                        🔄 Sync
-                    </button>
+                    
+                    <!-- Sync Buttons Group -->
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-success btn-sm" onclick="manualSyncWithMongoDB()" title="Pull data from MongoDB to IndexedDB (Download from Server)">
+                            ⬇️ Pull from Server
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="saveAllData()" title="Push data from IndexedDB to MongoDB (Upload to Server)">
+                            ⬆️ Push to Server
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="manualSyncWithMongoDB()" title="Full sync between IndexedDB and MongoDB">
+                            🔄 Full Sync
+                        </button>
+                    </div>
+                    
                     <button class="btn btn-warning btn-sm" onclick="clearIndexedDBData()" title="Clear local cache and reload from MongoDB">
                         🗑️ Clear Cache
                     </button>
@@ -72,7 +83,7 @@
             
             <div class="header-actions">
                 <button class="btn btn-success" onclick="saveAllData()">
-                    💾 Save All Changes
+                    💾 Save All & Sync to Server
                 </button>
                 <button class="btn btn-primary" onclick="downloadJSON()">
                     📥 Download JSON

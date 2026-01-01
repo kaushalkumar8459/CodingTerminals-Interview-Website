@@ -495,7 +495,7 @@ function renderVideoList() {
         container.innerHTML += `
             <div class="video-item ${currentEditingIndex === 'upcoming' ? 'active' : ''}" onclick="editUpcomingTopic()" style="border-left-color: #ff9800;">
                 <div class="day">🔔 Coming Soon</div>
-                <div class="title">${videoPlaylistData.upcomingTopic.title || 'Upcoming Topic'}</div>
+                <div class="title">${videoPlaylistData.upcomingTopic.title}</div>
             </div>
         `;
     }
@@ -1513,43 +1513,63 @@ async function saveToServer() {
             showToast('⚠️ Warning: Could not save to local database', 'warning');
         }
 
-        // Prepare data to save to MongoDB/JSON - save ALL videos to maintain correct indexing
-        const validVideoPlaylistData = videoPlaylistData.videoPlaylist
-            .map(video => {
-                const validSubtopics = (video.subtopics || [])
-                    .filter(topic => topic && topic.trim() !== '');
-                
-                const validQuestions = (video.interviewQuestions || [])
-                    .filter(q => {
-                        if (!q) return false;
-                        if (typeof q === 'string') return q.trim() !== '';
-                        if (typeof q === 'object') return q.question && q.question.trim() !== '';
-                        return false;
-                    })
-                    .map(q => {
-                        if (typeof q === 'string') {
-                            return { question: q, answer: '' };
-                        }
-                        return q;
-                    });
-                
-                return {
-                    title: video.title,
-                    subtopics: validSubtopics,
-                    interviewQuestions: validQuestions
-                };
-            });
-            // Don't filter - save ALL videos even if empty to maintain correct indexing
-
-        let cleanUpcomingTopic = {
-            title: '',
-            description: '',
-            subtopics: [],
-            interviewQuestions: [],
-            estimatedDate: new Date().toISOString().split('T')[0]
-        };
+        // ==================== SEPARATE PUBLISHED & UPCOMING VIDEOS ====================
+        // Videos WITH videoId = Published (from YouTube)
+        // Videos WITHOUT videoId = Upcoming (manually added)
         
-        if (videoPlaylistData.upcomingTopic) {
+        const publishedVideos = [];
+        const upcomingVideos = [];
+        
+        videoPlaylistData.videoPlaylist.forEach((video) => {
+            const validSubtopics = (video.subtopics || [])
+                .filter(topic => topic && topic.trim() !== '');
+            
+            const validQuestions = (video.interviewQuestions || [])
+                .filter(q => {
+                    if (!q) return false;
+                    if (typeof q === 'string') return q.trim() !== '';
+                    if (typeof q === 'object') return q.question && q.question.trim() !== '';
+                    return false;
+                })
+                .map(q => {
+                    if (typeof q === 'string') {
+                        return { question: q, answer: '' };
+                    }
+                    return q;
+                });
+            
+            const videoData = {
+                videoId: video.videoId,
+                title: video.title,
+                subtopics: validSubtopics,
+                interviewQuestions: validQuestions,
+                ...(video.estimatedDate && { estimatedDate: video.estimatedDate })
+            };
+            
+            // Check if this is a published video (has videoId from YouTube) or upcoming (manually added)
+            if (video.videoId && !video.videoId.startsWith('upcoming-')) {
+                // Published video from YouTube
+                publishedVideos.push(videoData);
+            } else {
+                // Upcoming video (manually added, no real YouTube ID)
+                upcomingVideos.push({
+                    title: video.title || 'Untitled Topic',
+                    description: video.description || '',
+                    subtopics: validSubtopics,
+                    interviewQuestions: validQuestions,
+                    estimatedDate: video.estimatedDate || new Date().toISOString().split('T')[0]
+                });
+            }
+        });
+
+        // ==================== COLLECT UPCOMING TOPICS ====================
+        const upcomingTopics = [];
+        
+        // Add manually added videos as upcoming topics
+        upcomingTopics.push(...upcomingVideos);
+        
+        // Add the main upcomingTopic if it exists and has content
+        if (videoPlaylistData.upcomingTopic && videoPlaylistData.upcomingTopic.title?.trim()) {
             const validSubtopics = (videoPlaylistData.upcomingTopic.subtopics || [])
                 .filter(topic => topic && topic.trim() !== '');
             
@@ -1567,24 +1587,27 @@ async function saveToServer() {
                     return q;
                 });
             
-            cleanUpcomingTopic = {
-                title: videoPlaylistData.upcomingTopic.title?.trim() || '',
+            upcomingTopics.push({
+                title: videoPlaylistData.upcomingTopic.title.trim(),
                 description: videoPlaylistData.upcomingTopic.description?.trim() || '',
                 subtopics: validSubtopics,
                 interviewQuestions: validQuestions,
                 estimatedDate: videoPlaylistData.upcomingTopic.estimatedDate || new Date().toISOString().split('T')[0]
-            };
+            });
         }
 
+        // ==================== PREPARE DATA TO SEND ====================
         const dataToSave = {
             channelName: videoPlaylistData.channelName,
             channelLogo: videoPlaylistData.channelLogo,
-            videoPlaylist: validVideoPlaylistData,
-            upcomingTopic: cleanUpcomingTopic
+            videoPlaylist: publishedVideos, // Only published videos
+            upcomingTopics: upcomingTopics  // Array of upcoming topics (NEW)
         };
 
-        console.log('Saving data to MongoDB:', dataToSave);
-        console.log(`Saving ${validVideoPlaylistData.length} videos`);
+        console.log('💾 Saving to MongoDB:', {
+            publishedVideos: publishedVideos.length,
+            upcomingTopics: upcomingTopics.length
+        });
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -1597,20 +1620,15 @@ async function saveToServer() {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Server response:', errorText);
-            throw new Error('Failed to save to JSON: ' + errorText);
+            throw new Error('Failed to save to server: ' + errorText);
         }
         
         const result = await response.json();
-        console.log('JSON save successful:', result);
+        console.log('✅ Save successful:', result);
         
         return true;
     } catch (error) {
         console.error('Error saving data:', error);
-        // Check if IndexedDB save was successful
-        if (error.message.includes('JSON')) {
-            showToast('⚠️ Data saved to IndexedDB but JSON save failed: ' + error.message, 'warning');
-            return false;
-        }
         showToast('❌ Error saving data! ' + error.message, 'error');
         return false;
     }
@@ -1812,17 +1830,18 @@ async function deleteUpcomingTopic() {
  * Shows loader during sync and toast notification on completion
  */
 async function manualSyncWithMongoDB() {
-    const syncButton = document.getElementById('syncButton');
     const syncStatus = document.getElementById('syncStatus');
     const syncStatusText = document.getElementById('syncStatusText');
     
     try {
-        // Disable button and show syncing status
-        syncButton.disabled = true;
-        syncButton.classList.add('syncing');
-        syncStatus.style.display = 'flex';
-        syncStatus.className = 'sync-status syncing';
-        syncStatusText.textContent = 'Syncing with MongoDB...';
+        // Show syncing status
+        if (syncStatus) {
+            syncStatus.style.display = 'flex';
+            syncStatus.className = 'sync-status syncing';
+        }
+        if (syncStatusText) {
+            syncStatusText.textContent = 'Syncing with MongoDB...';
+        }
         
         console.log('🔄 Manual sync initiated...');
         
@@ -1831,7 +1850,7 @@ async function manualSyncWithMongoDB() {
             throw new Error('Admin API not loaded');
         }
         
-        // Fetch complete roadmap including upcomingTopic
+        // Fetch complete roadmap including upcomingTopics
         const roadmapData = await adminAPI.getCompleteRoadmap();
         const apiVideos = roadmapData.videoPlaylist || [];
         
@@ -1857,19 +1876,22 @@ async function manualSyncWithMongoDB() {
             };
         });
         
-        // Load upcomingTopic from MongoDB
-        if (roadmapData.upcomingTopic) {
-            console.log('🔔 Loading upcoming topic from MongoDB:', roadmapData.upcomingTopic.title);
+        // Load upcomingTopics from MongoDB (now an array)
+        if (roadmapData.upcomingTopics && roadmapData.upcomingTopics.length > 0) {
+            console.log(`🔔 Loading ${roadmapData.upcomingTopics.length} upcoming topics from MongoDB`);
+            // For backward compatibility, store the first upcoming topic in upcomingTopic
             videoPlaylistData.upcomingTopic = {
-                ...roadmapData.upcomingTopic,
-                interviewQuestions: (roadmapData.upcomingTopic.interviewQuestions || []).map(q => {
+                ...roadmapData.upcomingTopics[0],
+                interviewQuestions: (roadmapData.upcomingTopics[0].interviewQuestions || []).map(q => {
                     if (typeof q === 'string') return { question: q, answer: '' };
                     return q;
                 })
             };
+            videoPlaylistData.upcomingTopics = roadmapData.upcomingTopics;
         } else {
-            console.log('📭 No upcoming topic found in MongoDB');
+            console.log('📭 No upcoming topics found in MongoDB');
             videoPlaylistData.upcomingTopic = null;
+            videoPlaylistData.upcomingTopics = [];
         }
         
         // Update IndexedDB with fresh data
@@ -1880,32 +1902,39 @@ async function manualSyncWithMongoDB() {
         renderVideoList();
         
         // Show success status
-        syncStatus.className = 'sync-status success';
-        syncStatusText.textContent = '✓ Synced successfully!';
+        if (syncStatus) {
+            syncStatus.className = 'sync-status success';
+        }
+        if (syncStatusText) {
+            syncStatusText.textContent = '✓ Synced successfully!';
+        }
         showToast('✅ Successfully synced with MongoDB', 'success');
         
         // Hide status after 3 seconds
         setTimeout(() => {
-            syncStatus.style.display = 'none';
+            if (syncStatus) {
+                syncStatus.style.display = 'none';
+            }
         }, 3000);
         
     } catch (error) {
         console.error('❌ Manual sync failed:', error);
         
         // Show error status
-        syncStatus.className = 'sync-status error';
-        syncStatusText.textContent = '✕ Sync failed';
+        if (syncStatus) {
+            syncStatus.className = 'sync-status error';
+        }
+        if (syncStatusText) {
+            syncStatusText.textContent = '✕ Sync failed';
+        }
         showToast('❌ Sync failed: ' + error.message, 'error');
         
         // Hide status after 5 seconds
         setTimeout(() => {
-            syncStatus.style.display = 'none';
+            if (syncStatus) {
+                syncStatus.style.display = 'none';
+            }
         }, 5000);
-        
-    } finally {
-        // Re-enable button
-        syncButton.disabled = false;
-        syncButton.classList.remove('syncing');
     }
 }
 

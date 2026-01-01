@@ -24,7 +24,7 @@ const adminAPI = {
     /**
      * Get complete roadmap data from MongoDB
      * Fetches videos from youtubeVideos collection and questions from interviewQuestions collection
-     * Separates regular videos (isUpcoming: false) and upcoming video (isUpcoming: true)
+     * Separates regular videos (isUpcoming: false) and upcoming videos (isUpcoming: true)
      * Returns merged data ready for IndexedDB caching
      */
     async getCompleteRoadmap() {
@@ -41,12 +41,12 @@ const adminAPI = {
             
             console.log(`✅ Fetched ${allVideos.length} total videos from MongoDB`);
             
-            // Separate regular videos and upcoming video using isUpcoming flag
+            // Separate regular videos and upcoming videos using isUpcoming flag
             const regularVideos = allVideos.filter(v => !v.isUpcoming);
-            const upcomingVideo = allVideos.find(v => v.isUpcoming);
+            const upcomingVideos = allVideos.filter(v => v.isUpcoming);
             
             console.log(`📹 Regular videos: ${regularVideos.length}`);
-            console.log(`🔔 Upcoming video: ${upcomingVideo ? upcomingVideo.title : 'None'}`);
+            console.log(`🔔 Upcoming videos: ${upcomingVideos.length}`);
             
             // Fetch interview questions for each video
             const videosWithQuestions = await Promise.all(
@@ -62,26 +62,29 @@ const adminAPI = {
                 })
             );
             
-            // Fetch questions for upcoming video if exists
-            let upcomingTopicData = null;
-            if (upcomingVideo) {
-                const upcomingQuestions = await this._getQuestionsByVideoId(upcomingVideo.videoId);
-                upcomingTopicData = {
-                    _id: upcomingVideo._id,
-                    title: upcomingVideo.title,
-                    description: upcomingVideo.description || '',
-                    subtopics: upcomingVideo.subtopics || [],
-                    interviewQuestions: upcomingQuestions,
-                    estimatedDate: upcomingVideo.estimatedDate || new Date().toISOString()
-                };
-            }
+            // Fetch questions for all upcoming videos
+            const upcomingTopicsData = await Promise.all(
+                upcomingVideos.map(async (upcomingVideo) => {
+                    const upcomingQuestions = await this._getQuestionsByVideoId(upcomingVideo.videoId);
+                    return {
+                        _id: upcomingVideo._id,
+                        title: upcomingVideo.title,
+                        description: upcomingVideo.description || '',
+                        subtopics: upcomingVideo.subtopics || [],
+                        interviewQuestions: upcomingQuestions,
+                        estimatedDate: upcomingVideo.estimatedDate || new Date().toISOString()
+                    };
+                })
+            );
             
             // Convert to roadmap format for IndexedDB
             const roadmapData = {
                 channelName: 'Coding Terminals',
                 channelLogo: './../../assets/CT logo.jpg',
                 videoPlaylist: videosWithQuestions,
-                upcomingTopic: upcomingTopicData
+                upcomingTopics: upcomingTopicsData, // Changed from upcomingTopic to upcomingTopics array
+                // Keep backward compatibility
+                upcomingTopic: upcomingTopicsData.length > 0 ? upcomingTopicsData[0] : null
             };
             
             console.log('✅ Roadmap data prepared for caching');

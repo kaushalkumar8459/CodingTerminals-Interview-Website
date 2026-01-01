@@ -11,6 +11,9 @@ const videoController = require('../controllers/videoController');
 // Get all videos
 router.get('/', videoController.getAllVideos);
 
+// Get only upcoming videos
+router.get('/upcoming', videoController.getUpcomingVideos);
+
 // Get video by MongoDB ID
 router.get('/:id', videoController.getVideoById);
 
