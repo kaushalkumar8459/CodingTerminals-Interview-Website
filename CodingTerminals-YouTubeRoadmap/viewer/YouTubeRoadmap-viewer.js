@@ -522,13 +522,29 @@ function toggleAccordion(header) {
     const content = header.nextElementSibling;
     const icon = header.querySelector('.accordion-icon');
 
-    // Close all other accordions
-    document.querySelectorAll('.card-content').forEach(item => {
-        if (item !== content) {
-            item.classList.remove('active');
-            item.previousElementSibling.querySelector('.accordion-icon').classList.remove('active');
+    if (!content || !icon) {
+        return; // Safety check
+    }
+
+    const isCurrentlyActive = content.classList.contains('active');
+
+    // Only close other accordions if we're opening this one
+    if (!isCurrentlyActive) {
+        // Use a more efficient approach - only get parent container's children
+        const container = header.closest('#roadmapContainer');
+        if (container) {
+            const activeContents = container.querySelectorAll('.card-content.active');
+            activeContents.forEach(item => {
+                if (item !== content) {
+                    item.classList.remove('active');
+                    const prevIcon = item.previousElementSibling?.querySelector('.accordion-icon');
+                    if (prevIcon) {
+                        prevIcon.classList.remove('active');
+                    }
+                }
+            });
         }
-    });
+    }
 
     // Toggle current accordion
     content.classList.toggle('active');

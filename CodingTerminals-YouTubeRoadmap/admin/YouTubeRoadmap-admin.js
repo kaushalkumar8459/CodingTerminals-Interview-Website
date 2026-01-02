@@ -947,83 +947,110 @@ A: TypeScript adds static typing to JS...</div>
         videoPlaylistData.upcomingTopic.estimatedDate = e.target.value;
     });
 
-    // Initialize Quill editor for upcoming subtopics
+    // Clear old editors
     quillEditors = {};
-    const upcomingSubtopicsEditor = new Quill('#upcomingSubtopicsEditor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'color': [] }, { 'background': [] }],
-                ['clean']
-            ]
-        }
-    });
-
-    // Set initial content - directly set the HTML content
-    if (subtopicsHTML) {
-        upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
-    }
-
-    // Save changes on text change
-    upcomingSubtopicsEditor.on('text-change', () => {
-        const htmlContent = upcomingSubtopicsEditor.root.innerHTML;
-        // Extract list items from the HTML
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
-        const listItems = tempDiv.querySelectorAll('li');
-        videoPlaylistData.upcomingTopic.subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
-
-        // If no list items, save the entire content as a single item
-        if (videoPlaylistData.upcomingTopic.subtopics.length === 0) {
-            const textContent = upcomingSubtopicsEditor.getText().trim();
-            if (textContent) {
-                videoPlaylistData.upcomingTopic.subtopics = [htmlContent];
-            }
-        }
-    });
-
-    quillEditors['upcomingSubtopicsEditor'] = upcomingSubtopicsEditor;
-
-    // Initialize Quill editors for upcoming questions and answers
-    (topic.interviewQuestions || [{ question: '', answer: '' }]).forEach((item, i) => {
-        // Question editor
-        const questionEditorId = `upcomingQuestionEditor${i}`;
-        quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
+    
+    // Use requestAnimationFrame to defer heavy initialization
+    requestAnimationFrame(() => {
+        // Initialize Quill editor for upcoming subtopics
+        const upcomingSubtopicsEditor = new Quill('#upcomingSubtopicsEditor', {
             theme: 'snow',
             modules: {
                 toolbar: [
                     ['bold', 'italic', 'underline'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    ['clean']
-                ]
-            }
-        });
-
-        quillEditors[questionEditorId].on('text-change', () => {
-            updateUpcomingQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
-        });
-
-        // Answer editor
-        const answerEditorId = `upcomingAnswerEditor${i}`;
-        quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'header': [1, 2, 3, false] }],
                     [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                     [{ 'color': [] }, { 'background': [] }],
-                    ['link', 'code-block'],
                     ['clean']
                 ]
             }
         });
 
-        quillEditors[answerEditorId].on('text-change', () => {
-            updateUpcomingQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
+        // Set initial content - directly set the HTML content
+        if (subtopicsHTML) {
+            upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
+        }
+
+        // Save changes on text change
+        upcomingSubtopicsEditor.on('text-change', () => {
+            const htmlContent = upcomingSubtopicsEditor.root.innerHTML;
+            // Extract list items from the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            const listItems = tempDiv.querySelectorAll('li');
+            videoPlaylistData.upcomingTopic.subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
+
+            // If no list items, save the entire content as a single item
+            if (videoPlaylistData.upcomingTopic.subtopics.length === 0) {
+                const textContent = upcomingSubtopicsEditor.getText().trim();
+                if (textContent) {
+                    videoPlaylistData.upcomingTopic.subtopics = [htmlContent];
+                }
+            }
         });
+
+        quillEditors['upcomingSubtopicsEditor'] = upcomingSubtopicsEditor;
+
+        // Initialize Quill editors for upcoming questions and answers in batches
+        const questions = topic.interviewQuestions || [{ question: '', answer: '' }];
+        let currentIndex = 0;
+        
+        const initNextEditor = () => {
+            if (currentIndex >= questions.length) return;
+            
+            const i = currentIndex;
+            const item = questions[i];
+            
+            // Question editor
+            const questionEditorId = `upcomingQuestionEditor${i}`;
+            if (document.getElementById(questionEditorId)) {
+                quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                quillEditors[questionEditorId].on('text-change', () => {
+                    updateUpcomingQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
+                });
+            }
+
+            // Answer editor
+            const answerEditorId = `upcomingAnswerEditor${i}`;
+            if (document.getElementById(answerEditorId)) {
+                quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
+                    theme: 'snow',
+                    modules: {
+                        toolbar: [
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'header': [1, 2, 3, false] }],
+                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                            [{ 'color': [] }, { 'background': [] }],
+                            ['link', 'code-block'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                quillEditors[answerEditorId].on('text-change', () => {
+                    updateUpcomingQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
+                });
+            }
+            
+            currentIndex++;
+            
+            // Initialize next editor in next frame to avoid blocking
+            if (currentIndex < questions.length) {
+                requestAnimationFrame(initNextEditor);
+            }
+        };
+        
+        // Start initializing editors
+        initNextEditor();
     });
 }
 
