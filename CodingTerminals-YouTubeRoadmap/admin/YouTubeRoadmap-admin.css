@@ -281,6 +281,28 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     max-height: calc(100vh - 180px);
     overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+.video-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.video-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.video-list::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.video-list::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .video-list h2 {
@@ -295,7 +317,7 @@ body {
     background: #f8f9ff;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     border-left: 4px solid #667eea;
     position: relative;
 }
@@ -346,6 +368,32 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     max-height: calc(100vh - 180px);
     overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+.editor-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.editor-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.editor-panel::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.editor-panel::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .editor-panel h2 {
@@ -390,15 +438,8 @@ body {
 
 .list-section {
     margin-bottom: 30px;
-}
-
-.list-section h3 {
-    color: #667eea;
-    margin-bottom: 15px;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    transform: translateZ(0);
+    contain: layout style paint;
 }
 
 .list-items {
@@ -406,6 +447,8 @@ body {
     border-radius: 10px;
     padding: 15px;
     margin-bottom: 15px;
+    transform: translateZ(0);
+    contain: layout style paint;
 }
 
 .list-item {
@@ -616,13 +659,17 @@ body {
     padding: 15px;
     padding-left: 60px;
     margin-bottom: 15px;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     position: relative;
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
+    contain: layout style paint;
 }
 
 .qa-container:hover {
     border-color: #667eea;
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    transform: translateZ(0) translateY(-2px);
 }
 
 /* Reorder buttons on the left side */
@@ -820,6 +867,8 @@ body {
     border: 2px solid #e0e0e0;
     border-radius: 0;
     background: white;
+    transform: translateZ(0);
+    will-change: contents;
 }
 
 .quill-editor-small .ql-toolbar {
@@ -828,6 +877,7 @@ body {
     background: #f8f9ff;
     border: none;
     border-bottom: 2px solid #e0e0e0;
+    transform: translateZ(0);
 }
 
 .quill-editor-small .ql-container {
@@ -836,12 +886,15 @@ body {
     border-bottom-right-radius: 0;
     font-size: 0.95rem;
     min-height: 80px;
+    transform: translateZ(0);
+    will-change: contents;
 }
 
 .quill-editor-topics {
     border: 2px solid #667eea;
     border-radius: 0;
     background: white;
+    transform: translateZ(0);
 }
 
 .quill-editor-topics .ql-toolbar {
@@ -850,6 +903,7 @@ body {
     background: #f8f9ff;
     border: none;
     border-bottom: 2px solid #667eea;
+    transform: translateZ(0);
 }
 
 .quill-editor-topics .ql-container {
@@ -858,12 +912,15 @@ body {
     border-bottom-right-radius: 0;
     font-size: 0.95rem;
     min-height: 200px;
+    transform: translateZ(0);
+    will-change: contents;
 }
 
 .quill-editor-answer {
     border: 2px solid #28a745;
     border-radius: 0;
     background: white;
+    transform: translateZ(0);
 }
 
 .quill-editor-answer .ql-toolbar {
@@ -872,6 +929,7 @@ body {
     background: #f0fff4;
     border: none;
     border-bottom: 2px solid #28a745;
+    transform: translateZ(0);
 }
 
 .quill-editor-answer .ql-container {
@@ -880,10 +938,13 @@ body {
     border-bottom-right-radius: 0;
     font-size: 0.95rem;
     min-height: 150px;
+    transform: translateZ(0);
+    will-change: contents;
 }
 
 .ql-editor {
     line-height: 1.6;
+    text-rendering: optimizeSpeed;
 }
 
 .ql-editor.ql-blank::before {
@@ -1020,7 +1081,7 @@ body {
     align-items: center;
     gap: 15px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .stat-card:hover {
@@ -1101,6 +1162,30 @@ body {
     border: 2px solid #e0e0e0;
     max-height: 500px;
     overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+    will-change: scroll-position;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+.comments-section::-webkit-scrollbar {
+    width: 8px;
+}
+
+.comments-section::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.comments-section::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.comments-section::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .comments-loading {
@@ -1118,7 +1203,7 @@ body {
     background: #f8f9ff;
     border-radius: 10px;
     border-left: 3px solid #667eea;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .comment-item:hover {
@@ -1261,6 +1346,28 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     max-height: calc(100vh - 250px);
     overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+.notes-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notes-sidebar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.notes-sidebar::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.notes-sidebar::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .notes-sidebar h2 {
@@ -1275,7 +1382,7 @@ body {
     background: #f8f9ff;
     border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     border-left: 4px solid #28a745;
     position: relative;
 }
@@ -1308,6 +1415,28 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
     max-height: calc(100vh - 250px);
     overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #667eea #f1f1f1;
+}
+
+.notes-editor-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.notes-editor-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.notes-editor-panel::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+.notes-editor-panel::-webkit-scrollbar-thumb:hover {
+    background: #5568d3;
 }
 
 .notes-editor-panel h2 {
