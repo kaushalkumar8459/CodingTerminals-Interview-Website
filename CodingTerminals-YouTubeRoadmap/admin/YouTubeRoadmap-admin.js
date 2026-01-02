@@ -20,6 +20,9 @@ let currentEditingIndex = null;
 let youtubeVideos = [];
 let quillEditors = {}; // Store Quill editor instances
 
+// Track which questions are in edit mode
+let editingQuestions = new Set();
+
 // ==================== INDEXEDDB SETUP ====================
 /**
  * Initialize IndexedDB
@@ -603,14 +606,11 @@ async function editVideo(index) {
     // Prepare subtopics HTML - handle both plain text and HTML content
     let subtopicsHTML = '';
     if (video.subtopics && video.subtopics.length > 0) {
-        // Check if subtopics contain HTML or plain text
         const hasHTML = video.subtopics.some(topic => topic.includes('<') && topic.includes('>'));
 
         if (hasHTML) {
-            // Join HTML content directly
             subtopicsHTML = video.subtopics.join('');
         } else {
-            // Wrap plain text in list items
             subtopicsHTML = `<ul>${video.subtopics.map(topic => `<li>${topic}</li>`).join('')}</ul>`;
         }
     }
@@ -672,29 +672,7 @@ async function editVideo(index) {
         <div class="list-section">
             <h3>💼 Interview Questions</h3>
             <div class="list-items" id="questionsList">
-                ${(video.interviewQuestions && video.interviewQuestions.length > 0 ? video.interviewQuestions : [{ question: '', answer: '' }]).map((item, i) => {
-        const question = typeof item === 'object' ? item.question : item;
-        const answer = typeof item === 'object' ? (item.answer || '') : '';
-
-        return `
-                        <div class="qa-container">
-                            <div class="qa-reorder-buttons">
-                                <button class="btn-reorder" onclick="moveQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
-                                <button class="btn-reorder" onclick="moveQuestion(${i}, 1)" ${i === (video.interviewQuestions?.length || 1) - 1 ? 'disabled' : ''}>⬇️</button>
-                            </div>
-                            <div class="qa-header">
-                                <span class="qa-number">${i + 1}</span>
-                                <span class="qa-label question">Question</span>
-                            </div>
-                            <div id="questionEditor${i}" class="quill-editor-small">${question}</div>
-                            <div class="qa-header" style="margin-top: 10px;">
-                                <span class="qa-label answer">Answer</span>
-                            </div>
-                            <div id="answerEditor${i}" class="quill-editor-answer">${answer}</div>
-                            <button class="qa-delete-btn" onclick="removeQuestion(${i})">✕</button>
-                        </div>
-                    `;
-    }).join('')}
+                ${renderQuestionsReadOnly(video.interviewQuestions || [])}
             </div>
             <button class="btn-add" onclick="addQuestion()">➕ Add Question</button>
             <button class="btn-clear-all" onclick="clearAllQuestions()">🗑️ Clear All Questions</button>
@@ -751,21 +729,17 @@ A: TypeScript adds static typing to JS...</div>
         }
     });
 
-    // Set initial content - directly set the HTML content
     if (subtopicsHTML) {
         subtopicsEditor.root.innerHTML = subtopicsHTML;
     }
 
-    // Save changes on text change
     subtopicsEditor.on('text-change', () => {
         const htmlContent = subtopicsEditor.root.innerHTML;
-        // Extract list items from the HTML
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
         const listItems = tempDiv.querySelectorAll('li');
         videoPlaylistData.videoPlaylist[currentEditingIndex].subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
 
-        // If no list items, save the entire content as a single item
         if (videoPlaylistData.videoPlaylist[currentEditingIndex].subtopics.length === 0) {
             const textContent = subtopicsEditor.getText().trim();
             if (textContent) {
@@ -775,46 +749,441 @@ A: TypeScript adds static typing to JS...</div>
     });
 
     quillEditors['subtopicsEditor'] = subtopicsEditor;
+}
 
-    // Initialize Quill editors for questions and answers
-    (video.interviewQuestions || ['']).forEach((item, i) => {
-        // Question editor
-        const questionEditorId = `questionEditor${i}`;
-        quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    ['clean']
-                ]
-            }
-        });
+/**
+ * Render questions in read-only mode with Edit button
+ */
+function renderQuestionsReadOnly(questions) {
+    if (!questions || questions.length === 0) {
+        return '<p style="color: #999; text-align: center; padding: 20px;">No questions added yet. Click "➕ Add Question" to start.</p>';
+    }
 
-        quillEditors[questionEditorId].on('text-change', () => {
-            updateQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
-        });
+    return questions.map((item, i) => {
+        const question = typeof item === 'object' ? (item.question || '') : item;
+        const answer = typeof item === 'object' ? (item.answer || '') : '';
+        
+        // Strip HTML for preview (show plain text)
+        const questionPreview = question.replace(/<[^>]*>/g, '').trim() || 'Empty question';
+        const answerPreview = answer.replace(/<[^>]*>/g, '').trim() || 'No answer provided';
 
-        // Answer editor
-        const answerEditorId = `answerEditor${i}`;
-        quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'header': [1, 2, 3, false] }],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    ['link', 'code-block'],
-                    ['clean']
-                ]
-            }
-        });
+        return `
+            <div class="qa-container qa-readonly" id="qa-container-${i}">
+                <div class="qa-reorder-buttons">
+                    <button class="btn-reorder" onclick="moveQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
+                    <button class="btn-reorder" onclick="moveQuestion(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
+                </div>
+                
+                <div class="qa-header">
+                    <span class="qa-number">${i + 1}</span>
+                    <span class="qa-label question">Question</span>
+                </div>
+                <div class="qa-preview">${questionPreview}</div>
+                
+                <div class="qa-header" style="margin-top: 10px;">
+                    <span class="qa-label answer">Answer</span>
+                </div>
+                <div class="qa-preview qa-answer-preview">${answerPreview}</div>
+                
+                <div class="qa-actions">
+                    <button class="btn-edit" onclick="editQuestion(${i})">✏️ Edit</button>
+                    <button class="qa-delete-btn" onclick="removeQuestion(${i})">✕ Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
 
-        quillEditors[answerEditorId].on('text-change', () => {
-            updateQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
-        });
+/**
+ * Edit a specific question - Show Quill editors for this question only
+ */
+function editQuestion(index) {
+    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+    const item = video.interviewQuestions[index];
+    const question = typeof item === 'object' ? (item.question || '') : item;
+    const answer = typeof item === 'object' ? (item.answer || '') : '';
+
+    const container = document.getElementById(`qa-container-${index}`);
+    if (!container) return;
+
+    // Replace read-only view with editable Quill editors
+    container.className = 'qa-container qa-editing';
+    container.innerHTML = `
+        <div class="qa-reorder-buttons">
+            <button class="btn-reorder" onclick="moveQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>⬆️</button>
+            <button class="btn-reorder" onclick="moveQuestion(${index}, 1)" ${index === video.interviewQuestions.length - 1 ? 'disabled' : ''}>⬇️</button>
+        </div>
+        
+        <div class="qa-header">
+            <span class="qa-number">${index + 1}</span>
+            <span class="qa-label question">Question</span>
+        </div>
+        <div id="questionEditor${index}" class="quill-editor-small">${question}</div>
+        
+        <div class="qa-header" style="margin-top: 10px;">
+            <span class="qa-label answer">Answer</span>
+        </div>
+        <div id="answerEditor${index}" class="quill-editor-answer">${answer}</div>
+        
+        <div class="qa-actions">
+            <button class="btn-save" onclick="saveQuestion(${index})">💾 Save</button>
+            <button class="btn-cancel" onclick="cancelEditQuestion(${index})">❌ Cancel</button>
+            <button class="qa-delete-btn" onclick="removeQuestion(${index})">✕ Delete</button>
+        </div>
+    `;
+
+    // Initialize Quill editors for this question
+    const questionEditorId = `questionEditor${index}`;
+    quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
     });
+
+    const answerEditorId = `answerEditor${index}`;
+    quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'header': [1, 2, 3, false] }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'code-block'],
+                ['clean']
+            ]
+        }
+    });
+}
+
+/**
+ * Save edited question and return to read-only view
+ */
+async function saveQuestion(index) {
+    const questionEditor = quillEditors[`questionEditor${index}`];
+    const answerEditor = quillEditors[`answerEditor${index}`];
+
+    if (!questionEditor || !answerEditor) {
+        showToast('❌ Editor not found', 'error');
+        return;
+    }
+
+    // Get content from editors
+    const questionContent = questionEditor.root.innerHTML;
+    const answerContent = answerEditor.root.innerHTML;
+
+    console.log('💾 Saving question', index + 1);
+
+    // Update data
+    videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions[index] = {
+        question: questionContent,
+        answer: answerContent
+    };
+
+    // Save to IndexedDB
+    try {
+        await saveRoadmapToIndexedDB(videoPlaylistData);
+        console.log('✅ Saved to IndexedDB');
+    } catch (error) {
+        console.error('❌ IndexedDB save error:', error);
+    }
+
+    // Save to MongoDB
+    const success = await saveToServer();
+
+    if (success) {
+        showToast('✅ Question saved successfully', 'success');
+        
+        // Clean up editors
+        delete quillEditors[`questionEditor${index}`];
+        delete quillEditors[`answerEditor${index}`];
+        
+        // Re-render in read-only mode
+        const questionsList = document.getElementById('questionsList');
+        questionsList.innerHTML = renderQuestionsReadOnly(videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions);
+    } else {
+        showToast('❌ Failed to save question', 'error');
+    }
+}
+
+/**
+ * Cancel editing and return to read-only view
+ */
+function cancelEditQuestion(index) {
+    // Clean up editors
+    delete quillEditors[`questionEditor${index}`];
+    delete quillEditors[`answerEditor${index}`];
+    
+    // Re-render in read-only mode
+    const questionsList = document.getElementById('questionsList');
+    questionsList.innerHTML = renderQuestionsReadOnly(videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions);
+}
+
+// Render questions in read-only mode with Edit button
+function renderQuestionsReadOnly(questions, type) {
+    if (!questions || questions.length === 0) {
+        return '<p style="color: #999; text-align: center; padding: 20px;">No questions added yet. Click "Add Question" or "Bulk Add" to get started.</p>';
+    }
+
+    return questions.map((item, i) => {
+        const question = typeof item === 'object' ? (item.question || '') : item;
+        const answer = typeof item === 'object' ? (item.answer || '') : '';
+        const isEditing = editingQuestions.has(`${type}-${i}`);
+
+        // Strip HTML tags for display
+        const displayQuestion = question.replace(/<[^>]*>/g, '').trim() || 'Empty question';
+        const displayAnswer = answer.replace(/<[^>]*>/g, '').trim() || 'No answer provided';
+
+        if (isEditing) {
+            // Edit mode - show Quill editors
+            return `
+                <div class="qa-container editing" data-index="${i}">
+                    <div class="qa-reorder-buttons">
+                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
+                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
+                    </div>
+                    <div class="qa-header">
+                        <span class="qa-number">${i + 1}</span>
+                        <span class="qa-label question">Question</span>
+                    </div>
+                    <div id="${type}QuestionEditor${i}" class="quill-editor-small">${question}</div>
+                    <div class="qa-header" style="margin-top: 10px;">
+                        <span class="qa-label answer">Answer</span>
+                    </div>
+                    <div id="${type}AnswerEditor${i}" class="quill-editor-answer">${answer}</div>
+                    <div class="qa-action-buttons">
+                        <button class="btn-save-question" onclick="${type === 'video' ? 'saveQuestion' : 'saveUpcomingQuestion'}(${i})">✅ Save</button>
+                        <button class="btn-cancel-edit" onclick="${type === 'video' ? 'cancelEditQuestion' : 'cancelEditUpcomingQuestion'}(${i})">❌ Cancel</button>
+                    </div>
+                    <button class="qa-delete-btn" onclick="${type === 'video' ? 'removeQuestion' : 'removeUpcomingQuestion'}(${i})">✕</button>
+                </div>
+            `;
+        } else {
+            // Read-only mode
+            return `
+                <div class="qa-container read-only" data-index="${i}">
+                    <div class="qa-reorder-buttons">
+                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
+                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
+                    </div>
+                    <div class="qa-header">
+                        <span class="qa-number">${i + 1}</span>
+                        <span class="qa-label question">Question</span>
+                    </div>
+                    <div class="qa-readonly-content">
+                        ${question || '<em style="color: #999;">No question text</em>'}
+                    </div>
+                    <div class="qa-header" style="margin-top: 15px;">
+                        <span class="qa-label answer">Answer</span>
+                    </div>
+                    <div class="qa-readonly-content">
+                        ${answer || '<em style="color: #999;">No answer provided</em>'}
+                    </div>
+                    <div class="qa-action-buttons">
+                        <button class="btn-edit-question" onclick="${type === 'video' ? 'editQuestion' : 'editUpcomingQuestion'}(${i})">✏️ Edit</button>
+                    </div>
+                    <button class="qa-delete-btn" onclick="${type === 'video' ? 'removeQuestion' : 'removeUpcomingQuestion'}(${i})">✕</button>
+                </div>
+            `;
+        }
+    }).join('');
+}
+
+// Edit a specific question
+function editQuestion(index) {
+    editingQuestions.add(`video-${index}`);
+    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+    
+    // Re-render questions
+    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
+    
+    // Initialize editors for this question only
+    const item = video.interviewQuestions[index];
+    const question = typeof item === 'object' ? item.question : item;
+    const answer = typeof item === 'object' ? item.answer : '';
+    
+    // Question editor
+    const questionEditor = new Quill(`#videoQuestionEditor${index}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
+    });
+    
+    // Answer editor
+    const answerEditor = new Quill(`#videoAnswerEditor${index}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'header': [1, 2, 3, false] }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'code-block'],
+                ['clean']
+            ]
+        }
+    });
+    
+    // Store editors temporarily
+    window[`tempQuestionEditor${index}`] = questionEditor;
+    window[`tempAnswerEditor${index}`] = answerEditor;
+}
+
+// Save edited question
+function saveQuestion(index) {
+    const questionEditor = window[`tempQuestionEditor${index}`];
+    const answerEditor = window[`tempAnswerEditor${index}`];
+    
+    if (questionEditor && answerEditor) {
+        const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+        if (!video.interviewQuestions[index]) {
+            video.interviewQuestions[index] = { question: '', answer: '' };
+        }
+        
+        video.interviewQuestions[index].question = questionEditor.root.innerHTML;
+        video.interviewQuestions[index].answer = answerEditor.root.innerHTML;
+        
+        // Clean up
+        delete window[`tempQuestionEditor${index}`];
+        delete window[`tempAnswerEditor${index}`];
+    }
+    
+    editingQuestions.delete(`video-${index}`);
+    
+    // Re-render questions
+    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
+    
+    showToast('Question saved!', 'success');
+}
+
+// Cancel editing question
+function cancelEditQuestion(index) {
+    // Clean up editors
+    delete window[`tempQuestionEditor${index}`];
+    delete window[`tempAnswerEditor${index}`];
+    
+    editingQuestions.delete(`video-${index}`);
+    
+    // Re-render questions
+    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
+}
+
+// Similar functions for upcoming questions
+function editUpcomingQuestion(index) {
+    editingQuestions.add(`upcoming-${index}`);
+    const topic = videoPlaylistData.upcomingTopic;
+    
+    // Re-render questions
+    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(topic.interviewQuestions, 'upcoming');
+    
+    // Initialize editors for this question only
+    const item = topic.interviewQuestions[index];
+    const question = typeof item === 'object' ? item.question : item;
+    const answer = typeof item === 'object' ? item.answer : '';
+    
+    // Question editor
+    const questionEditor = new Quill(`#upcomingQuestionEditor${index}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
+    });
+    
+    // Answer editor
+    const answerEditor = new Quill(`#upcomingAnswerEditor${index}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'header': [1, 2, 3, false] }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'code-block'],
+                ['clean']
+            ]
+        }
+    });
+    
+    // Store editors temporarily
+    window[`tempUpcomingQuestionEditor${index}`] = questionEditor;
+    window[`tempUpcomingAnswerEditor${index}`] = answerEditor;
+}
+
+function saveUpcomingQuestion(index) {
+    const questionEditor = window[`tempUpcomingQuestionEditor${index}`];
+    const answerEditor = window[`tempUpcomingAnswerEditor${index}`];
+    
+    if (questionEditor && answerEditor) {
+        if (!videoPlaylistData.upcomingTopic.interviewQuestions[index]) {
+            videoPlaylistData.upcomingTopic.interviewQuestions[index] = { question: '', answer: '' };
+        }
+        
+        videoPlaylistData.upcomingTopic.interviewQuestions[index].question = questionEditor.root.innerHTML;
+        videoPlaylistData.upcomingTopic.interviewQuestions[index].answer = answerEditor.root.innerHTML;
+        
+        // Clean up
+        delete window[`tempUpcomingQuestionEditor${index}`];
+        delete window[`tempUpcomingAnswerEditor${index}`];
+    }
+    
+    editingQuestions.delete(`upcoming-${index}`);
+    
+    // Re-render questions
+    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
+    
+    showToast('Question saved!', 'success');
+}
+
+function cancelEditUpcomingQuestion(index) {
+    // Clean up editors
+    delete window[`tempUpcomingQuestionEditor${index}`];
+    delete window[`tempUpcomingAnswerEditor${index}`];
+    
+    editingQuestions.delete(`upcoming-${index}`);
+    
+    // Re-render questions
+    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
+}
+
+// Update addQuestion to work with read-only view
+function addQuestion() {
+    if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
+        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
+    }
+    videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push({ question: '', answer: '' });
+    
+    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
+    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
+    
+    // Auto-edit the new question
+    const newIndex = video.interviewQuestions.length - 1;
+    editQuestion(newIndex);
+}
+
+function addUpcomingQuestion() {
+    videoPlaylistData.upcomingTopic.interviewQuestions.push({ question: '', answer: '' });
+    
+    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
+    
+    // Auto-edit the new question
+    const newIndex = videoPlaylistData.upcomingTopic.interviewQuestions.length - 1;
+    editUpcomingQuestion(newIndex);
 }
 
 // Edit upcoming topic
@@ -877,29 +1246,7 @@ function editUpcomingTopic() {
         <div class="list-section">
             <h3>💼 Interview Questions</h3>
             <div class="list-items" id="upcomingQuestions">
-                ${(topic.interviewQuestions || [{ question: '', answer: '' }]).map((item, i) => {
-        const question = typeof item === 'object' ? item.question : item;
-        const answer = typeof item === 'object' ? item.answer : '';
-
-        return `
-                        <div class="qa-container">
-                            <div class="qa-reorder-buttons">
-                                <button class="btn-reorder" onclick="moveUpcomingQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
-                                <button class="btn-reorder" onclick="moveUpcomingQuestion(${i}, 1)" ${i === topic.interviewQuestions.length - 1 ? 'disabled' : ''}>⬇️</button>
-                            </div>
-                            <div class="qa-header">
-                                <span class="qa-number">${i + 1}</span>
-                                <span class="qa-label question">Question</span>
-                            </div>
-                            <div id="upcomingQuestionEditor${i}" class="quill-editor-small">${question}</div>
-                            <div class="qa-header" style="margin-top: 10px;">
-                                <span class="qa-label answer">Answer</span>
-                            </div>
-                            <div id="upcomingAnswerEditor${i}" class="quill-editor-answer">${answer}</div>
-                            <button class="qa-delete-btn" onclick="removeUpcomingQuestion(${i})">✕</button>
-                        </div>
-                    `;
-    }).join('')}
+                ${renderQuestionsReadOnly(topic.interviewQuestions || [], 'upcoming')}
             </div>
             <button class="btn-add" onclick="addUpcomingQuestion()">➕ Add Question</button>
             <button class="btn-clear-all" onclick="clearAllUpcomingQuestions()" style="margin-left: 10px;">🗑️ Clear All Questions</button>
@@ -1079,50 +1426,11 @@ function toggleBulkAdd(type) {
             });
         }
 
-        // Pre-populate editor with existing questions
+        // DON'T pre-populate - start with empty editor for bulk add
         const editor = quillEditors[editorId];
         if (editor) {
-            let existingQuestions = [];
-
-            if (type === 'questions') {
-                // Get existing questions from current video
-                existingQuestions = videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions || [];
-            } else if (type === 'upcomingQuestions') {
-                // Get existing questions from upcoming topic
-                existingQuestions = videoPlaylistData.upcomingTopic.interviewQuestions || [];
-            }
-
-            // Filter out empty questions and format them
-            const formattedText = existingQuestions
-                .filter(q => {
-                    if (typeof q === 'object') {
-                        return q.question && q.question.trim() !== '';
-                    }
-                    return q && q.trim() !== '';
-                })
-                .map(q => {
-                    if (typeof q === 'object') {
-                        const question = q.question || '';
-                        const answer = q.answer || '';
-
-                        // Remove HTML tags for plain text display in bulk editor
-                        const plainQuestion = question.replace(/<[^>]*>/g, '').trim();
-                        const plainAnswer = answer.replace(/<[^>]*>/g, '').trim();
-
-                        if (plainAnswer) {
-                            return `Q: ${plainQuestion}\nA: ${plainAnswer}`;
-                        } else {
-                            return `Q: ${plainQuestion}`;
-                        }
-                    }
-                    return q;
-                })
-                .join('\n\n');
-
-            // Set the existing content in the editor
-            if (formattedText) {
-                editor.setText(formattedText);
-            }
+            // Always start with empty editor
+            editor.setText('');
         }
     } else {
         // Clear editor content when closing (cancel)
@@ -1348,14 +1656,6 @@ function updateQuestion(index, value, field) {
     videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions[index][field] = value;
 }
 
-function addQuestion() {
-    if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
-        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
-    }
-    videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push({ question: '', answer: '' });
-    editVideo(currentEditingIndex);
-}
-
 function removeQuestion(index) {
     showConfirmModal('⚠️ Are you sure you want to delete this question?', () => {
         videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.splice(index, 1);
@@ -1423,11 +1723,6 @@ function updateUpcomingQuestion(index, value, field) {
         videoPlaylistData.upcomingTopic.interviewQuestions[index] = { question: '', answer: '' };
     }
     videoPlaylistData.upcomingTopic.interviewQuestions[index][field] = value;
-}
-
-function addUpcomingQuestion() {
-    videoPlaylistData.upcomingTopic.interviewQuestions.push({ question: '', answer: '' });
-    editUpcomingTopic();
 }
 
 function removeUpcomingQuestion(index) {
