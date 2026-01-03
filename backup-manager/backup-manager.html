@@ -174,6 +174,10 @@
                                 Last updated: <span class="font-semibold">--</span>
                             </div>
                         </div>
+                        <button onclick="viewCollectionDetails('active')" class="mt-4 w-full px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all flex items-center justify-center gap-2">
+                            <span>👁️</span>
+                            <span>View Details</span>
+                        </button>
                     </div>
 
                     <!-- Today's Backup Status -->
@@ -194,6 +198,10 @@
                                 Last backup: <span class="font-semibold">--</span>
                             </div>
                         </div>
+                        <button onclick="viewCollectionDetails('temp')" class="mt-4 w-full px-4 py-2 bg-yellow-600 text-white rounded-lg font-semibold hover:bg-yellow-700 transition-all flex items-center justify-center gap-2">
+                            <span>👁️</span>
+                            <span>View Details</span>
+                        </button>
                     </div>
 
                     <!-- Permanent Save Status -->
@@ -214,6 +222,10 @@
                                 Last archive: <span class="font-semibold">--</span>
                             </div>
                         </div>
+                        <button onclick="viewCollectionDetails('final')" class="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                            <span>👁️</span>
+                            <span>View Details</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -352,11 +364,11 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
-    <!-- Confirmation Modal -->
-    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <!-- Confirmation Modal - Higher z-index to appear above details modal -->
+    <div id="confirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <h3 id="confirmModalTitle" class="text-xl font-bold text-gray-800 mb-4">Confirm Action</h3>
-            <p id="confirmModalMessage" class="text-gray-600 mb-6">Are you sure?</p>
+            <p id="confirmModalMessage" class="text-gray-600 mb-6 whitespace-pre-line">Are you sure?</p>
             <div class="flex gap-3 justify-end">
                 <button onclick="closeModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-all">
                     Cancel
@@ -364,6 +376,52 @@
                 <button id="confirmModalBtn" onclick="confirmAction()" class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all">
                     Confirm
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Details Modal -->
+    <div id="detailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <div>
+                    <h3 id="detailsModalTitle" class="text-2xl font-bold text-gray-800">📊 Collection Details</h3>
+                    <p id="detailsModalSubtitle" class="text-sm text-gray-600 mt-1">View all data in this collection</p>
+                </div>
+                <button onclick="closeDetailsModal()" class="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none">
+                    ×
+                </button>
+            </div>
+            
+            <!-- Modal Body - Scrollable -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Tab Navigation for Multiple Collections -->
+                <div id="collectionTabs" class="flex gap-2 mb-4 border-b border-gray-200"></div>
+                
+                <!-- Collection Content -->
+                <div id="detailsModalContent" class="space-y-4">
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-4xl mb-2">⏳</div>
+                        <div>Loading data...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+                <div id="detailsModalStats" class="text-sm text-gray-600">
+                    <!-- Stats will be inserted here -->
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="downloadCurrentDetails()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all flex items-center gap-2">
+                        <span>📥</span>
+                        <span>Download JSON</span>
+                    </button>
+                    <button onclick="closeDetailsModal()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-all">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     </div>

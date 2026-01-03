@@ -61,15 +61,15 @@
                     <span class="nav-icon">🎬</span>
                     <span class="nav-text">Video Playlist</span>
                 </a>
-                <a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html" class="nav-link">
+                <a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html" target="_blank" class="nav-link">
                     <span class="nav-icon">📝</span>
                     <span class="nav-text">Study Notes</span>
                 </a>
-                <a href="../../backup-manager/backup-manager.html" class="nav-link">
+                <a href="../../backup-manager/backup-manager.html" target="_blank" class="nav-link">
                     <span class="nav-icon">💾</span>
                     <span class="nav-text">Backup Manager</span>
                 </a>
-                <a href="#" class="nav-link disabled" title="Coming Soon">
+                <a href="#" class="nav-link disabled" target="_blank" title="Coming Soon">
                     <span class="nav-icon">📊</span>
                     <span class="nav-text">Analytics</span>
                 </a>
@@ -101,6 +101,20 @@
                     ➕ Add New Video
                 </button>
                 <div id="videoListContainer"></div>
+                
+                <!-- Upcoming Videos Section Divider -->
+                <div class="upcoming-divider">
+                    <span class="divider-line"></span>
+                    <span class="divider-text">🔔 Upcoming Video</span>
+                    <span class="divider-line"></span>
+                </div>
+                
+                <!-- Upcoming Videos Container -->
+                <div id="upcomingVideoContainer">
+                    <button class="btn-add-upcoming" onclick="addUpcomingTopic()">
+                        ➕ Add Upcoming Topic
+                    </button>
+                </div>
             </div>
 
             <!-- Editor Panel -->

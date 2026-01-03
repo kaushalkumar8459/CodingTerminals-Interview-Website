@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const connectDB = require('./config/database');
-const { authRoutes, videoRoutes, noteRoutes } = require('./routes');
+const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const APP_CONFIG = require('../config/app.config.js');
 
@@ -40,6 +40,12 @@ app.use('/api/interview-questions', interviewQuestionRoutes);
 
 // Authentication API
 app.use('/api/auth', authRoutes);
+
+// Backup API for Notes
+app.use('/api/notes/backup', backupRoutes);
+
+// Backup API for Videos
+app.use('/api/videos/backup', backupRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

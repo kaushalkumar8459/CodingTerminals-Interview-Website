@@ -1,4 +1,4 @@
-// ==================== STUDY NOTES APPLICATION WITH INDEXEDDB ====================
+// ==================== STUDY NOTES APPLICATION (MONGODB ONLY) ====================
 // Global Variables
 let studyNotesData = {
     notes: []
@@ -7,85 +7,11 @@ let studyNotesData = {
 let currentEditingNoteIndex = null;
 let noteQuillEditor = null;
 let confirmModalCallback = null;
-let db = null; // IndexedDB instance
-
-// IndexedDB Configuration - Use centralized config
-const DB_NAME = APP_CONFIG.INDEXEDDB.DB_NAME;
-const DB_VERSION = APP_CONFIG.INDEXEDDB.DB_VERSION;
-const STORE_NAME = APP_CONFIG.INDEXEDDB.STORES.STUDY_NOTES;
 
 // ==================== INITIALIZATION ====================
 window.addEventListener('DOMContentLoaded', () => {
-    initializeIndexedDB();
+    loadStudyNotes();
 });
-
-// ==================== INDEXEDDB SETUP ====================
-/**
- * Initialize IndexedDB
- * Creates database and object store if they don't exist
- */
-function initializeIndexedDB() {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    // Handle database upgrade (first time or version change)
-    request.onupgradeneeded = function(event) {
-        db = event.target.result;
-        
-        console.log('🔄 Upgrading database...', 'Current stores:', db.objectStoreNames);
-        
-        // Create object store if it doesn't exist
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: '_id' });
-            
-            // Create indexes for better query performance
-            objectStore.createIndex('title', 'title', { unique: false });
-            objectStore.createIndex('category', 'category', { unique: false });
-            objectStore.createIndex('date', 'date', { unique: false });
-            objectStore.createIndex('createdAt', 'createdAt', { unique: false });
-            
-            console.log('✅ IndexedDB object store created:', STORE_NAME);
-        } else {
-            console.log('ℹ️ Object store already exists:', STORE_NAME);
-        }
-    };
-
-    // Handle success
-    request.onsuccess = function(event) {
-        db = event.target.result;
-        
-        // Check if the required object store exists
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            console.error('❌ Object store not found:', STORE_NAME);
-            console.log('Available stores:', Array.from(db.objectStoreNames));
-            
-            // Close and delete the database, then retry
-            db.close();
-            showToast('⚠️ Recreating database...', 'warning');
-            
-            const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-            deleteRequest.onsuccess = function() {
-                console.log('🗑️ Old database deleted, reinitializing...');
-                setTimeout(() => initializeIndexedDB(), 500);
-            };
-            deleteRequest.onerror = function() {
-                console.error('❌ Failed to delete database');
-                showToast('Database error. Please refresh the page.', 'error');
-            };
-            return;
-        }
-        
-        console.log('✅ IndexedDB initialized successfully');
-        console.log('Available stores:', Array.from(db.objectStoreNames));
-        loadStudyNotes();
-    };
-
-    // Handle error
-    request.onerror = function(event) {
-        console.error('❌ IndexedDB initialization failed:', event.target.error);
-        showToast('Database initialization failed. Using fallback storage.', 'error');
-        loadStudyNotesFromJSON(); // Fallback to loading from JSON
-    };
-}
 
 // ==================== AUTHENTICATION ====================
 function logout() {
@@ -124,125 +50,24 @@ async function loadStudyNotes() {
                         updatedAt: note.updatedAt
                     }));
                     
-                    // Save to IndexedDB for offline access
-                    for (const note of studyNotesData.notes) {
-                        await saveNoteToIndexedDB(note);
-                    }
-                    
                     renderNotesList();
                     showToast('📚 Notes loaded from MongoDB!', 'success');
                     return;
                 }
             } catch (mongoError) {
-                console.warn('⚠️ MongoDB unavailable, loading from IndexedDB:', mongoError);
+                console.warn('⚠️ MongoDB unavailable:', mongoError);
             }
         }
         
-        // Fallback to IndexedDB
-        const notes = await getAllNotesFromIndexedDB();
-        
-        if (notes.length > 0) {
-            studyNotesData.notes = notes;
-            renderNotesList();
-            showToast('📚 Notes loaded from IndexedDB (offline)', 'info');
-        } else {
-            // First time - load sample data from JSON
-            await loadStudyNotesFromJSON();
-        }
+        // Fallback to empty notes
+        studyNotesData.notes = [];
+        renderNotesList();
+        showToast('⚠️ No notes available', 'warning');
     } catch (error) {
         console.error('Error loading study notes:', error);
         showToast('⚠️ Error loading notes', 'error');
         renderNotesList();
     }
-}
-
-/**
- * Load sample notes from JSON file (first time only)
- */
-async function loadStudyNotesFromJSON() {
-    try {
-        const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
-        if (response.ok) {
-            const jsonData = await response.json();
-            studyNotesData = jsonData;
-            
-            // Save all sample notes to IndexedDB
-            for (const note of jsonData.notes) {
-                await saveNoteToIndexedDB(note);
-            }
-            
-            renderNotesList();
-            showToast('📚 Sample notes loaded and saved to IndexedDB!', 'success');
-        } else {
-            throw new Error('Failed to load sample notes');
-        }
-    } catch (error) {
-        console.error('Error loading sample notes:', error);
-        showToast('⚠️ Could not load sample data', 'warning');
-        renderNotesList();
-    }
-}
-
-/**
- * Get all notes from IndexedDB
- * @returns {Promise<Array>} Array of note objects
- */
-function getAllNotesFromIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.getAll();
-
-        request.onsuccess = function() {
-            resolve(request.result || []);
-        };
-
-        request.onerror = function() {
-            reject(request.error);
-        };
-    });
-}
-
-/**
- * Save a single note to IndexedDB
- * @param {Object} note - Note object to save
- * @returns {Promise}
- */
-function saveNoteToIndexedDB(note) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.put(note); // put = insert or update
-
-        request.onsuccess = function() {
-            resolve(request.result);
-        };
-
-        request.onerror = function() {
-            reject(request.error);
-        };
-    });
-}
-
-/**
- * Delete a note from IndexedDB
- * @param {string} noteId - ID of note to delete
- * @returns {Promise}
- */
-function deleteNoteFromIndexedDB(noteId) {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(STORE_NAME);
-        const request = objectStore.delete(noteId);
-
-        request.onsuccess = function() {
-            resolve();
-        };
-
-        request.onerror = function() {
-            reject(request.error);
-        };
-    });
 }
 
 /**
@@ -262,9 +87,6 @@ async function saveCurrentNote() {
         // Update timestamp
         currentNote.updatedAt = new Date().toISOString();
 
-        // Save to IndexedDB
-        await saveNoteToIndexedDB(currentNote);
-        
         showToast('✅ Note saved successfully!', 'success');
         return true;
     } catch (error) {
@@ -286,11 +108,6 @@ async function saveAllNotes() {
                 currentNote.content = noteQuillEditor.root.innerHTML;
             }
             currentNote.updatedAt = new Date().toISOString();
-        }
-
-        // Save all notes to IndexedDB
-        for (const note of studyNotesData.notes) {
-            await saveNoteToIndexedDB(note);
         }
         
         showToast('✅ All notes saved successfully!', 'success');
@@ -359,9 +176,6 @@ async function createNewNote() {
     };
     
     try {
-        // Save to IndexedDB
-        await saveNoteToIndexedDB(newNote);
-        
         // Add to local array
         studyNotesData.notes.push(newNote);
         currentEditingNoteIndex = studyNotesData.notes.length - 1;
@@ -494,9 +308,6 @@ async function deleteCurrentNote() {
         `Are you sure you want to delete "${note.title}"? This action cannot be undone.`,
         async () => {
             try {
-                // Delete from IndexedDB
-                await deleteNoteFromIndexedDB(note._id);
-                
                 // Remove from local array
                 studyNotesData.notes.splice(currentEditingNoteIndex, 1);
                 currentEditingNoteIndex = null;
@@ -538,9 +349,6 @@ async function duplicateNote() {
         duplicatedNote.createdAt = new Date().toISOString();
         duplicatedNote.updatedAt = new Date().toISOString();
         
-        // Save to IndexedDB
-        await saveNoteToIndexedDB(duplicatedNote);
-        
         // Add to local array
         studyNotesData.notes.push(duplicatedNote);
         currentEditingNoteIndex = studyNotesData.notes.length - 1;
@@ -579,16 +387,13 @@ function exportCurrentNote() {
 // Export all notes to JSON
 async function exportAllNotesToJSON() {
     try {
-        // Get fresh data from IndexedDB
-        const allNotes = await getAllNotesFromIndexedDB();
-        
         const exportData = {
             _id: 'study_notes_collection',
             version: '1.0',
             exportedAt: new Date().toISOString(),
-            notes: allNotes,
-            categories: [...new Set(allNotes.map(n => n.category))],
-            tags: [...new Set(allNotes.flatMap(n => n.tags || []))]
+            notes: studyNotesData.notes,
+            categories: [...new Set(studyNotesData.notes.map(n => n.category))],
+            tags: [...new Set(studyNotesData.notes.flatMap(n => n.tags || []))]
         };
         
         const dataStr = JSON.stringify(exportData, null, 2);
@@ -603,213 +408,6 @@ async function exportAllNotesToJSON() {
     } catch (error) {
         console.error('Error exporting notes:', error);
         showToast('❌ Error exporting notes', 'error');
-    }
-}
-
-// Export for MongoDB (JSONL format - one document per line)
-async function exportForMongoDB() {
-    try {
-        // Get fresh data from IndexedDB
-        const allNotes = await getAllNotesFromIndexedDB();
-        
-        if (allNotes.length === 0) {
-            showToast('⚠️ No notes to export', 'warning');
-            return;
-        }
-
-        // JSONL format (JSON Lines) - each document on a separate line
-        // This is the format MongoDB's mongoimport expects
-        const jsonlData = allNotes.map(note => JSON.stringify(note)).join('\n');
-        
-        // Create and download JSONL file
-        const blob = new Blob([jsonlData], { type: 'application/x-ndjson' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `mongodb_import_notes_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        // Show instructions modal
-        showMongoDBImportInstructions(allNotes.length);
-        
-        showToast(`📥 MongoDB import file created (${allNotes.length} notes)!`, 'success');
-    } catch (error) {
-        console.error('Error exporting for MongoDB:', error);
-        showToast('❌ Error creating MongoDB export', 'error');
-    }
-}
-
-// Export as MongoDB Array (alternative format)
-async function exportAsMongoDBArray() {
-    try {
-        const allNotes = await getAllNotesFromIndexedDB();
-        
-        if (allNotes.length === 0) {
-            showToast('⚠️ No notes to export', 'warning');
-            return;
-        }
-
-        // Array format for MongoDB Compass or insertMany()
-        const exportData = JSON.stringify(allNotes, null, 2);
-        
-        const blob = new Blob([exportData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `mongodb_array_notes_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        showToast('📥 MongoDB array format exported!', 'success');
-    } catch (error) {
-        console.error('Error exporting array:', error);
-        showToast('❌ Error creating array export', 'error');
-    }
-}
-
-// Show MongoDB import instructions
-function showMongoDBImportInstructions(noteCount) {
-    const modal = document.getElementById('confirmModal');
-    const modalTitle = document.getElementById('confirmModalTitle');
-    const modalMessage = document.getElementById('confirmModalMessage');
-    const modalBtn = document.getElementById('confirmModalBtn');
-    
-    modalTitle.innerHTML = '📦 MongoDB Import Instructions';
-    modalMessage.innerHTML = `
-        <div class="text-left space-y-4">
-            <p class="font-semibold text-green-600">✅ File exported: ${noteCount} notes</p>
-            
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="font-semibold mb-2">🔧 Option 1: Using MongoDB Shell (mongoimport)</p>
-                <pre class="bg-gray-800 text-green-400 p-3 rounded text-xs overflow-x-auto">mongoimport --db codingTerminalsDB --collection studyNotes --file mongodb_import_notes_*.json</pre>
-            </div>
-            
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="font-semibold mb-2">🖥️ Option 2: Using MongoDB Compass</p>
-                <ol class="list-decimal list-inside text-sm space-y-1 text-gray-700">
-                    <li>Open MongoDB Compass</li>
-                    <li>Connect to your database</li>
-                    <li>Select/Create database: <code class="bg-gray-200 px-2 py-1 rounded">codingTerminalsDB</code></li>
-                    <li>Select/Create collection: <code class="bg-gray-200 px-2 py-1 rounded">studyNotes</code></li>
-                    <li>Click "Add Data" → "Import File"</li>
-                    <li>Select the exported JSON file</li>
-                    <li>Click "Import"</li>
-                </ol>
-            </div>
-            
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="font-semibold mb-2">📝 Option 3: Using Node.js/Express</p>
-                <pre class="bg-gray-800 text-green-400 p-3 rounded text-xs overflow-x-auto">const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('file.json'));
-await db.collection('studyNotes').insertMany(data);</pre>
-            </div>
-        </div>
-    `;
-    
-    modalBtn.textContent = 'Got it!';
-    modalBtn.className = 'px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all';
-    
-    confirmModalCallback = () => {
-        closeConfirmModal();
-        // Reset button
-        modalBtn.textContent = 'Confirm';
-        modalBtn.className = 'px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all';
-    };
-    
-    modal.classList.remove('hidden');
-}
-
-// Import notes from JSON
-function importNotesFromJSON() {
-    document.getElementById('importFileInput').click();
-}
-
-async function handleFileImport(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            
-            if (importedData.notes && Array.isArray(importedData.notes)) {
-                // Save all imported notes to IndexedDB
-                for (const note of importedData.notes) {
-                    // Ensure unique _id
-                    if (!note._id) {
-                        note._id = 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    }
-                    await saveNoteToIndexedDB(note);
-                }
-                
-                // Reload notes from IndexedDB
-                studyNotesData.notes = await getAllNotesFromIndexedDB();
-                
-                renderNotesList();
-                currentEditingNoteIndex = null;
-                document.getElementById('noteEditorContainer').innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-center">
-                        <div class="text-6xl mb-4">✅</div>
-                        <h3 class="text-2xl font-bold text-gray-700 mb-2">Notes Imported!</h3>
-                        <p class="text-gray-500">Successfully imported ${importedData.notes.length} notes</p>
-                    </div>
-                `;
-                showToast(`📤 ${importedData.notes.length} notes imported successfully!`, 'success');
-            } else {
-                throw new Error('Invalid file format');
-            }
-        } catch (error) {
-            console.error('Error importing notes:', error);
-            showToast('❌ Error importing notes. Please check the file format.', 'error');
-        }
-    };
-    reader.readAsText(file);
-    
-    // Reset file input
-    event.target.value = '';
-}
-
-// ==================== MONGODB SYNC ====================
-/**
- * Sync all notes with MongoDB
- * Saves current state to MongoDB and updates IndexedDB cache
- */
-async function syncWithMongoDB() {
-    try {
-        if (typeof studyNotesAPI === 'undefined') {
-            showToast('❌ MongoDB API service not available', 'error');
-            return;
-        }
-
-        // Save current note first
-        if (currentEditingNoteIndex !== null) {
-            const currentNote = studyNotesData.notes[currentEditingNoteIndex];
-            if (noteQuillEditor) {
-                currentNote.content = noteQuillEditor.root.innerHTML;
-            }
-            currentNote.updatedAt = new Date().toISOString();
-        }
-
-        showToast('🔄 Syncing with MongoDB...', 'info');
-
-        // Sync all notes using the API service
-        const syncedNotes = await studyNotesAPI.syncNotesWithMongoDB(studyNotesData.notes);
-        
-        // Update local data
-        studyNotesData.notes = syncedNotes;
-        
-        // Update IndexedDB cache
-        for (const note of syncedNotes) {
-            await saveNoteToIndexedDB(note);
-        }
-        
-        renderNotesList();
-        showToast(`✅ Successfully synced ${syncedNotes.length} notes with MongoDB!`, 'success');
-    } catch (error) {
-        console.error('Error syncing with MongoDB:', error);
-        showToast('❌ Failed to sync with MongoDB. Changes saved locally.', 'error');
     }
 }
 

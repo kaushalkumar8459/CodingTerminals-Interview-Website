@@ -1,0 +1,14 @@
+// copy paste in console
+videoPlaylistData.upcomingTopic = {
+    title: '',
+    description: '',
+    subtopics: [''],
+    interviewQuestions: [{ question: '', answer: '' }],
+    estimatedDate: new Date().toISOString().split('T')[0]
+};
+
+// Save it
+saveToServer().then(() => {
+    renderVideoList();
+    showToast('✅ Coming Soon section restored!', 'success');
+});

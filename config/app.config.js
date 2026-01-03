@@ -210,8 +210,10 @@ const APP_CONFIG = {
 
     // Backend Configuration (No longer uses JSON files)
     SERVER: {
-        PORT: 3000
-        // JSON file paths removed - using MongoDB only
+        PORT: 3000,
+        // File-based storage removed - using MongoDB only
+        FILES: {
+        }
     }
 };
 

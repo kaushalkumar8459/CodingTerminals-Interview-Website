@@ -197,9 +197,9 @@ const studyNotesAPI = {
             
             const results = await this.bulkUpsertNotes(notesToSync);
             
-            // Update local notes with MongoDB data (preserve noteId as _id for IndexedDB)
-            const syncedNotes = results.map(mongoNote => ({
-                _id: mongoNote.noteId,        // Use noteId as _id for IndexedDB
+            // Update local notes with MongoDB data
+            return results.map(mongoNote => ({
+                _id: mongoNote.noteId,        // Use noteId as _id for consistency
                 noteId: mongoNote.noteId,     // Keep noteId for reference
                 title: mongoNote.title,
                 content: mongoNote.content,
@@ -213,8 +213,8 @@ const studyNotesAPI = {
                 updatedAt: mongoNote.updatedAt
             }));
             
-            console.log('✅ Sync complete:', syncedNotes.length, 'notes synced');
-            return syncedNotes;
+            console.log('✅ Sync complete:', results.length, 'notes synced');
+            return results;
         } catch (error) {
             console.error('❌ Sync failed:', error);
             throw error;

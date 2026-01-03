@@ -25,7 +25,7 @@ const adminAPI = {
      * Get complete roadmap data from MongoDB
      * Fetches videos from youtubeVideos collection and questions from interviewQuestions collection
      * Separates regular videos (isUpcoming: false) and upcoming videos (isUpcoming: true)
-     * Returns merged data ready for IndexedDB caching
+     * Returns merged data ready for frontend
      */
     async getCompleteRoadmap() {
         try {
@@ -77,7 +77,7 @@ const adminAPI = {
                 })
             );
             
-            // Convert to roadmap format for IndexedDB
+            // Convert to roadmap format for frontend
             const roadmapData = {
                 channelName: 'Coding Terminals',
                 channelLogo: './../../assets/CT logo.jpg',

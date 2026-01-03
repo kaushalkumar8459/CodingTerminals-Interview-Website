@@ -3,12 +3,7 @@ const API_URL = APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.YOUTUBE_ROADM
 const YOUTUBE_API_KEY = APP_CONFIG.YOUTUBE.API_KEY;
 const PLAYLIST_ID = APP_CONFIG.YOUTUBE.PLAYLIST_ID;
 
-// IndexedDB Configuration - Use centralized config
-const DB_NAME = APP_CONFIG.INDEXEDDB.DB_NAME;
-const DB_VERSION = APP_CONFIG.INDEXEDDB.DB_VERSION;
-const ROADMAP_STORE_NAME = APP_CONFIG.INDEXEDDB.STORES.YOUTUBE_ROADMAP;
-let db = null; // IndexedDB instance
-
+// ==================== DATA STORAGE (MONGODB ONLY) ====================
 let videoPlaylistData = {
     channelName: APP_CONFIG.APP.CHANNEL_NAME,
     channelLogo: APP_CONFIG.ASSETS.LOGO,
@@ -23,168 +18,7 @@ let quillEditors = {}; // Store Quill editor instances
 // Track which questions are in edit mode
 let editingQuestions = new Set();
 
-// ==================== INDEXEDDB SETUP ====================
-/**
- * Initialize IndexedDB
- * Creates database and object stores if they don't exist
- */
-function initializeIndexedDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        // Handle database upgrade (first time or version change)
-        request.onupgradeneeded = function (event) {
-            db = event.target.result;
-
-            console.log('🔄 Upgrading database to version', DB_VERSION);
-
-            // Create roadmap object store if it doesn't exist
-            if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
-                const objectStore = db.createObjectStore(ROADMAP_STORE_NAME, { keyPath: '_id' });
-
-                // Create indexes for better query performance
-                objectStore.createIndex('type', 'type', { unique: false });
-                objectStore.createIndex('updatedAt', 'updatedAt', { unique: false });
-
-                console.log('✅ IndexedDB roadmap store created:', ROADMAP_STORE_NAME);
-            }
-
-            // Create study notes store if it doesn't exist (for compatibility)
-            const studyNotesStore = APP_CONFIG.INDEXEDDB.STORES.STUDY_NOTES;
-            if (!db.objectStoreNames.contains(studyNotesStore)) {
-                const notesStore = db.createObjectStore(studyNotesStore, { keyPath: '_id' });
-                notesStore.createIndex('title', 'title', { unique: false });
-                notesStore.createIndex('category', 'category', { unique: false });
-                notesStore.createIndex('createdAt', 'createdAt', { unique: false });
-                console.log('✅ IndexedDB study notes store created:', studyNotesStore);
-            }
-        };
-
-        // Handle success
-        request.onsuccess = function (event) {
-            db = event.target.result;
-
-            // Check if the required object store exists
-            if (!db.objectStoreNames.contains(ROADMAP_STORE_NAME)) {
-                console.error('❌ Object store not found:', ROADMAP_STORE_NAME);
-                console.log('Available stores:', Array.from(db.objectStoreNames));
-
-                // Close and delete the database, then retry
-                db.close();
-                console.log('⚠️ Recreating database with correct object store...');
-
-                const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
-                deleteRequest.onsuccess = function () {
-                    console.log('🗑️ Old database deleted, reinitializing...');
-                    setTimeout(() => initializeIndexedDB(), 500);
-                };
-                deleteRequest.onerror = function () {
-                    console.error('❌ Failed to delete database');
-                };
-                return;
-            }
-
-            console.log('✅ IndexedDB initialized successfully');
-            console.log('Available stores:', Array.from(db.objectStoreNames));
-            resolve(db);
-        };
-
-        // Handle error
-        request.onerror = function (event) {
-            console.error('❌ IndexedDB initialization failed:', event.target.error);
-            reject(event.target.error);
-        };
-    });
-}
-
-/**
- * Save roadmap data to IndexedDB
- * @param {Object} data - Roadmap data to save
- * @returns {Promise}
- */
-function saveRoadmapToIndexedDB(data) {
-    return new Promise((resolve, reject) => {
-        if (!db) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-
-        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-
-        const YoutubeRoadmapData = {
-            _id: 'YoutubeRoadmap_main',
-            type: 'YoutubeRoadmap',
-            channelName: data.channelName,
-            channelLogo: data.channelLogo,
-            videoPlaylist: data.videoPlaylist,
-            upcomingTopic: data.upcomingTopic,
-            updatedAt: new Date().toISOString()
-        };
-
-        const request = objectStore.put(YoutubeRoadmapData);
-
-        request.onsuccess = function () {
-            console.log('✅ Roadmap saved to IndexedDB');
-            resolve(request.result);
-        };
-
-        request.onerror = function () {
-            console.error('❌ Error saving to IndexedDB:', request.error);
-            reject(request.error);
-        };
-    });
-}
-
-/**
- * Load roadmap data from IndexedDB
- * @returns {Promise<Object|null>}
- */
-function loadRoadmapFromIndexedDB() {
-    return new Promise((resolve, reject) => {
-        if (!db) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-
-        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readonly');
-        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-        const request = objectStore.get('YoutubeRoadmap_main');
-
-        request.onsuccess = function () {
-            resolve(request.result || null);
-        };
-
-        request.onerror = function () {
-            reject(request.error);
-        };
-    });
-}
-
-/**
- * Clear roadmap data from IndexedDB
- * @returns {Promise}
- */
-function clearRoadmapFromIndexedDB() {
-    return new Promise((resolve, reject) => {
-        if (!db) {
-            reject(new Error('Database not initialized'));
-            return;
-        }
-
-        const transaction = db.transaction([ROADMAP_STORE_NAME], 'readwrite');
-        const objectStore = transaction.objectStore(ROADMAP_STORE_NAME);
-        const request = objectStore.delete('YoutubeRoadmap_main');
-
-        request.onsuccess = function () {
-            resolve();
-        };
-
-        request.onerror = function () {
-            reject(request.error);
-        };
-    });
-}
+// ==================== YOUTUBE API FUNCTIONS ====================
 
 // Fetch playlist videos from YouTube API
 async function fetchPlaylistVideos() {
@@ -384,84 +218,26 @@ function formatRelativeTime(dateString) {
     return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
 }
 
-// ==================== OFFLINE-FIRST LOAD DATA ====================
+// ==================== MONGODB-ONLY LOAD DATA ====================
 /**
- * FETCH FLOW: UI → IndexedDB → MongoDB
- * 1. Check IndexedDB
- * 2. If data exists → render UI instantly
- * 3. Call MongoDB API in background
- * 4. Update IndexedDB
- * 5. Refresh UI silently
+ * FETCH FLOW: UI → MongoDB (Direct)
+ * 1. Fetch videos from YouTube API
+ * 2. Fetch data from MongoDB
+ * 3. Merge and render UI
+ * No caching - always fresh data
  */
 async function loadData() {
     try {
         console.log('🚀 Starting offline-first load...');
 
-        // Show loader
-        GlobalLoader.show('Loading Data', 'Fetching videos from YouTube...');
-
-        // Initialize IndexedDB first
-        await initializeIndexedDB();
-
         // Fetch YouTube videos for merging
-        GlobalLoader.updateMessage('Loading Data', 'Fetching videos from YouTube API...');
         youtubeVideos = await fetchPlaylistVideos();
         if (youtubeVideos.length > 0) {
             console.log(`📹 Loaded ${youtubeVideos.length} videos from YouTube API`);
         }
 
-        // ==================== STEP 1: CHECK INDEXEDDB ====================
-        let indexedDBData = null;
-        try {
-            GlobalLoader.updateMessage('Loading Data', 'Checking local cache...');
-            indexedDBData = await loadRoadmapFromIndexedDB();
-        } catch (dbError) {
-            console.error('Error loading from IndexedDB:', dbError);
-        }
-
-        // ==================== STEP 2: IF DATA EXISTS → RENDER UI INSTANTLY ====================
-        if (indexedDBData && indexedDBData.videoPlaylist && indexedDBData.videoPlaylist.length > 0) {
-            console.log('📂 Found data in IndexedDB - Rendering instantly...');
-
-            // Merge IndexedDB data with YouTube data
-            videoPlaylistData.channelName = indexedDBData.channelName || APP_CONFIG.APP.CHANNEL_NAME;
-            videoPlaylistData.channelLogo = indexedDBData.channelLogo || APP_CONFIG.ASSETS.LOGO;
-
-            if (indexedDBData.upcomingTopic) {
-                videoPlaylistData.upcomingTopic = {
-                    ...indexedDBData.upcomingTopic,
-                    interviewQuestions: (indexedDBData.upcomingTopic.interviewQuestions || []).map(q => {
-                        if (typeof q === 'string') return { question: q, answer: '' };
-                        return q;
-                    })
-                };
-            }
-
-            videoPlaylistData.videoPlaylist = youtubeVideos.map((video, index) => {
-                const savedVideo = indexedDBData.videoPlaylist[index] || {};
-                const interviewQuestions = (savedVideo.interviewQuestions || []).map(q => {
-                    if (typeof q === 'string') return { question: q, answer: '' };
-                    return q;
-                });
-
-                return {
-                    ...video,
-                    _id: savedVideo._id,
-                    subtopics: savedVideo.subtopics || [''],
-                    interviewQuestions: interviewQuestions.length > 0 ? interviewQuestions : [{ question: '', answer: '' }]
-                };
-            });
-
-            // ✅ RENDER UI INSTANTLY
-            renderVideoList();
-            showToast('✅ Loaded instantly from cache', 'success');
-        } else {
-            console.log('📭 No cache found');
-        }
-
         // ==================== STEP 3: CALL MONGODB API (BACKGROUND) ====================
         console.log('🔄 Syncing with MongoDB in background...');
-        GlobalLoader.updateMessage('Syncing', 'Fetching data from MongoDB...');
 
         try {
             // Check if adminAPI is available
@@ -504,10 +280,6 @@ async function loadData() {
                         videoPlaylistData.upcomingTopic = null;
                     }
 
-                    // ==================== STEP 4: UPDATE INDEXEDDB ====================
-                    await saveRoadmapToIndexedDB(videoPlaylistData);
-                    console.log('💾 IndexedDB updated with latest data');
-
                     // ==================== STEP 5: REFRESH UI SILENTLY ====================
                     renderVideoList();
                     showToast('✓ Synced with MongoDB', 'success');
@@ -517,35 +289,25 @@ async function loadData() {
             } else {
                 throw new Error('Admin API not loaded');
             }
-
-            // Hide loader after successful sync
-            GlobalLoader.hide();
             
         } catch (mongoError) {
             console.warn('⚠️ MongoDB sync failed:', mongoError.message);
-            GlobalLoader.hide();
 
-            // If we had cache, we already showed it
-            if (indexedDBData) {
-                showToast('⚠ Using cached data (offline)', 'warning');
+            // No MongoDB - use YouTube data only
+            if (youtubeVideos.length > 0) {
+                videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
+                    ...video,
+                    subtopics: [''],
+                    interviewQuestions: [{ question: '', answer: '' }]
+                }));
+                renderVideoList();
+                showToast('ℹ️ Using YouTube data only', 'info');
             } else {
-                // No cache and no MongoDB - use YouTube data only
-                if (youtubeVideos.length > 0) {
-                    videoPlaylistData.videoPlaylist = youtubeVideos.map(video => ({
-                        ...video,
-                        subtopics: [''],
-                        interviewQuestions: [{ question: '', answer: '' }]
-                    }));
-                    renderVideoList();
-                    showToast('ℹ️ Using YouTube data only', 'info');
-                } else {
-                    showToast('❌ Cannot load data: No connection', 'error');
-                }
+                showToast('❌ Cannot load data: No connection', 'error');
             }
         }
     } catch (error) {
         console.error('❌ Error in loadData:', error);
-        GlobalLoader.hide();
         showToast('❌ Error loading data: ' + error.message, 'error');
 
         // If we have any data at all, render it
@@ -558,26 +320,32 @@ async function loadData() {
 // Render video list
 function renderVideoList() {
     const container = document.getElementById('videoListContainer');
+    const upcomingContainer = document.getElementById('upcomingVideoContainer');
 
     if (videoPlaylistData.videoPlaylist.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center;">No videos added yet</p>';
-        return;
+    } else {
+        container.innerHTML = videoPlaylistData.videoPlaylist.map((video, index) => `
+            <div class="video-item ${currentEditingIndex === index ? 'active' : ''}" onclick="editVideo(${index})">
+                <div class="day">Day ${index + 1}</div>
+                <div class="title">${video.title || 'Untitled Video'}</div>
+            </div>
+        `).join('');
     }
 
-    container.innerHTML = videoPlaylistData.videoPlaylist.map((video, index) => `
-        <div class="video-item ${currentEditingIndex === index ? 'active' : ''}" onclick="editVideo(${index})">
-            <div class="day">Day ${index + 1}</div>
-            <div class="title">${video.title || 'Untitled Video'}</div>
-        </div>
-    `).join('');
-
-    // Add upcoming topic
-    if (videoPlaylistData.upcomingTopic) {
-        container.innerHTML += `
-            <div class="video-item ${currentEditingIndex === 'upcoming' ? 'active' : ''}" onclick="editUpcomingTopic()" style="border-left-color: #ff9800;">
+    // Render upcoming topic in separate container
+    if (videoPlaylistData.upcomingTopic && videoPlaylistData.upcomingTopic.title) {
+        upcomingContainer.innerHTML = `
+            <div class="video-item upcoming ${currentEditingIndex === 'upcoming' ? 'active' : ''}" onclick="editUpcomingTopic()">
                 <div class="day">🔔 Coming Soon</div>
                 <div class="title">${videoPlaylistData.upcomingTopic.title}</div>
             </div>
+        `;
+    } else {
+        upcomingContainer.innerHTML = `
+            <button class="btn-add-upcoming" onclick="addUpcomingTopic()">
+                ➕ Add Upcoming Topic
+            </button>
         `;
     }
 }
@@ -675,7 +443,6 @@ async function editVideo(index) {
                 ${renderQuestionsReadOnly(video.interviewQuestions || [])}
             </div>
             <button class="btn-add" onclick="addQuestion()">➕ Add Question</button>
-            <button class="btn-clear-all" onclick="clearAllQuestions()">🗑️ Clear All Questions</button>
             <div class="tooltip-wrapper">
                 <button class="btn-bulk" onclick="toggleBulkAdd('questions')">📝 Bulk Add</button>
                 <button class="btn-info-help" title="Click for help">?</button>
@@ -885,14 +652,6 @@ async function saveQuestion(index) {
         answer: answerContent
     };
 
-    // Save to IndexedDB
-    try {
-        await saveRoadmapToIndexedDB(videoPlaylistData);
-        console.log('✅ Saved to IndexedDB');
-    } catch (error) {
-        console.error('❌ IndexedDB save error:', error);
-    }
-
     // Save to MongoDB
     const success = await saveToServer();
 
@@ -924,243 +683,6 @@ function cancelEditQuestion(index) {
     questionsList.innerHTML = renderQuestionsReadOnly(videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions);
 }
 
-// Render questions in read-only mode with Edit button
-function renderQuestionsReadOnly(questions, type) {
-    if (!questions || questions.length === 0) {
-        return '<p style="color: #999; text-align: center; padding: 20px;">No questions added yet. Click "Add Question" or "Bulk Add" to get started.</p>';
-    }
-
-    return questions.map((item, i) => {
-        const question = typeof item === 'object' ? (item.question || '') : item;
-        const answer = typeof item === 'object' ? (item.answer || '') : '';
-        const isEditing = editingQuestions.has(`${type}-${i}`);
-
-        // Strip HTML tags for display
-        const displayQuestion = question.replace(/<[^>]*>/g, '').trim() || 'Empty question';
-        const displayAnswer = answer.replace(/<[^>]*>/g, '').trim() || 'No answer provided';
-
-        if (isEditing) {
-            // Edit mode - show Quill editors
-            return `
-                <div class="qa-container editing" data-index="${i}">
-                    <div class="qa-reorder-buttons">
-                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
-                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
-                    </div>
-                    <div class="qa-header">
-                        <span class="qa-number">${i + 1}</span>
-                        <span class="qa-label question">Question</span>
-                    </div>
-                    <div id="${type}QuestionEditor${i}" class="quill-editor-small">${question}</div>
-                    <div class="qa-header" style="margin-top: 10px;">
-                        <span class="qa-label answer">Answer</span>
-                    </div>
-                    <div id="${type}AnswerEditor${i}" class="quill-editor-answer">${answer}</div>
-                    <div class="qa-action-buttons">
-                        <button class="btn-save-question" onclick="${type === 'video' ? 'saveQuestion' : 'saveUpcomingQuestion'}(${i})">✅ Save</button>
-                        <button class="btn-cancel-edit" onclick="${type === 'video' ? 'cancelEditQuestion' : 'cancelEditUpcomingQuestion'}(${i})">❌ Cancel</button>
-                    </div>
-                    <button class="qa-delete-btn" onclick="${type === 'video' ? 'removeQuestion' : 'removeUpcomingQuestion'}(${i})">✕</button>
-                </div>
-            `;
-        } else {
-            // Read-only mode
-            return `
-                <div class="qa-container read-only" data-index="${i}">
-                    <div class="qa-reorder-buttons">
-                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
-                        <button class="btn-reorder" onclick="${type === 'video' ? 'moveQuestion' : 'moveUpcomingQuestion'}(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
-                    </div>
-                    <div class="qa-header">
-                        <span class="qa-number">${i + 1}</span>
-                        <span class="qa-label question">Question</span>
-                    </div>
-                    <div class="qa-readonly-content">
-                        ${question || '<em style="color: #999;">No question text</em>'}
-                    </div>
-                    <div class="qa-header" style="margin-top: 15px;">
-                        <span class="qa-label answer">Answer</span>
-                    </div>
-                    <div class="qa-readonly-content">
-                        ${answer || '<em style="color: #999;">No answer provided</em>'}
-                    </div>
-                    <div class="qa-action-buttons">
-                        <button class="btn-edit-question" onclick="${type === 'video' ? 'editQuestion' : 'editUpcomingQuestion'}(${i})">✏️ Edit</button>
-                    </div>
-                    <button class="qa-delete-btn" onclick="${type === 'video' ? 'removeQuestion' : 'removeUpcomingQuestion'}(${i})">✕</button>
-                </div>
-            `;
-        }
-    }).join('');
-}
-
-// Edit a specific question
-function editQuestion(index) {
-    editingQuestions.add(`video-${index}`);
-    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
-    
-    // Re-render questions
-    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
-    
-    // Initialize editors for this question only
-    const item = video.interviewQuestions[index];
-    const question = typeof item === 'object' ? item.question : item;
-    const answer = typeof item === 'object' ? item.answer : '';
-    
-    // Question editor
-    const questionEditor = new Quill(`#videoQuestionEditor${index}`, {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'color': [] }, { 'background': [] }],
-                ['clean']
-            ]
-        }
-    });
-    
-    // Answer editor
-    const answerEditor = new Quill(`#videoAnswerEditor${index}`, {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'header': [1, 2, 3, false] }],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'color': [] }, { 'background': [] }],
-                ['link', 'code-block'],
-                ['clean']
-            ]
-        }
-    });
-    
-    // Store editors temporarily
-    window[`tempQuestionEditor${index}`] = questionEditor;
-    window[`tempAnswerEditor${index}`] = answerEditor;
-}
-
-// Save edited question
-function saveQuestion(index) {
-    const questionEditor = window[`tempQuestionEditor${index}`];
-    const answerEditor = window[`tempAnswerEditor${index}`];
-    
-    if (questionEditor && answerEditor) {
-        const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
-        if (!video.interviewQuestions[index]) {
-            video.interviewQuestions[index] = { question: '', answer: '' };
-        }
-        
-        video.interviewQuestions[index].question = questionEditor.root.innerHTML;
-        video.interviewQuestions[index].answer = answerEditor.root.innerHTML;
-        
-        // Clean up
-        delete window[`tempQuestionEditor${index}`];
-        delete window[`tempAnswerEditor${index}`];
-    }
-    
-    editingQuestions.delete(`video-${index}`);
-    
-    // Re-render questions
-    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
-    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
-    
-    showToast('Question saved!', 'success');
-}
-
-// Cancel editing question
-function cancelEditQuestion(index) {
-    // Clean up editors
-    delete window[`tempQuestionEditor${index}`];
-    delete window[`tempAnswerEditor${index}`];
-    
-    editingQuestions.delete(`video-${index}`);
-    
-    // Re-render questions
-    const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
-    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
-}
-
-// Similar functions for upcoming questions
-function editUpcomingQuestion(index) {
-    editingQuestions.add(`upcoming-${index}`);
-    const topic = videoPlaylistData.upcomingTopic;
-    
-    // Re-render questions
-    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(topic.interviewQuestions, 'upcoming');
-    
-    // Initialize editors for this question only
-    const item = topic.interviewQuestions[index];
-    const question = typeof item === 'object' ? item.question : item;
-    const answer = typeof item === 'object' ? item.answer : '';
-    
-    // Question editor
-    const questionEditor = new Quill(`#upcomingQuestionEditor${index}`, {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline'],
-                [{ 'color': [] }, { 'background': [] }],
-                ['clean']
-            ]
-        }
-    });
-    
-    // Answer editor
-    const answerEditor = new Quill(`#upcomingAnswerEditor${index}`, {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'header': [1, 2, 3, false] }],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'color': [] }, { 'background': [] }],
-                ['link', 'code-block'],
-                ['clean']
-            ]
-        }
-    });
-    
-    // Store editors temporarily
-    window[`tempUpcomingQuestionEditor${index}`] = questionEditor;
-    window[`tempUpcomingAnswerEditor${index}`] = answerEditor;
-}
-
-function saveUpcomingQuestion(index) {
-    const questionEditor = window[`tempUpcomingQuestionEditor${index}`];
-    const answerEditor = window[`tempUpcomingAnswerEditor${index}`];
-    
-    if (questionEditor && answerEditor) {
-        if (!videoPlaylistData.upcomingTopic.interviewQuestions[index]) {
-            videoPlaylistData.upcomingTopic.interviewQuestions[index] = { question: '', answer: '' };
-        }
-        
-        videoPlaylistData.upcomingTopic.interviewQuestions[index].question = questionEditor.root.innerHTML;
-        videoPlaylistData.upcomingTopic.interviewQuestions[index].answer = answerEditor.root.innerHTML;
-        
-        // Clean up
-        delete window[`tempUpcomingQuestionEditor${index}`];
-        delete window[`tempUpcomingAnswerEditor${index}`];
-    }
-    
-    editingQuestions.delete(`upcoming-${index}`);
-    
-    // Re-render questions
-    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
-    
-    showToast('Question saved!', 'success');
-}
-
-function cancelEditUpcomingQuestion(index) {
-    // Clean up editors
-    delete window[`tempUpcomingQuestionEditor${index}`];
-    delete window[`tempUpcomingAnswerEditor${index}`];
-    
-    editingQuestions.delete(`upcoming-${index}`);
-    
-    // Re-render questions
-    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
-}
-
 // Update addQuestion to work with read-only view
 function addQuestion() {
     if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
@@ -1169,452 +691,11 @@ function addQuestion() {
     videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push({ question: '', answer: '' });
     
     const video = videoPlaylistData.videoPlaylist[currentEditingIndex];
-    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions, 'video');
+    document.getElementById('questionsList').innerHTML = renderQuestionsReadOnly(video.interviewQuestions);
     
     // Auto-edit the new question
     const newIndex = video.interviewQuestions.length - 1;
     editQuestion(newIndex);
-}
-
-function addUpcomingQuestion() {
-    videoPlaylistData.upcomingTopic.interviewQuestions.push({ question: '', answer: '' });
-    
-    document.getElementById('upcomingQuestions').innerHTML = renderQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions, 'upcoming');
-    
-    // Auto-edit the new question
-    const newIndex = videoPlaylistData.upcomingTopic.interviewQuestions.length - 1;
-    editUpcomingQuestion(newIndex);
-}
-
-// Edit upcoming topic
-function editUpcomingTopic() {
-    currentEditingIndex = 'upcoming';
-    renderVideoList();
-
-    if (!videoPlaylistData.upcomingTopic) {
-        videoPlaylistData.upcomingTopic = {
-            title: '',
-            description: '',
-            subtopics: [''],
-            interviewQuestions: [{ question: '', answer: '' }],
-            estimatedDate: new Date().toISOString().split('T')[0]
-        };
-    }
-
-    const topic = videoPlaylistData.upcomingTopic;
-
-    // Get current date in YYYY-MM-DD format
-    const currentDate = new Date().toISOString().split('T')[0];
-
-    // Prepare subtopics HTML - handle both plain text and HTML content
-    let subtopicsHTML = '';
-    if (topic.subtopics && topic.subtopics.length > 0) {
-        // Check if subtopics contain HTML or plain text
-        const hasHTML = topic.subtopics.some(t => t.includes('<') && t.includes('>'));
-
-        if (hasHTML) {
-            // Join HTML content directly
-            subtopicsHTML = topic.subtopics.join('');
-        } else {
-            // Wrap plain text in list items
-            subtopicsHTML = `<ul>${topic.subtopics.map(t => `<li>${t}</li>`).join('')}</ul>`;
-        }
-    }
-
-    const editorPanel = document.getElementById('editorPanel');
-    editorPanel.innerHTML = `
-        <h2>🔔 Edit Upcoming Topic</h2>
-        
-        <div class="form-group">
-            <label>Topic Title</label>
-            <input type="text" id="upcomingTitle" value="${topic.title || ''}" placeholder="Enter topic title">
-        </div>
-
-        <div class="form-group">
-            <label>Estimated Date</label>
-            <input type="date" id="upcomingDate" value="${currentDate}">
-        </div>
-
-        <div class="list-section">
-            <h3>📝 Description</h3>
-            <div class="format-helper" style="margin-bottom: 10px;">
-                💡 <strong>Tip:</strong> Use the bullet list or numbered list buttons in the toolbar to add multiple topics
-            </div>
-            <div id="upcomingSubtopicsEditor" class="quill-editor-topics"></div>
-        </div>
-
-        <div class="list-section">
-            <h3>💼 Interview Questions</h3>
-            <div class="list-items" id="upcomingQuestions">
-                ${renderQuestionsReadOnly(topic.interviewQuestions || [], 'upcoming')}
-            </div>
-            <button class="btn-add" onclick="addUpcomingQuestion()">➕ Add Question</button>
-            <button class="btn-clear-all" onclick="clearAllUpcomingQuestions()" style="margin-left: 10px;">🗑️ Clear All Questions</button>
-            <div class="tooltip-wrapper">
-                <button class="btn-bulk" onclick="toggleBulkAdd('upcomingQuestions')">📝 Bulk Add</button>
-                <button class="btn-info-help" title="Click for help">?</button>
-                <div class="tooltip-content">
-                    <strong>💡 Bulk Add Format Options:</strong><br><br>
-                    <strong>Option 1 - Questions only:</strong><br>
-                    One question per line
-                    <div class="example">What is JavaScript?
-What is TypeScript?
-What is React?</div>
-                    <strong>Option 2 - With answers:</strong><br>
-                    Use <code>Q:</code> and <code>A:</code> format
-                    <div class="example">Q: What is JavaScript?
-A: JavaScript is a programming language...
-
-Q: What is TypeScript?
-A: TypeScript adds static typing to JS...</div>
-                </div>
-            </div>
-            <div class="bulk-add-container" id="bulkUpcomingQuestions">
-                <div id="bulkUpcomingQuestionsEditor" class="quill-editor-bulk"></div>
-                <div style="margin-top: 10px;">
-                    <button class="btn-add" onclick="applyBulkUpcomingQuestions()">✅ Add All</button>
-                    <button class="btn-remove" onclick="toggleBulkAdd('upcomingQuestions')">❌ Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="action-buttons">
-            <button class="btn btn-primary" onclick="copyUpcomingToLatestVideo()">📋 Copy to Latest Video</button>
-            <button class="btn btn-success" onclick="saveAllData()">💾 Save Changes</button>
-            <button class="btn btn-danger" onclick="deleteUpcomingTopic()">🗑️ Clear Values</button>
-        </div>
-    `;
-
-    // Add event listeners
-    document.getElementById('upcomingTitle').addEventListener('change', (e) => {
-        videoPlaylistData.upcomingTopic.title = e.target.value;
-    });
-
-    document.getElementById('upcomingDate').addEventListener('change', (e) => {
-        videoPlaylistData.upcomingTopic.estimatedDate = e.target.value;
-    });
-
-    // Clear old editors
-    quillEditors = {};
-    
-    // Use requestAnimationFrame to defer heavy initialization
-    requestAnimationFrame(() => {
-        // Initialize Quill editor for upcoming subtopics
-        const upcomingSubtopicsEditor = new Quill('#upcomingSubtopicsEditor', {
-            theme: 'snow',
-            modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    [{ 'color': [] }, { 'background': [] }],
-                    ['clean']
-                ]
-            }
-        });
-
-        // Set initial content - directly set the HTML content
-        if (subtopicsHTML) {
-            upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
-        }
-
-        // Save changes on text change
-        upcomingSubtopicsEditor.on('text-change', () => {
-            const htmlContent = upcomingSubtopicsEditor.root.innerHTML;
-            // Extract list items from the HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
-            const listItems = tempDiv.querySelectorAll('li');
-            videoPlaylistData.upcomingTopic.subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
-
-            // If no list items, save the entire content as a single item
-            if (videoPlaylistData.upcomingTopic.subtopics.length === 0) {
-                const textContent = upcomingSubtopicsEditor.getText().trim();
-                if (textContent) {
-                    videoPlaylistData.upcomingTopic.subtopics = [htmlContent];
-                }
-            }
-        });
-
-        quillEditors['upcomingSubtopicsEditor'] = upcomingSubtopicsEditor;
-
-        // Initialize Quill editors for upcoming questions and answers in batches
-        const questions = topic.interviewQuestions || [{ question: '', answer: '' }];
-        let currentIndex = 0;
-        
-        const initNextEditor = () => {
-            if (currentIndex >= questions.length) return;
-            
-            const i = currentIndex;
-            const item = questions[i];
-            
-            // Question editor
-            const questionEditorId = `upcomingQuestionEditor${i}`;
-            if (document.getElementById(questionEditorId)) {
-                quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
-                    theme: 'snow',
-                    modules: {
-                        toolbar: [
-                            ['bold', 'italic', 'underline'],
-                            [{ 'color': [] }, { 'background': [] }],
-                            ['clean']
-                        ]
-                    }
-                });
-
-                quillEditors[questionEditorId].on('text-change', () => {
-                    updateUpcomingQuestion(i, quillEditors[questionEditorId].root.innerHTML, 'question');
-                });
-            }
-
-            // Answer editor
-            const answerEditorId = `upcomingAnswerEditor${i}`;
-            if (document.getElementById(answerEditorId)) {
-                quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
-                    theme: 'snow',
-                    modules: {
-                        toolbar: [
-                            ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'header': [1, 2, 3, false] }],
-                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                            [{ 'color': [] }, { 'background': [] }],
-                            ['link', 'code-block'],
-                            ['clean']
-                        ]
-                    }
-                });
-
-                quillEditors[answerEditorId].on('text-change', () => {
-                    updateUpcomingQuestion(i, quillEditors[answerEditorId].root.innerHTML, 'answer');
-                });
-            }
-            
-            currentIndex++;
-            
-            // Initialize next editor in next frame to avoid blocking
-            if (currentIndex < questions.length) {
-                requestAnimationFrame(initNextEditor);
-            }
-        };
-        
-        // Start initializing editors
-        initNextEditor();
-    });
-}
-
-// Bulk add functions
-function toggleBulkAdd(type) {
-    const container = document.getElementById(type === 'subtopics' ? 'bulkSubtopics' : type === 'questions' ? 'bulkQuestions' : 'bulkUpcomingQuestions');
-    container.classList.toggle('show');
-
-    // Initialize Quill editor for bulk add if showing
-    if (container.classList.contains('show')) {
-        const editorId = type === 'questions' ? 'bulkQuestionsEditor' : 'bulkUpcomingQuestionsEditor';
-
-        // Only initialize if not already initialized
-        if (!quillEditors[editorId]) {
-            quillEditors[editorId] = new Quill(`#${editorId}`, {
-                theme: 'snow',
-                modules: {
-                    toolbar: [
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                        [{ 'color': [] }, { 'background': [] }],
-                        ['clean']
-                    ]
-                },
-                placeholder: 'Type or paste your questions here...\n\nExample:\nQ: What is JavaScript?\nA: JavaScript is a programming language...\n\nOr one question per line'
-            });
-        }
-
-        // DON'T pre-populate - start with empty editor for bulk add
-        const editor = quillEditors[editorId];
-        if (editor) {
-            // Always start with empty editor
-            editor.setText('');
-        }
-    } else {
-        // Clear editor content when closing (cancel)
-        const editorId = type === 'questions' ? 'bulkQuestionsEditor' : 'bulkUpcomingQuestionsEditor';
-        if (quillEditors[editorId]) {
-            quillEditors[editorId].setText('');
-        }
-    }
-}
-
-function applyBulkQuestions() {
-    const editor = quillEditors['bulkQuestionsEditor'];
-    if (!editor) {
-        showToast('Editor not initialized. Please try clicking Bulk Add again.', 'error');
-        return;
-    }
-
-    const text = editor.getText().trim();
-    if (!text) {
-        showToast('Please enter at least one question', 'error');
-        return;
-    }
-
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
-
-    if (lines.length === 0) {
-        showToast('No valid questions found', 'error');
-        return;
-    }
-
-    // Check if using Q:/A: format
-    const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
-
-    const formattedQuestions = [];
-
-    if (hasQAFormat) {
-        // Parse Q: and A: format - preserve HTML formatting
-        let currentQuestion = null;
-
-        lines.forEach(line => {
-            if (line.startsWith('Q:')) {
-                // Save previous question if exists
-                if (currentQuestion) {
-                    formattedQuestions.push(currentQuestion);
-                }
-                // Start new question
-                currentQuestion = {
-                    question: line.substring(2).trim(),
-                    answer: ''
-                };
-            } else if (line.startsWith('A:')) {
-                // Add answer to current question
-                if (currentQuestion) {
-                    currentQuestion.answer = line.substring(2).trim();
-                }
-            } else if (currentQuestion && currentQuestion.answer) {
-                // Continue multi-line answer
-                currentQuestion.answer += '<br>' + line;
-            } else if (currentQuestion) {
-                // Continue multi-line question
-                currentQuestion.question += '<br>' + line;
-            }
-        });
-
-        // Don't forget the last question
-        if (currentQuestion) {
-            formattedQuestions.push(currentQuestion);
-        }
-    } else {
-        // Simple format: one question per line
-        lines.forEach(line => {
-            formattedQuestions.push({
-                question: line,
-                answer: ''
-            });
-        });
-    }
-
-    if (formattedQuestions.length === 0) {
-        showToast('No valid questions found', 'error');
-        return;
-    }
-
-    // Add all new questions to the current video
-    if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
-        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
-    }
-
-    videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push(...formattedQuestions);
-
-    showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
-
-    // Clear the editor
-    editor.setText('');
-
-    editVideo(currentEditingIndex);
-}
-
-function applyBulkUpcomingQuestions() {
-    const editor = quillEditors['bulkUpcomingQuestionsEditor'];
-    if (!editor) {
-        showToast('Editor not initialized. Please try clicking Bulk Add again.', 'error');
-        return;
-    }
-
-    const text = editor.getText().trim();
-    if (!text) {
-        showToast('Please enter at least one question', 'error');
-        return;
-    }
-
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
-
-    if (lines.length === 0) {
-        showToast('No valid questions found', 'error');
-        return;
-    }
-
-    // Check if using Q:/A: format
-    const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
-
-    const formattedQuestions = [];
-
-    if (hasQAFormat) {
-        // Parse Q: and A: format
-        let currentQuestion = null;
-
-        lines.forEach(line => {
-            if (line.startsWith('Q:')) {
-                // Save previous question if exists
-                if (currentQuestion) {
-                    formattedQuestions.push(currentQuestion);
-                }
-                // Start new question
-                currentQuestion = {
-                    question: line.substring(2).trim(),
-                    answer: ''
-                };
-            } else if (line.startsWith('A:')) {
-                // Add answer to current question
-                if (currentQuestion) {
-                    currentQuestion.answer = line.substring(2).trim();
-                }
-            } else if (currentQuestion && currentQuestion.answer) {
-                // Continue multi-line answer
-                currentQuestion.answer += '<br>' + line;
-            } else if (currentQuestion) {
-                // Continue multi-line question
-                currentQuestion.question += '<br>' + line;
-            }
-        });
-
-        // Don't forget the last question
-        if (currentQuestion) {
-            formattedQuestions.push(currentQuestion);
-        }
-    } else {
-        // Simple format: one question per line
-        lines.forEach(line => {
-            formattedQuestions.push({
-                question: line,
-                answer: ''
-            });
-        });
-    }
-
-    if (formattedQuestions.length === 0) {
-        showToast('No valid questions found', 'error');
-        return;
-    }
-
-    // Add all new questions to the upcoming topic
-    if (!videoPlaylistData.upcomingTopic.interviewQuestions) {
-        videoPlaylistData.upcomingTopic.interviewQuestions = [];
-    }
-
-    videoPlaylistData.upcomingTopic.interviewQuestions.push(...formattedQuestions);
-
-    showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
-
-    // Clear the editor
-    editor.setText('');
-
-    editUpcomingTopic();
 }
 
 // Subtopic functions
@@ -1664,19 +745,6 @@ function removeQuestion(index) {
     }, {
         title: '🗑️ Delete Question',
         buttonText: 'Delete',
-        buttonClass: 'btn btn-danger'
-    });
-}
-
-// Clear all questions
-function clearAllQuestions() {
-    showConfirmModal('⚠️ Are you sure you want to clear all questions?', () => {
-        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
-        editVideo(currentEditingIndex);
-        showToast('All questions cleared successfully', 'success');
-    }, {
-        title: '🗑️ Clear All Questions',
-        buttonText: 'Ok',
         buttonClass: 'btn btn-danger'
     });
 }
@@ -1741,11 +809,17 @@ function removeUpcomingQuestion(index) {
 function clearAllUpcomingQuestions() {
     showConfirmModal('⚠️ Are you sure you want to clear all upcoming questions?', () => {
         videoPlaylistData.upcomingTopic.interviewQuestions = [];
-        editUpcomingTopic();
+        
+        // Re-render the questions list without reloading the entire editor
+        const questionsList = document.getElementById('upcomingQuestions');
+        if (questionsList) {
+            questionsList.innerHTML = renderUpcomingQuestionsReadOnly([]);
+        }
+        
         showToast('All upcoming questions cleared successfully', 'success');
     }, {
         title: '🗑️ Clear All Upcoming Questions',
-        buttonText: 'Ok',
+        buttonText: 'Clear All',
         buttonClass: 'btn btn-danger'
     });
 }
@@ -1904,15 +978,6 @@ async function deleteVideo(index) {
 // Save to server (only save subtopics and interview questions, not YouTube data)
 async function saveToServer() {
     try {
-        // Save to IndexedDB first
-        try {
-            await saveRoadmapToIndexedDB(videoPlaylistData);
-            console.log('✅ Data saved to IndexedDB');
-        } catch (dbError) {
-            console.error('Error saving to IndexedDB:', dbError);
-            showToast('⚠️ Warning: Could not save to local database', 'warning');
-        }
-
         // Prepare published videos data
         const publishedVideos = [];
 
@@ -2021,26 +1086,9 @@ async function saveAllData() {
     }
 }
 
-// Download JSON (backup) - now includes option to export from IndexedDB
+// Download JSON (backup) - exports current data
 async function downloadJSON() {
     try {
-        // Get fresh data from IndexedDB
-        const indexedDBData = await loadRoadmapFromIndexedDB();
-
-        const dataToExport = indexedDBData || videoPlaylistData;
-
-        const dataStr = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `roadmap_backup_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('✅ Backup downloaded from IndexedDB!', 'success');
-    } catch (error) {
-        console.error('Error downloading backup:', error);
-        // Fallback to current data
         const dataStr = JSON.stringify(videoPlaylistData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -2050,41 +1098,10 @@ async function downloadJSON() {
         a.click();
         URL.revokeObjectURL(url);
         showToast('✅ Backup downloaded!', 'success');
+    } catch (error) {
+        console.error('Error downloading backup:', error);
+        showToast('❌ Error downloading backup!', 'error');
     }
-}
-
-// Clear all data from IndexedDB (useful for debugging/reset)
-async function clearIndexedDBData() {
-    showConfirmModal(
-        `<div style="text-align: left;">
-            <p><strong>This will:</strong></p>
-            <ul style="margin: 15px 0;">
-                <li>Clear all cached data from IndexedDB</li>
-                <li>Reload fresh data from MongoDB</li>
-                <li>Fix any sync issues</li>
-            </ul>
-            <p style="color: #666; margin-top: 15px;">
-                ℹ️ This is useful if you're seeing outdated data or the "Coming Soon" section is missing.
-            </p>
-        </div>`,
-        async () => {
-            try {
-                await clearRoadmapFromIndexedDB();
-                showToast('🔄 Cache cleared! Reloading fresh data...', 'success');
-
-                // Reload data from MongoDB
-                await loadData();
-            } catch (error) {
-                console.error('Error clearing IndexedDB:', error);
-                showToast('❌ Error clearing data: ' + error.message, 'error');
-            }
-        },
-        {
-            title: '🗑️ Clear Cache & Reload',
-            buttonText: 'Clear & Reload',
-            buttonClass: 'btn btn-warning'
-        }
-    );
 }
 
 // Show toast notification
@@ -2206,12 +1223,8 @@ async function deleteUpcomingTopic() {
 // ==================== MANUAL SYNC WITH MONGODB ====================
 /**
  * Manual sync button function - allows users to manually trigger MongoDB sync
- * Shows loader during sync and toast notification on completion
  */
 async function manualSyncWithMongoDB() {
-    // Show global loader instead of sync status indicator
-    GlobalLoader.show('Syncing with MongoDB', 'Fetching latest data from server...');
-
     try {
         console.log('🔄 Manual sync initiated...');
 
@@ -2219,8 +1232,6 @@ async function manualSyncWithMongoDB() {
         if (typeof adminAPI === 'undefined') {
             throw new Error('Admin API not loaded');
         }
-
-        GlobalLoader.updateMessage('Syncing with MongoDB', 'Loading videos and topics...');
 
         // Fetch complete roadmap including upcomingTopic
         const roadmapData = await adminAPI.getCompleteRoadmap();
@@ -2263,22 +1274,574 @@ async function manualSyncWithMongoDB() {
             videoPlaylistData.upcomingTopic = null;
         }
 
-        // Update IndexedDB with fresh data
-        GlobalLoader.updateMessage('Syncing with MongoDB', 'Updating local cache...');
-        await saveRoadmapToIndexedDB(videoPlaylistData);
-        console.log('💾 IndexedDB updated with MongoDB data');
-
         // Refresh UI
         renderVideoList();
 
-        // Hide loader and show success
-        GlobalLoader.hide();
         showToast('✅ Successfully synced with MongoDB', 'success');
 
     } catch (error) {
         console.error('❌ Manual sync failed:', error);
-        GlobalLoader.hide();
         showToast('❌ Sync failed: ' + error.message, 'error');
+    }
+}
+
+// Edit upcoming topic
+function editUpcomingTopic() {
+    currentEditingIndex = 'upcoming';
+    renderVideoList();
+
+    if (!videoPlaylistData.upcomingTopic) {
+        videoPlaylistData.upcomingTopic = {
+            title: '',
+            description: '',
+            subtopics: [''],
+            interviewQuestions: [{ question: '', answer: '' }],
+            estimatedDate: new Date().toISOString().split('T')[0]
+        };
+    }
+
+    const topic = videoPlaylistData.upcomingTopic;
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Prepare subtopics HTML
+    let subtopicsHTML = '';
+    if (topic.subtopics && topic.subtopics.length > 0) {
+        const hasHTML = topic.subtopics.some(t => t.includes('<') && t.includes('>'));
+        if (hasHTML) {
+            subtopicsHTML = topic.subtopics.join('');
+        } else {
+            subtopicsHTML = `<ul>${topic.subtopics.map(t => `<li>${t}</li>`).join('')}</ul>`;
+        }
+    }
+
+    const editorPanel = document.getElementById('editorPanel');
+    editorPanel.innerHTML = `
+        <h2>🔔 Edit Upcoming Topic</h2>
+        
+        <div class="form-group">
+            <label>Topic Title</label>
+            <input type="text" id="upcomingTitle" value="${topic.title || ''}" placeholder="Enter topic title">
+        </div>
+
+        <div class="form-group">
+            <label>Estimated Date</label>
+            <input type="date" id="upcomingDate" value="${topic.estimatedDate || currentDate}">
+        </div>
+
+        <div class="list-section">
+            <h3>📝 Description</h3>
+            <div class="format-helper" style="margin-bottom: 10px;">
+                💡 <strong>Tip:</strong> Use the bullet list or numbered list buttons in the toolbar to add multiple topics
+            </div>
+            <div id="upcomingSubtopicsEditor" class="quill-editor-topics"></div>
+        </div>
+
+        <div class="list-section">
+            <h3>💼 Interview Questions</h3>
+            <div class="list-items" id="upcomingQuestions">
+                ${renderUpcomingQuestionsReadOnly(topic.interviewQuestions || [])}
+            </div>
+            <button class="btn-add" onclick="addUpcomingQuestion()">➕ Add Question</button>
+            <button class="btn-clear-all" onclick="clearAllUpcomingQuestions()">🗑️ Clear All Questions</button>
+            <div class="tooltip-wrapper">
+                <button class="btn-bulk" onclick="toggleBulkAdd('upcomingQuestions')">📝 Bulk Add</button>
+                <button class="btn-info-help" title="Click for help">?</button>
+                <div class="tooltip-content">
+                    <strong>💡 Bulk Add Format Options:</strong><br><br>
+                    <strong>Option 1 - Questions only:</strong><br>
+                    One question per line
+                    <div class="example">What is JavaScript?
+What is TypeScript?
+What is React?</div>
+                    <strong>Option 2 - With answers:</strong><br>
+                    Use <code>Q:</code> and <code>A:</code> format
+                    <div class="example">Q: What is JavaScript?
+A: JavaScript is a programming language...
+
+Q: What is TypeScript?
+A: TypeScript adds static typing to JS...</div>
+                </div>
+            </div>
+            <div class="bulk-add-container" id="bulkUpcomingQuestions">
+                <div id="bulkUpcomingQuestionsEditor" class="quill-editor-bulk"></div>
+                <div style="margin-top: 10px;">
+                    <button class="btn-add" onclick="applyBulkUpcomingQuestions()">✅ Add All</button>
+                    <button class="btn-remove" onclick="toggleBulkAdd('upcomingQuestions')">❌ Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="copyUpcomingToLatestVideo()">📋 Copy to Latest Video</button>
+            <button class="btn btn-success" onclick="saveAllData()">💾 Save Changes</button>
+            <button class="btn btn-danger" onclick="deleteUpcomingTopic()">🗑️ Clear Values</button>
+        </div>
+    `;
+
+    // Add event listeners
+    document.getElementById('upcomingTitle').addEventListener('change', (e) => {
+        videoPlaylistData.upcomingTopic.title = e.target.value;
+    });
+
+    document.getElementById('upcomingDate').addEventListener('change', (e) => {
+        videoPlaylistData.upcomingTopic.estimatedDate = e.target.value;
+    });
+
+    // Initialize Quill editor for subtopics
+    quillEditors = {};
+    const upcomingSubtopicsEditor = new Quill('#upcomingSubtopicsEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    if (subtopicsHTML) {
+        upcomingSubtopicsEditor.root.innerHTML = subtopicsHTML;
+    }
+
+    upcomingSubtopicsEditor.on('text-change', () => {
+        const htmlContent = upcomingSubtopicsEditor.root.innerHTML;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        const listItems = tempDiv.querySelectorAll('li');
+        videoPlaylistData.upcomingTopic.subtopics = Array.from(listItems).map(li => li.innerHTML.trim()).filter(item => item !== '');
+
+        if (videoPlaylistData.upcomingTopic.subtopics.length === 0) {
+            const textContent = upcomingSubtopicsEditor.getText().trim();
+            if (textContent) {
+                videoPlaylistData.upcomingTopic.subtopics = [htmlContent];
+            }
+        }
+    });
+
+    quillEditors['upcomingSubtopicsEditor'] = upcomingSubtopicsEditor;
+}
+
+// Add upcoming topic (initialize if doesn't exist)
+function addUpcomingTopic() {
+    if (!videoPlaylistData.upcomingTopic) {
+        videoPlaylistData.upcomingTopic = {
+            title: '',
+            description: '',
+            subtopics: [''],
+            interviewQuestions: [{ question: '', answer: '' }],
+            estimatedDate: new Date().toISOString().split('T')[0]
+        };
+    }
+    editUpcomingTopic();
+}
+
+// Render upcoming questions in read-only mode
+function renderUpcomingQuestionsReadOnly(questions) {
+    if (!questions || questions.length === 0) {
+        return '<p style="color: #999; text-align: center; padding: 20px;">No questions added yet. Click "➕ Add Question" to start.</p>';
+    }
+
+    return questions.map((item, i) => {
+        const question = typeof item === 'object' ? (item.question || '') : item;
+        const answer = typeof item === 'object' ? (item.answer || '') : '';
+        
+        const questionPreview = question.replace(/<[^>]*>/g, '').trim() || 'Empty question';
+        const answerPreview = answer.replace(/<[^>]*>/g, '').trim() || 'No answer provided';
+
+        return `
+            <div class="qa-container qa-readonly" id="qa-upcoming-container-${i}">
+                <div class="qa-reorder-buttons">
+                    <button class="btn-reorder" onclick="moveUpcomingQuestion(${i}, -1)" ${i === 0 ? 'disabled' : ''}>⬆️</button>
+                    <button class="btn-reorder" onclick="moveUpcomingQuestion(${i}, 1)" ${i === questions.length - 1 ? 'disabled' : ''}>⬇️</button>
+                </div>
+                
+                <div class="qa-header">
+                    <span class="qa-number">${i + 1}</span>
+                    <span class="qa-label question">Question</span>
+                </div>
+                <div class="qa-preview">${questionPreview}</div>
+                
+                <div class="qa-header" style="margin-top: 10px;">
+                    <span class="qa-label answer">Answer</span>
+                </div>
+                <div class="qa-preview qa-answer-preview">${answerPreview}</div>
+                
+                <div class="qa-actions">
+                    <button class="btn-edit" onclick="editUpcomingQuestion(${i})">✏️ Edit</button>
+                    <button class="qa-delete-btn" onclick="removeUpcomingQuestion(${i})">✕ Delete</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Edit upcoming question
+function editUpcomingQuestion(index) {
+    if (!videoPlaylistData.upcomingTopic) {
+        showToast('❌ No upcoming topic available', 'error');
+        return;
+    }
+    
+    const topic = videoPlaylistData.upcomingTopic;
+    const item = topic.interviewQuestions[index];
+    const question = typeof item === 'object' ? (item.question || '') : item;
+    const answer = typeof item === 'object' ? (item.answer || '') : '';
+
+    const container = document.getElementById(`qa-upcoming-container-${index}`);
+    if (!container) {
+        console.error('Container not found for upcoming question', index);
+        return;
+    }
+
+    container.className = 'qa-container qa-editing';
+    container.innerHTML = `
+        <div class="qa-reorder-buttons">
+            <button class="btn-reorder" onclick="moveUpcomingQuestion(${index}, -1)" ${index === 0 ? 'disabled' : ''}>⬆️</button>
+            <button class="btn-reorder" onclick="moveUpcomingQuestion(${index}, 1)" ${index === topic.interviewQuestions.length - 1 ? 'disabled' : ''}>⬇️</button>
+        </div>
+        
+        <div class="qa-header">
+            <span class="qa-number">${index + 1}</span>
+            <span class="qa-label question">Question</span>
+        </div>
+        <div id="upcomingQuestionEditor${index}" class="quill-editor-small">${question}</div>
+        
+        <div class="qa-header" style="margin-top: 10px;">
+            <span class="qa-label answer">Answer</span>
+        </div>
+        <div id="upcomingAnswerEditor${index}" class="quill-editor-answer">${answer}</div>
+        
+        <div class="qa-actions">
+            <button class="btn-save" onclick="saveUpcomingQuestion(${index})">💾 Save</button>
+            <button class="btn-cancel" onclick="cancelEditUpcomingQuestion(${index})">❌ Cancel</button>
+            <button class="qa-delete-btn" onclick="removeUpcomingQuestion(${index})">✕ Delete</button>
+        </div>
+    `;
+
+    const questionEditorId = `upcomingQuestionEditor${index}`;
+    quillEditors[questionEditorId] = new Quill(`#${questionEditorId}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline'],
+                [{ 'color': [] }, { 'background': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    const answerEditorId = `upcomingAnswerEditor${index}`;
+    quillEditors[answerEditorId] = new Quill(`#${answerEditorId}`, {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'header': [1, 2, 3, false] }],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'code-block'],
+                ['clean']
+            ]
+        }
+    });
+}
+
+// Save upcoming question
+async function saveUpcomingQuestion(index) {
+    const questionEditor = quillEditors[`upcomingQuestionEditor${index}`];
+    const answerEditor = quillEditors[`upcomingAnswerEditor${index}`];
+
+    if (!questionEditor || !answerEditor) {
+        showToast('❌ Editor not found', 'error');
+        return;
+    }
+
+    const questionContent = questionEditor.root.innerHTML;
+    const answerContent = answerEditor.root.innerHTML;
+
+    videoPlaylistData.upcomingTopic.interviewQuestions[index] = {
+        question: questionContent,
+        answer: answerContent
+    };
+
+    const success = await saveToServer();
+
+    if (success) {
+        showToast('✅ Question saved successfully', 'success');
+        delete quillEditors[`upcomingQuestionEditor${index}`];
+        delete quillEditors[`upcomingAnswerEditor${index}`];
+        
+        const questionsList = document.getElementById('upcomingQuestions');
+        if (questionsList) {
+            questionsList.innerHTML = renderUpcomingQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions);
+        }
+    } else {
+        showToast('❌ Failed to save question', 'error');
+    }
+}
+
+// Cancel edit upcoming question
+function cancelEditUpcomingQuestion(index) {
+    delete quillEditors[`upcomingQuestionEditor${index}`];
+    delete quillEditors[`upcomingAnswerEditor${index}`];
+    
+    const questionsList = document.getElementById('upcomingQuestions');
+    if (questionsList) {
+        questionsList.innerHTML = renderUpcomingQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions);
+    }
+}
+
+// Add upcoming question
+function addUpcomingQuestion() {
+    if (!videoPlaylistData.upcomingTopic) {
+        showToast('❌ No upcoming topic available', 'error');
+        return;
+    }
+    
+    if (!videoPlaylistData.upcomingTopic.interviewQuestions) {
+        videoPlaylistData.upcomingTopic.interviewQuestions = [];
+    }
+    videoPlaylistData.upcomingTopic.interviewQuestions.push({ question: '', answer: '' });
+    
+    const questionsList = document.getElementById('upcomingQuestions');
+    if (questionsList) {
+        questionsList.innerHTML = renderUpcomingQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions);
+        
+        const newIndex = videoPlaylistData.upcomingTopic.interviewQuestions.length - 1;
+        editUpcomingQuestion(newIndex);
+    }
+}
+
+// Bulk add functions
+function toggleBulkAdd(type) {
+    const container = document.getElementById(type === 'subtopics' ? 'bulkSubtopics' : type === 'questions' ? 'bulkQuestions' : 'bulkUpcomingQuestions');
+    
+    if (!container) {
+        console.error('Bulk add container not found:', type);
+        return;
+    }
+    
+    container.classList.toggle('show');
+
+    // Initialize Quill editor for bulk add if showing
+    if (container.classList.contains('show')) {
+        const editorId = type === 'questions' ? 'bulkQuestionsEditor' : 'bulkUpcomingQuestionsEditor';
+
+        // Only initialize if not already initialized
+        if (!quillEditors[editorId]) {
+            quillEditors[editorId] = new Quill(`#${editorId}`, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        ['clean']
+                    ]
+                },
+                placeholder: 'Type or paste your questions here...\n\nExample:\nQ: What is JavaScript?\nA: JavaScript is a programming language...\n\nOr one question per line'
+            });
+        }
+
+        // Start with empty editor for bulk add
+        const editor = quillEditors[editorId];
+        if (editor) {
+            editor.setText('');
+        }
+    } else {
+        // Clear editor content when closing (cancel)
+        const editorId = type === 'questions' ? 'bulkQuestionsEditor' : 'bulkUpcomingQuestionsEditor';
+        if (quillEditors[editorId]) {
+            quillEditors[editorId].setText('');
+        }
+    }
+}
+
+function applyBulkQuestions() {
+    const editor = quillEditors['bulkQuestionsEditor'];
+    if (!editor) {
+        showToast('Editor not initialized. Please try clicking Bulk Add again.', 'error');
+        return;
+    }
+
+    const text = editor.getText().trim();
+    if (!text) {
+        showToast('Please enter at least one question', 'error');
+        return;
+    }
+
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (lines.length === 0) {
+        showToast('No valid questions found', 'error');
+        return;
+    }
+
+    // Check if using Q:/A: format
+    const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
+
+    const formattedQuestions = [];
+
+    if (hasQAFormat) {
+        // Parse Q: and A: format - preserve HTML formatting
+        let currentQuestion = null;
+
+        lines.forEach(line => {
+            if (line.startsWith('Q:')) {
+                // Save previous question if exists
+                if (currentQuestion) {
+                    formattedQuestions.push(currentQuestion);
+                }
+                // Start new question
+                currentQuestion = {
+                    question: line.substring(2).trim(),
+                    answer: ''
+                };
+            } else if (line.startsWith('A:')) {
+                // Add answer to current question
+                if (currentQuestion) {
+                    currentQuestion.answer = line.substring(2).trim();
+                }
+            } else if (currentQuestion && currentQuestion.answer) {
+                // Continue multi-line answer
+                currentQuestion.answer += '<br>' + line;
+            } else if (currentQuestion) {
+                // Continue multi-line question
+                currentQuestion.question += '<br>' + line;
+            }
+        });
+
+        // Don't forget the last question
+        if (currentQuestion) {
+            formattedQuestions.push(currentQuestion);
+        }
+    } else {
+        // Simple format: one question per line
+        lines.forEach(line => {
+            formattedQuestions.push({
+                question: line,
+                answer: ''
+            });
+        });
+    }
+
+    if (formattedQuestions.length === 0) {
+        showToast('No valid questions found', 'error');
+        return;
+    }
+
+    // Add all new questions to the current video
+    if (!videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions) {
+        videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions = [];
+    }
+
+    videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions.push(...formattedQuestions);
+
+    showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
+
+    // Clear the editor and close bulk add
+    editor.setText('');
+    toggleBulkAdd('questions');
+
+    // Re-render questions list
+    const questionsList = document.getElementById('questionsList');
+    if (questionsList) {
+        questionsList.innerHTML = renderQuestionsReadOnly(videoPlaylistData.videoPlaylist[currentEditingIndex].interviewQuestions);
+    }
+}
+
+function applyBulkUpcomingQuestions() {
+    const editor = quillEditors['bulkUpcomingQuestionsEditor'];
+    if (!editor) {
+        showToast('Editor not initialized. Please try clicking Bulk Add again.', 'error');
+        return;
+    }
+
+    const text = editor.getText().trim();
+    if (!text) {
+        showToast('Please enter at least one question', 'error');
+        return;
+    }
+
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (lines.length === 0) {
+        showToast('No valid questions found', 'error');
+        return;
+    }
+
+    // Check if using Q:/A: format
+    const hasQAFormat = lines.some(line => line.startsWith('Q:') || line.startsWith('A:'));
+
+    const formattedQuestions = [];
+
+    if (hasQAFormat) {
+        // Parse Q: and A: format
+        let currentQuestion = null;
+
+        lines.forEach(line => {
+            if (line.startsWith('Q:')) {
+                // Save previous question if exists
+                if (currentQuestion) {
+                    formattedQuestions.push(currentQuestion);
+                }
+                // Start new question
+                currentQuestion = {
+                    question: line.substring(2).trim(),
+                    answer: ''
+                };
+            } else if (line.startsWith('A:')) {
+                // Add answer to current question
+                if (currentQuestion) {
+                    currentQuestion.answer = line.substring(2).trim();
+                }
+            } else if (currentQuestion && currentQuestion.answer) {
+                // Continue multi-line answer
+                currentQuestion.answer += '<br>' + line;
+            } else if (currentQuestion) {
+                // Continue multi-line question
+                currentQuestion.question += '<br>' + line;
+            }
+        });
+
+        // Don't forget the last question
+        if (currentQuestion) {
+            formattedQuestions.push(currentQuestion);
+        }
+    } else {
+        // Simple format: one question per line
+        lines.forEach(line => {
+            formattedQuestions.push({
+                question: line,
+                answer: ''
+            });
+        });
+    }
+
+    if (formattedQuestions.length === 0) {
+        showToast('No valid questions found', 'error');
+        return;
+    }
+
+    // Add all new questions to the upcoming topic
+    if (!videoPlaylistData.upcomingTopic.interviewQuestions) {
+        videoPlaylistData.upcomingTopic.interviewQuestions = [];
+    }
+
+    videoPlaylistData.upcomingTopic.interviewQuestions.push(...formattedQuestions);
+
+    showToast(`Added ${formattedQuestions.length} questions successfully!`, 'success');
+
+    // Clear the editor and close bulk add
+    editor.setText('');
+    toggleBulkAdd('upcomingQuestions');
+
+    // Re-render questions list
+    const questionsList = document.getElementById('upcomingQuestions');
+    if (questionsList) {
+        questionsList.innerHTML = renderUpcomingQuestionsReadOnly(videoPlaylistData.upcomingTopic.interviewQuestions);
     }
 }
 
