@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 /**
  * Note Model (Individual Documents)
- * Collection: studyNotes
+ * Collection: codingTerminalsStudyNotes
  * NEW Architecture - One document per note
  */
 
@@ -54,7 +54,7 @@ const noteSchema = new mongoose.Schema({
     }
 }, { 
     timestamps: true,
-    collection: 'studyNotes'
+    collection: 'codingTerminalsStudyNotes'
 });
 
 // Indexes for better query performance

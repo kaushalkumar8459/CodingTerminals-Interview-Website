@@ -87,7 +87,24 @@ async function saveCurrentNote() {
         // Update timestamp
         currentNote.updatedAt = new Date().toISOString();
 
-        showToast('✅ Note saved successfully!', 'success');
+        // ✅ FIXED: Actually save to MongoDB
+        if (typeof studyNotesAPI !== 'undefined') {
+            try {
+                // Check if note has MongoDB _id
+                if (currentNote._id && currentNote._id.startsWith('note_')) {
+                    // New note - create it
+                    await studyNotesAPI.createNote(currentNote);
+                } else {
+                    // Existing note - update it
+                    await studyNotesAPI.updateNote(currentNote._id, currentNote);
+                }
+                showToast('✅ Note saved to MongoDB!', 'success');
+            } catch (error) {
+                console.error('MongoDB save error:', error);
+                showToast('⚠️ Saved locally only (MongoDB unavailable)', 'warning');
+            }
+        }
+
         return true;
     } catch (error) {
         console.error('Error saving note:', error);
@@ -110,7 +127,25 @@ async function saveAllNotes() {
             currentNote.updatedAt = new Date().toISOString();
         }
         
-        showToast('✅ All notes saved successfully!', 'success');
+        // ✅ FIXED: Actually save all notes to MongoDB using bulk upsert
+        if (typeof studyNotesAPI !== 'undefined') {
+            try {
+                console.log('💾 Saving all notes to MongoDB...');
+                const results = await studyNotesAPI.syncNotesWithMongoDB(studyNotesData.notes);
+                
+                // Update local notes with MongoDB data (includes _id)
+                studyNotesData.notes = results;
+                
+                showToast(`✅ All ${results.length} notes saved to MongoDB!`, 'success');
+                renderNotesList();
+            } catch (error) {
+                console.error('MongoDB bulk save error:', error);
+                showToast('⚠️ Saved locally only (MongoDB unavailable)', 'warning');
+            }
+        } else {
+            showToast('⚠️ Saved locally only (API not available)', 'warning');
+        }
+        
         return true;
     } catch (error) {
         console.error('Error saving notes:', error);
@@ -308,6 +343,20 @@ async function deleteCurrentNote() {
         `Are you sure you want to delete "${note.title}"? This action cannot be undone.`,
         async () => {
             try {
+                // ✅ FIXED: Delete from MongoDB first
+                if (typeof studyNotesAPI !== 'undefined' && note._id) {
+                    try {
+                        // If it's a MongoDB document (has proper _id), delete from MongoDB
+                        if (!note._id.startsWith('note_')) {
+                            await studyNotesAPI.deleteNote(note._id);
+                            showToast('✅ Note deleted from MongoDB!', 'success');
+                        }
+                    } catch (error) {
+                        console.error('MongoDB delete error:', error);
+                        showToast('⚠️ Deleted locally (MongoDB unavailable)', 'warning');
+                    }
+                }
+                
                 // Remove from local array
                 studyNotesData.notes.splice(currentEditingNoteIndex, 1);
                 currentEditingNoteIndex = null;
@@ -321,7 +370,6 @@ async function deleteCurrentNote() {
                         <p class="text-gray-500">Create a new note or select an existing one</p>
                     </div>
                 `;
-                showToast('✅ Note deleted successfully', 'success');
             } catch (error) {
                 console.error('Error deleting note:', error);
                 showToast('❌ Error deleting note', 'error');

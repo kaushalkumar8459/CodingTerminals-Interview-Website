@@ -243,5 +243,5 @@ const studyNotesAPI = {
 
 // Initialize on load
 console.log('✅ Study Notes API Service initialized');
-console.log('📡 API Endpoint: /api/notes (studyNotes collection)');
+console.log('📡 API Endpoint: /api/notes (codingTerminalsStudyNotes collection)');
 console.log('📊 Architecture: MongoDB (individual documents) → Backend → IndexedDB cache');

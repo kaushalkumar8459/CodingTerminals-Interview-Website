@@ -11,7 +11,7 @@ const APP_CONFIG = {
         BASE_URL: 'http://localhost:3000',
         ENDPOINTS: {
             YOUTUBE_ROADMAP: '/api/youtube-roadmap',
-            STUDY_NOTES: '/api/study-notes',
+            STUDY_NOTES: '/api/notes', // ✅ FIXED: Changed from '/api/study-notes' to '/api/notes'
             LOGIN: '/api/auth/login',
             AUTH_CONFIG: '/api/auth-config'
         }

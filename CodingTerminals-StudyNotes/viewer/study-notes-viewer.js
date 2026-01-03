@@ -14,6 +14,8 @@ window.addEventListener('DOMContentLoaded', () => {
 async function loadStudyNotes() {
     showLoading(true);
     try {
+        console.log('🔄 Loading study notes from API...');
+        
         // Fetch notes from server API
         const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.STUDY_NOTES);
         
@@ -21,10 +23,23 @@ async function loadStudyNotes() {
             throw new Error('Failed to load notes');
         }
 
-        const data = await response.json();
-        allNotes = data.notes || [];
+        const result = await response.json();
+        console.log('✅ API Response:', result);
+        
+        // ✅ FIXED: Handle the actual API response format
+        if (result.success && result.data) {
+            allNotes = result.data || [];
+        } else {
+            // Fallback for old format
+            allNotes = result.notes || result.data || [];
+        }
+        
         filteredNotes = [...allNotes];
-        categories = data.categories || [];
+        
+        // Extract unique categories from notes
+        categories = [...new Set(allNotes.map(note => note.category).filter(Boolean))];
+        
+        console.log(`📚 Loaded ${allNotes.length} notes with ${categories.length} categories`);
 
         // Populate category filter
         populateCategoryFilter();
@@ -39,9 +54,12 @@ async function loadStudyNotes() {
         
         if (allNotes.length === 0) {
             showEmptyState();
+        } else {
+            // Auto-select first note
+            displayNote(0);
         }
     } catch (error) {
-        console.error('Error loading study notes:', error);
+        console.error('❌ Error loading study notes:', error);
         showLoading(false);
         showError('Failed to load study notes. Please make sure the server is running.');
     }
