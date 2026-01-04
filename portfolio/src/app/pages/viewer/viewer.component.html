@@ -1,0 +1,115 @@
+<div class="viewer-container">
+  <header class="viewer-header">
+    <h1>👁️ Projects Gallery - Portfolio Viewer</h1>
+    <div class="header-actions">
+      <a href="/resume" class="btn btn-outline">📋 View Resume</a>
+      <a href="/admin" class="btn btn-outline">🔐 Admin Login</a>
+    </div>
+  </header>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label>Filter by Category:</label>
+      <div class="filter-buttons">
+        <button 
+          [class.active]="selectedCategory === 'all'" 
+          (click)="filterByCategory('all')">
+          All
+        </button>
+        <button 
+          *ngFor="let cat of categories" 
+          [class.active]="selectedCategory === cat"
+          (click)="filterByCategory(cat)">
+          {{cat}}
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>Filter by Status:</label>
+      <div class="filter-buttons">
+        <button 
+          [class.active]="selectedStatus === 'all'" 
+          (click)="filterByStatus('all')">
+          All
+        </button>
+        <button 
+          [class.active]="selectedStatus === 'completed'" 
+          (click)="filterByStatus('completed')">
+          Completed
+        </button>
+        <button 
+          [class.active]="selectedStatus === 'in-progress'" 
+          (click)="filterByStatus('in-progress')">
+          In Progress
+        </button>
+        <button 
+          [class.active]="selectedStatus === 'planned'" 
+          (click)="filterByStatus('planned')">
+          Planned
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-reset" (click)="resetFilters()">🔄 Reset Filters</button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="loading" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Loading projects...</p>
+  </div>
+
+  <!-- Portfolio Results -->
+  <div class="portfolio-section" *ngIf="!loading">
+    <div class="results-info">
+      <h2>📁 Showing {{filteredPortfolios.length}} Projects</h2>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredPortfolios.length === 0">
+      <div class="empty-icon">📭</div>
+      <h3>No Projects Found</h3>
+      <p>Try adjusting your filters or check back later</p>
+    </div>
+
+    <!-- Portfolio Grid -->
+    <div class="portfolio-grid" *ngIf="filteredPortfolios.length > 0">
+      <div class="portfolio-card" *ngFor="let portfolio of filteredPortfolios">
+        <div class="card-image">
+          <img [src]="portfolio.imageUrl" [alt]="portfolio.title">
+          <span class="badge" [class.featured]="portfolio.featured">
+            {{portfolio.featured ? '⭐ Featured' : portfolio.status}}
+          </span>
+        </div>
+        <div class="card-content">
+          <h3>{{portfolio.title}}</h3>
+          <p class="description">{{portfolio.description}}</p>
+          <div class="card-meta">
+            <span class="category">📂 {{portfolio.category}}</span>
+          </div>
+          <div class="technologies" *ngIf="portfolio.technologies?.length">
+            <h4>Technologies Used:</h4>
+            <div class="tech-tags">
+              <span class="tech-tag" *ngFor="let tech of portfolio.technologies">
+                {{tech}}
+              </span>
+            </div>
+          </div>
+          <div class="card-links">
+            <a *ngIf="portfolio.projectUrl" [href]="portfolio.projectUrl" target="_blank" class="link-btn">
+              🔗 Live Demo
+            </a>
+            <a *ngIf="portfolio.githubUrl" [href]="portfolio.githubUrl" target="_blank" class="link-btn github">
+              🐙 GitHub
+            </a>
+          </div>
+          <div class="card-footer">
+            <small>Created: {{portfolio.createdAt | date:'mediumDate'}}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
