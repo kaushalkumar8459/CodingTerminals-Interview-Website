@@ -1,10 +1,3 @@
-# ==============================================
-# BACKEND ENVIRONMENT CONFIGURATION
-# ==============================================
-# This file is used by the Node.js backend
-# Different configs for development, staging, and production
-# ==============================================
-
 const getEnvironmentConfig = () => {
     const env = process.env.NODE_ENV || 'development';
     

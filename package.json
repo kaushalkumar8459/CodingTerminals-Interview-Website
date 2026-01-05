@@ -1,0 +1,15 @@
+{
+  "name": "codingterminals-fullstack",
+  "version": "1.0.0",
+  "description": "CodingTerminals YouTube Roadmap and Study Notes Platform",
+  "main": "youtube&studynote/backend/server.js",
+  "scripts": {
+    "start": "cd youtube&studynote/backend && npm start",
+    "dev": "cd youtube&studynote/backend && npm run dev:watch",
+    "install-backend": "cd youtube&studynote/backend && npm install",
+    "install": "npm run install-backend"
+  },
+  "keywords": ["youtube", "roadmap", "study-notes"],
+  "author": "Coding Terminals",
+  "license": "MIT"
+}
