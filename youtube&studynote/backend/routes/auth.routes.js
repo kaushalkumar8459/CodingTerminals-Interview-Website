@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * Authentication Routes
- * /api/auth
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: Authentication and authorization endpoints
  */
 
 // Load admin credentials from environment variables
@@ -22,14 +24,84 @@ if (process.env.ADMIN_USER2_USERNAME && process.env.ADMIN_USER2_PASSWORD) {
     });
 }
 
-// GET - Auth configuration (returns only usernames, not passwords)
+/**
+ * @swagger
+ * /api/auth/config:
+ *   get:
+ *     summary: Get authentication configuration
+ *     tags: [Authentication]
+ *     description: Retrieve available admin usernames (passwords not returned for security)
+ *     responses:
+ *       200:
+ *         description: Authentication configuration
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 users:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       username:
+ *                         type: string
+ */
 router.get('/config', (req, res) => {
     res.json({
         users: ADMIN_USERS.map(u => ({ username: u.username }))
     });
 });
 
-// POST - Login authentication
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: Admin login
+ *     tags: [Authentication]
+ *     description: Authenticate admin user with username and password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Admin username
+ *               password:
+ *                 type: string
+ *                 description: Admin password
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 username:
+ *                   type: string
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ */
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
     

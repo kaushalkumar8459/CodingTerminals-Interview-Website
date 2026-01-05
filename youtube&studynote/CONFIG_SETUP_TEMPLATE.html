@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Template - Configuration Setup</title>
+</head>
+<body>
+    <!-- 
+    ================================================
+    CONFIGURATION SCRIPT LOADING ORDER
+    ================================================
+    
+    Load config files in this order at the top of your <head> tag:
+    1. environment.config.js - Auto-detects environment
+    2. app.config.js - Centralized app configuration
+    
+    This ensures APP_CONFIG and EnvironmentConfig are available globally.
+    ================================================
+    -->
+
+    <!-- Step 1: Load environment detection utility -->
+    <script src="../../config/environment.config.js"></script>
+
+    <!-- Step 2: Load main app configuration -->
+    <script src="../../config/app.config.js"></script>
+
+    <!-- Step 3: Load authentication utilities (if needed) -->
+    <script src="../../auth/auth.js"></script>
+
+    <!-- Your page content -->
+    <div id="app">
+        <h1>Configuration Setup Complete</h1>
+        <p>Check the browser console for environment info</p>
+    </div>
+
+    <!-- Example Usage in Script -->
+    <script>
+        // These should be loaded after config files
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // ✅ Example 1: Get current environment
+            console.log('Current Environment:', EnvironmentConfig.getEnvironment());
+            
+            // ✅ Example 2: Get API URL
+            const videosUrl = EnvironmentConfig.getApiUrl('/api/videos');
+            console.log('Videos API URL:', videosUrl);
+            
+            // ✅ Example 3: Make API request
+            EnvironmentConfig.fetchApi('/api/health')
+                .then(data => console.log('Health Check:', data))
+                .catch(error => console.error('API Error:', error));
+            
+            // ✅ Example 4: Check if production
+            if (EnvironmentConfig.isProduction()) {
+                console.log('🚀 Running in Production');
+            } else if (EnvironmentConfig.isStaging()) {
+                console.log('🔄 Running in Staging');
+            } else {
+                console.log('🛠️ Running in Development');
+            }
+            
+            // ✅ Example 5: Use centralized config
+            console.log('App Config:', APP_CONFIG);
+            
+            // ✅ Example 6: Navigate using URL helpers
+            // APP_CONFIG.URL_HELPERS.navigateTo('YOUTUBE_ROADMAP', 'VIEWER', 'FROM_STUDY_NOTES_ADMIN');
+        });
+    </script>
+</body>
+</html>
+
+<!-- 
+================================================
+IMPORTANT: Script Loading Order
+================================================
+
+CORRECT ORDER (scripts in <head>):
+1. environment.config.js
+2. app.config.js
+3. auth.js (optional)
+4. Your custom scripts
+
+WHY: Each file depends on the previous ones being loaded.
+
+WRONG ORDER (will cause errors):
+❌ auth.js before environment.config.js
+❌ Your scripts before app.config.js
+
+================================================
+USAGE IN YOUR PAGES
+================================================
+
+Add to the <head> section of:
+✅ CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html
+✅ CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html
+✅ CodingTerminals-StudyNotes/admin/study-notes-admin.html
+✅ CodingTerminals-StudyNotes/viewer/study-notes-viewer.html
+✅ auth/login.html
+
+For files in subdirectories, adjust the path:
+- From admin pages: ../../config/environment.config.js
+- From viewer pages: ../../config/environment.config.js
+- From root: ./config/environment.config.js
+- From auth: ../config/environment.config.js
+
+================================================
+ENVIRONMENT-BASED BEHAVIOR
+================================================
+
+In Development (localhost):
+- APP_CONFIG.API.BASE_URL = 'http://localhost:3000'
+- APP_CONFIG.ENVIRONMENT = 'development'
+
+In Staging (staging domain):
+- APP_CONFIG.API.BASE_URL = 'https://staging-api.render.com'
+- APP_CONFIG.ENVIRONMENT = 'staging'
+
+In Production (your domain):
+- APP_CONFIG.API.BASE_URL = 'https://your-domain.com'
+- APP_CONFIG.ENVIRONMENT = 'production'
+
+All URLs switch automatically - no code changes needed!
+
+================================================
+TESTING
+================================================
+
+Open browser console and check:
+
+console.log(EnvironmentConfig.getEnvironment());
+console.log(APP_CONFIG.API.BASE_URL);
+console.log(APP_CONFIG.ENVIRONMENT);
+
+You should see the correct environment-specific values.
+
+================================================
+-->

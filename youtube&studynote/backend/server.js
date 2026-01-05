@@ -1,19 +1,24 @@
-require('dotenv').config();
+// ✅ Load environment variables from .env.{NODE_ENV} file
+require('./env-loader');
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger.config');
 const connectDB = require('./config/database');
 const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const APP_CONFIG = require('../config/app.config.js');
 
 const app = express();
-const PORT = process.env.PORT || APP_CONFIG.SERVER.PORT;
+// ✅ Render automatically provides PORT via environment variable
+const PORT = process.env.PORT || APP_CONFIG.SERVER.PORT || 3000;
 
 // Connect to MongoDB
 connectDB();
 
-// ✅ IMPROVED CORS Configuration for Netlify
+// ✅ RENDER-OPTIMIZED CORS Configuration
 const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -23,10 +28,17 @@ const corsOptions = {
         const allowedOrigins = [
             'http://localhost:3000',
             'http://127.0.0.1:3000',
-            'https://your-app.netlify.app', // 🔧 Replace with your actual Netlify URL
+            // Add your Render frontend URL here (will be auto-detected in production)
+            process.env.FRONTEND_URL || 'https://your-app.netlify.app',
             /\.netlify\.app$/, // Allow all Netlify preview URLs
-            /\.ngrok\.io$/ // Allow ngrok URLs
+            /\.render\.com$/, // Allow Render URLs
+            /\.ngrok\.io$/ // Allow ngrok URLs for local testing
         ];
+        
+        // In production, also allow the current origin
+        if (process.env.NODE_ENV === 'production' && origin) {
+            return callback(null, true);
+        }
         
         // Check if origin matches any allowed pattern
         const isAllowed = allowedOrigins.some(allowed => {
@@ -53,6 +65,18 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '..'))); // Serve static files
+
+// ============================================
+// SWAGGER DOCUMENTATION
+// ============================================
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    swaggerOptions: {
+        persistAuthorization: true,
+        displayOperationId: true
+    },
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'CodingTerminals API Documentation'
+}));
 
 // ============================================
 // API ROUTES (MODERN ARCHITECTURE)
@@ -133,19 +157,20 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
     console.log('\n🚀 CodingTerminals Server is running!');
-    console.log(`📡 Server URL: ${APP_CONFIG.API.BASE_URL}`);
+    console.log(`📡 Server URL: http://localhost:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`\n📺 YouTube Roadmap:`);
-    console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
-    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html`);
-    console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html`);
+    console.log(`   🔐 Login: http://localhost:${PORT}/auth/login.html`);
+    console.log(`   📝 Admin: http://localhost:${PORT}/CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html`);
+    console.log(`   👁️  Viewer: http://localhost:${PORT}/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html`);
     console.log(`\n📚 Study Notes:`);
-    console.log(`   🔐 Login: ${APP_CONFIG.API.BASE_URL}/auth/login.html`);
-    console.log(`   📝 Admin: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/admin/study-notes-admin.html`);
-    console.log(`   👁️  Viewer: ${APP_CONFIG.API.BASE_URL}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
+    console.log(`   🔐 Login: http://localhost:${PORT}/auth/login.html`);
+    console.log(`   📝 Admin: http://localhost:${PORT}/CodingTerminals-StudyNotes/admin/study-notes-admin.html`);
+    console.log(`   👁️  Viewer: http://localhost:${PORT}/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html`);
     console.log(`\n📡 API Endpoints:`);
-    console.log(`   - Videos: ${APP_CONFIG.API.BASE_URL}/api/videos`);
-    console.log(`   - Notes: ${APP_CONFIG.API.BASE_URL}/api/notes`);
-    console.log(`   - Interview Questions: ${APP_CONFIG.API.BASE_URL}/api/interview-questions`);
-    console.log(`   - Authentication: ${APP_CONFIG.API.BASE_URL}/api/auth/login`);
+    console.log(`   - Videos: http://localhost:${PORT}/api/videos`);
+    console.log(`   - Notes: http://localhost:${PORT}/api/notes`);
+    console.log(`   - Interview Questions: http://localhost:${PORT}/api/interview-questions`);
+    console.log(`   - Authentication: http://localhost:${PORT}/api/auth/login`);
     console.log('\n✨ Ready to manage your content!\n');
 });

@@ -2,18 +2,83 @@
 // CENTRALIZED CONFIGURATION FILE
 // ==============================================
 // This file contains all common paths, URLs, and settings
-// Update here to reflect changes across the entire application
+// Works in both browser (frontend) and Node.js (backend)
 // ==============================================
 
+/**
+ * Detect current environment and get appropriate base URL
+ * Supports: development, staging, production
+ * Safe for both browser and Node.js environments
+ */
+function getEnvironmentConfig() {
+    // Check if running in browser
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        // Determine environment based on hostname
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return {
+                ENV: 'development',
+                BASE_URL: 'http://localhost:3000',
+                API_BASE_URL: 'http://localhost:3000'
+            };
+        } else if (hostname.includes('staging') || hostname.includes('dev-')) {
+            return {
+                ENV: 'staging',
+                BASE_URL: 'https://staging-app.render.com',
+                API_BASE_URL: 'https://staging-api.render.com'
+            };
+        } else {
+            // Production
+            return {
+                ENV: 'production',
+                BASE_URL: `${protocol}//${hostname}`,
+                API_BASE_URL: `${protocol}//${hostname}`
+            };
+        }
+    } else {
+        // Running in Node.js (backend) - use environment variables
+        const env = process.env.NODE_ENV || 'development';
+        
+        const configs = {
+            development: {
+                ENV: 'development',
+                BASE_URL: 'http://localhost:3000',
+                API_BASE_URL: 'http://localhost:3000'
+            },
+            staging: {
+                ENV: 'staging',
+                BASE_URL: 'https://staging-app.render.com',
+                API_BASE_URL: 'https://staging-api.render.com'
+            },
+            production: {
+                ENV: 'production',
+                BASE_URL: process.env.FRONTEND_URL || 'https://your-production-domain.com',
+                API_BASE_URL: process.env.BACKEND_URL || 'https://your-production-domain.com'
+            }
+        };
+        
+        return configs[env] || configs.development;
+    }
+}
+
+const ENV_CONFIG = getEnvironmentConfig();
+
 const APP_CONFIG = {
+    // Environment Detection
+    ENVIRONMENT: ENV_CONFIG.ENV,
+    BASE_URL: ENV_CONFIG.BASE_URL,
+    
     // API Configuration
     API: {
-        BASE_URL: 'http://localhost:3000',
+        BASE_URL: ENV_CONFIG.API_BASE_URL,
         ENDPOINTS: {
             YOUTUBE_ROADMAP: '/api/youtube-roadmap',
-            STUDY_NOTES: '/api/notes', // ✅ FIXED: Changed from '/api/study-notes' to '/api/notes'
+            STUDY_NOTES: '/api/notes',
             LOGIN: '/api/auth/login',
-            AUTH_CONFIG: '/api/auth-config'
+            AUTH_CONFIG: '/api/auth-config',
+            HEALTH: '/api/health'
         }
     },
 
@@ -21,15 +86,14 @@ const APP_CONFIG = {
     ASSETS: {
         LOGO: '../assets/CT logo.jpg',
         LOGO_WHITE_BG: '../assets/CT Logog white background.jpg'
-        // JSON files removed - using MongoDB + IndexedDB only
     },
 
-    // Channel Information (Hardcoded - No MongoDB fetch needed)
+    // Channel Information
     CHANNEL: {
         NAME: 'Coding Terminals',
         TAGLINE: 'Your Complete Learning Video Playlist',
-        LOGO: '../../assets/CT logo.jpg', // Relative path from viewer/admin folders (two levels up)
-        LOGO_FROM_ROOT: './assets/CT logo.jpg', // Relative path from root
+        LOGO: '../../assets/CT logo.jpg',
+        LOGO_FROM_ROOT: './assets/CT logo.jpg',
     },
 
     // YouTube Configuration
@@ -42,9 +106,6 @@ const APP_CONFIG = {
     // ==============================================
     // 🎯 NAVIGATION URLs - Centralized URL Management
     // ==============================================
-    // Use these constants instead of hardcoded paths throughout the application
-    // Benefits: Easy maintenance, consistent URLs, single source of truth
-    
     URLS: {
         // ========== AUTHENTICATION ==========
         AUTH: {
@@ -57,14 +118,12 @@ const APP_CONFIG = {
 
         // ========== YOUTUBE ROADMAP MODULE ==========
         YOUTUBE_ROADMAP: {
-            // Admin Pages
             ADMIN: {
                 FROM_STUDY_NOTES_ADMIN: '../../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html',
                 FROM_STUDY_NOTES_VIEWER: '../../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html',
                 FROM_ROOT: './CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html',
             },
             
-            // Viewer Pages
             VIEWER: {
                 FROM_STUDY_NOTES_ADMIN: '../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html',
                 FROM_STUDY_NOTES_VIEWER: '../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html',
@@ -75,14 +134,12 @@ const APP_CONFIG = {
 
         // ========== STUDY NOTES MODULE ==========
         STUDY_NOTES: {
-            // Admin Pages
             ADMIN: {
                 FROM_YOUTUBE_ADMIN: '../../CodingTerminals-StudyNotes/admin/study-notes-admin.html',
                 FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/admin/study-notes-admin.html',
                 FROM_ROOT: './CodingTerminals-StudyNotes/admin/study-notes-admin.html',
             },
             
-            // Viewer Pages
             VIEWER: {
                 FROM_YOUTUBE_ADMIN: '../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html',
                 FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html',
@@ -95,7 +152,6 @@ const APP_CONFIG = {
         EXTERNAL: {
             YOUTUBE_CHANNEL: 'https://www.youtube.com/@codingterminals',
             GITHUB: 'https://github.com/codingterminals',
-            // Add more external links as needed
         },
 
         // ========== HOME/LANDING PAGE ==========
@@ -109,8 +165,6 @@ const APP_CONFIG = {
     // ==============================================
     // 🔧 URL HELPER FUNCTIONS
     // ==============================================
-    // Utility functions to get URLs dynamically
-    
     URL_HELPERS: {
         /**
          * Get full API URL with base URL
@@ -124,12 +178,16 @@ const APP_CONFIG = {
 
         /**
          * Navigate to a page using URL constants
-         * @param {string} module - Module name (e.g., 'YOUTUBE_ROADMAP', 'STUDY_NOTES')
-         * @param {string} page - Page type (e.g., 'ADMIN', 'VIEWER')
-         * @param {string} from - Current location (e.g., 'FROM_STUDY_NOTES_ADMIN')
-         * @example APP_CONFIG.URL_HELPERS.navigateTo('YOUTUBE_ROADMAP', 'VIEWER', 'FROM_STUDY_NOTES_ADMIN')
+         * @param {string} module - Module name
+         * @param {string} page - Page type
+         * @param {string} from - Current location
          */
         navigateTo: function(module, page, from) {
+            // Only works in browser
+            if (typeof window === 'undefined') {
+                console.error('Navigation only available in browser');
+                return;
+            }
             try {
                 const url = APP_CONFIG.URLS[module][page][from];
                 if (url) {
@@ -148,7 +206,6 @@ const APP_CONFIG = {
          * @param {string} page - Page type
          * @param {string} from - Current location
          * @returns {string} URL string
-         * @example APP_CONFIG.URL_HELPERS.getUrl('YOUTUBE_ROADMAP', 'VIEWER', 'FROM_STUDY_NOTES_ADMIN')
          */
         getUrl: function(module, page, from) {
             try {
@@ -161,10 +218,14 @@ const APP_CONFIG = {
 
         /**
          * Navigate to external link
-         * @param {string} linkKey - External link key (e.g., 'YOUTUBE_CHANNEL')
-         * @example APP_CONFIG.URL_HELPERS.navigateToExternal('YOUTUBE_CHANNEL')
+         * @param {string} linkKey - External link key
          */
         navigateToExternal: function(linkKey) {
+            // Only works in browser
+            if (typeof window === 'undefined') {
+                console.error('External navigation only available in browser');
+                return;
+            }
             const url = APP_CONFIG.URLS.EXTERNAL[linkKey];
             if (url) {
                 window.open(url, '_blank');
@@ -176,44 +237,39 @@ const APP_CONFIG = {
 
     // Page URLs (relative paths) - DEPRECATED - Use URLS instead
     PAGES: {
-        // YouTube Roadmap Pages
         YOUTUBE_ADMIN_LOGIN: '../CodingTerminals-YouTubeRoadmap/admin/login.html',
         YOUTUBE_ADMIN_PANEL: '../CodingTerminals-YouTubeRoadmap/admin/admin.html',
         YOUTUBE_VIEWER: '../CodingTerminals-YouTubeRoadmap/viewer/viewer.html',
         
-        // Study Notes Pages
         STUDY_NOTES_ADMIN_LOGIN: '../CodingTerminals-StudyNotes/admin/login.html',
         STUDY_NOTES_ADMIN_PANEL: '../CodingTerminals-StudyNotes/admin/admin.html',
         STUDY_NOTES_VIEWER: '../CodingTerminals-StudyNotes/viewer/viewer.html',
         
-        // Main Landing Page
         HOME: '../index.html'
     },
 
     // Application Settings
     APP: {
         CHANNEL_NAME: 'Coding Terminals',
-        SESSION_TIMEOUT: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
-        SEARCH_DEBOUNCE_TIME: 500, // milliseconds
-        DEFAULT_SORT_ORDER: 'desc' // 'desc' for newest first, 'asc' for oldest first
+        SESSION_TIMEOUT: 24 * 60 * 60 * 1000,
+        SEARCH_DEBOUNCE_TIME: 500,
+        DEFAULT_SORT_ORDER: 'desc'
     },
 
     // IndexedDB Configuration
     INDEXEDDB: {
         DB_NAME: 'CodingTerminalsDB',
-        DB_VERSION: 3, // Incremented to 3 to add youtubeRoadmapData store
+        DB_VERSION: 3,
         STORES: {
             YOUTUBE_ROADMAP: 'youtubeRoadmapData',
             STUDY_NOTES: 'studyNotesData'
         }
     },
 
-    // Backend Configuration (No longer uses JSON files)
+    // Backend Configuration
     SERVER: {
         PORT: 3000,
-        // File-based storage removed - using MongoDB only
-        FILES: {
-        }
+        FILES: {}
     }
 };
 
