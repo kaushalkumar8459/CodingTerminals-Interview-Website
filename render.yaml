@@ -8,14 +8,10 @@
 
 services:
   - type: web
-    name: coding-terminals-fullstack
-    runtime: node                    # ✅ REQUIRED: Node.js runtime
-    startCommand: npm start
-    buildCommand: npm install
-    
-    # Root directory where package.json is located
-    # Path is relative to where render.yaml file is located
-    rootDir: youtube&studynote/backend
+    name: coding-terminals-backend
+    runtime: node
+    startCommand: cd youtube&studynote/backend && npm start
+    buildCommand: cd youtube&studynote/backend && npm install
     
     # Region
     region: oregon
