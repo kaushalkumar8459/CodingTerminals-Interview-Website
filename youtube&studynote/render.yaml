@@ -13,6 +13,7 @@ services:
     buildCommand: npm install
     
     # Root directory where package.json is located
+    # This should be relative to where render.yaml is located
     rootDir: youtube&studynote/backend
     
     # Region
@@ -32,19 +33,19 @@ services:
       - key: PORT
         value: 3000
       
-      # MongoDB Connection (use your actual credentials)
+      # MongoDB Connection
       - key: MONGODB_CLOUD
         sync: false
       
-      # Frontend URL (update with your domain)
+      # Frontend URL
       - key: FRONTEND_URL
-        value: https://your-production-domain.com
+        sync: false
       
       # API URL
       - key: API_URL
-        value: https://your-production-domain.com/api
+        sync: false
       
-      # Authentication Secrets (use Render dashboard to set these)
+      # Authentication Secrets
       - key: JWT_SECRET
         sync: false
       
