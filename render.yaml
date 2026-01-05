@@ -1,0 +1,93 @@
+# ==============================================
+# RENDER.YAML - Deployment Configuration
+# ==============================================
+# This file tells Render how to deploy your application
+# Place this file at the ROOT of your repository (same level as .git)
+# Official Render Blueprints documentation:
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: coding-terminals-fullstack
+    runtime: node                    # ✅ REQUIRED: Node.js runtime
+    startCommand: npm start
+    buildCommand: npm install
+    
+    # Root directory where package.json is located
+    # Path is relative to where render.yaml file is located
+    rootDir: youtube&studynote/backend
+    
+    # Region
+    region: oregon
+    
+    # Plan (free or paid)
+    plan: free
+    
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: DB_ENVIRONMENT
+        value: cloud
+      
+      - key: PORT
+        value: 3000
+      
+      # MongoDB Connection
+      - key: MONGODB_CLOUD
+        sync: false
+      
+      # Frontend URL
+      - key: FRONTEND_URL
+        sync: false
+      
+      # API URL
+      - key: API_URL
+        sync: false
+      
+      # Authentication Secrets
+      - key: JWT_SECRET
+        sync: false
+      
+      - key: SESSION_SECRET
+        sync: false
+      
+      # Logging
+      - key: LOG_LEVEL
+        value: warn
+    
+    # AutoDeploy on Git push
+    autoDeploy: true
+    
+    # Health check
+    healthCheckPath: /api/health
+
+# ==============================================
+# DEPLOYMENT INSTRUCTIONS
+# ==============================================
+#
+# This file should be at the ROOT of your repository:
+# codingTerminals-Interview-Website/render.yaml ✅
+#
+# NOT here:
+# codingTerminals-Interview-Website/youtube&studynote/render.yaml ❌
+#
+# ==============================================
+# SETUP ON RENDER DASHBOARD
+# ==============================================
+#
+# 1. Go to https://render.com
+# 2. Click "New Web Service"
+# 3. Connect your GitHub repository
+# 4. Select the branch (usually "render" or "main")
+# 5. Render will automatically detect render.yaml
+# 6. Add environment variables in dashboard:
+#    - MONGODB_CLOUD: Your MongoDB connection string
+#    - JWT_SECRET: Random secret key
+#    - SESSION_SECRET: Random secret key
+#    - FRONTEND_URL: Your production domain
+#    - API_URL: Your API domain
+# 7. Click "Deploy"
+#
+# ==============================================
