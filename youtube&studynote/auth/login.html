@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Coding Terminals</title>
+    
+    <!-- Load Config First -->
+    <script src="../config/app.config.js"></script>
+    
+    <!-- Load Auth Utilities -->
+    <script src="auth.js"></script>
+    
+    <!-- Load Styles -->
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">🎓</div>
+            <h1>Coding Terminals</h1>
+            <h2>Admin Login</h2>
+            <p>Enter your credentials to access the admin panel</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">
+                    <span class="icon">👤</span>
+                    Username
+                </label>
+                <input type="text" id="username" name="username" placeholder="Enter username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <span class="icon">🔒</span>
+                    Password
+                </label>
+                <div class="password-toggle">
+                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                    <span class="toggle-icon" onclick="togglePassword()">👁️</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-login">🚀 Login</button>
+        </form>
+
+        <div class="back-link">
+            <a href="../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-icon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
+        // Handle login
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const loginButton = document.querySelector('.btn-login');
+
+            // Disable button and show loading
+            loginButton.disabled = true;
+            loginButton.textContent = '🔄 Logging in...';
+
+            try {
+                // Call backend API for authentication
+                const response = await fetch(APP_CONFIG.API.BASE_URL + APP_CONFIG.API.ENDPOINTS.LOGIN, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Store authentication using utility
+                    AuthUtils.setAuthentication(username);
+                    
+                    // Show success message
+                    loginButton.textContent = '✅ Success!';
+                    
+                    // Get redirect URL from query parameter or default
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectTo = urlParams.get('redirect') || '../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html';
+                    
+                    // Redirect to requested admin panel
+                    setTimeout(() => {
+                        window.location.href = redirectTo;
+                    }, 500);
+                } else {
+                    throw new Error(result.message || 'Invalid credentials');
+                }
+            } catch (error) {
+                // Show error message
+                errorMessage.textContent = '❌ Invalid username or password. Please try again.';
+                errorMessage.classList.add('show');
+                
+                // Reset button
+                loginButton.disabled = false;
+                loginButton.textContent = '🚀 Login';
+                
+                // Shake the form
+                document.getElementById('loginForm').style.animation = 'shake 0.4s ease';
+                
+                // Remove shake animation after it completes
+                setTimeout(() => {
+                    document.getElementById('loginForm').style.animation = '';
+                }, 400);
+
+                // Hide error after 3 seconds
+                setTimeout(() => {
+                    errorMessage.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', () => {
+            if (AuthUtils.isAuthenticated()) {
+                // Get redirect URL from query parameter or default
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectTo = urlParams.get('redirect') || '../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html';
+                
+                // Already logged in, redirect to admin panel
+                window.location.href = redirectTo;
+            }
+        });
+    </script>
+</body>
+</html>

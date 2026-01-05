@@ -1,0 +1,467 @@
+{
+  "channelName": "Coding Terminals",
+  "channelLogo": "/assets/CT logo.jpg",
+  "videoPlaylist": [
+    {
+      "title": "Angular 21 | Roadmap For 2026 |  CodingTerminals",
+      "subtopics": [
+        "introduction for playlist"
+      ],
+      "interviewQuestions": []
+    },
+    {
+      "title": "Angular 21 Setup Guide: Create Your First Project from Scratch (Step-by-Step)",
+      "subtopics": [
+        "<p><strong style=\"color: rgb(13, 13, 13);\">इस वीडियो में आप सीखेंगे:</strong></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular project कैसे create करें  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular CLI क्या है और क्यों ज़रूरी है  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Project structure का overview  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Environment setup (Node, npm, Angular CLI)  </span></p><p><span style=\"color: rgb(13, 13, 13);\">✅ Angular development की सही शुरुआत कैसे करें  </span></p>"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "What is the command to install Angular CLI globally?",
+          "answer": "npm install -g @angular/cli"
+        },
+        {
+          "question": "What is npm and why is it needed for Angular?",
+          "answer": "npm (Node Package Manager) is used to install and manage JavaScript packages/dependencies required for Angular projects"
+        },
+        {
+          "question": "What are the prerequisites for Angular development?",
+          "answer": "Node.js, npm, and a code editor (like VS Code)"
+        },
+        {
+          "question": "How do you create a new Angular project?",
+          "answer": "ng new projectname"
+        },
+        {
+          "question": "What command is used to start an Angular development server?",
+          "answer": "npm start or ng serve"
+        },
+        {
+          "question": "On which port does Angular run by default?",
+          "answer": "Port 4200 (http://localhost:4200)"
+        },
+        {
+          "question": "How do you check if Angular CLI is installed?",
+          "answer": "ng version or ng --version"
+        },
+        {
+          "question": "What is the difference between npm start and ng serve?",
+          "answer": "npm start runs the script defined in package.json (usually ng serve), while ng serve directly uses Angular CLI"
+        },
+        {
+          "question": "How do you run Angular on a different port?",
+          "answer": "ng serve --port 4500 or modify angular.json"
+        },
+        {
+          "question": "What files are created when you run ng new projectname?",
+          "answer": "package.json, angular.json, tsconfig files, src folder, node_modules, etc."
+        },
+        {
+          "question": "What is the difference between --skip-install and --skip-git flags?",
+          "answer": "--skip-install skips npm install, --skip-git skips git repository initialization"
+        },
+        {
+          "question": "How do you install Angular CLI locally (not globally)?",
+          "answer": "npm install @angular/cli --save-dev"
+        },
+        {
+          "question": "How do you open Angular app automatically in browser after running ng serve?",
+          "answer": "ng serve --open or ng serve -o"
+        }
+      ]
+    },
+    {
+      "title": "Angular 21 Folder Structure Explained | Files & Project Overview | CodingTerminals",
+      "subtopics": [
+        "<p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉Angular project folder structure explained</p><p>👉Role of each important file &amp; folder</p><p>👉Real-world best practices</p><p>👉Interview-focused explanations</p><p>👉Common mistakes beginners make</p><p>👉How folder structure helps in scalable projects</p>"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "What is the main folder of an Angular project?",
+          "answer": "The src folder. It contains the complete source code of the application."
+        },
+        {
+          "question": "What is the purpose of the app folder?",
+          "answer": "It contains components, services, routing, and modules or standalone components."
+        },
+        {
+          "question": "What is the use of the assets folder?",
+          "answer": "To store static files like images, icons, fonts, and JSON files."
+        },
+        {
+          "question": "What is the role of index.html in Angular?",
+          "answer": "It is the single host HTML file where the Angular application is loaded."
+        },
+        {
+          "question": "Why is main.ts important?",
+          "answer": "It is the entry point of the Angular application where the app is bootstrapped."
+        },
+        {
+          "question": "What is role of angular.json?",
+          "answer": "angular.json defines project structure and build configurations used by Angular CLI commands like ng serve, ng build, and ng test.<br>or<br>it is the central configuration file that controls Angular CLI behavior for building, serving, testing, and managing assets and environments in an Angular project."
+        },
+        {
+          "question": "What is the purpose of package.json?",
+          "answer": "It manages project dependencies, scripts, and metadata."
+        },
+        {
+          "question": "Why do we use the environments folder?",
+          "answer": "To manage different environment configurations like development and production."
+        },
+        {
+          "question": "What is the difference between styles.css and component styles?",
+          "answer": "styles.css → Global styles<br>Component styles → Scoped to that component only"
+        },
+        {
+          "question": "Why is node_modules not pushed to GitHub?",
+          "answer": "Because dependencies can be recreated using package.json and it increases repo size."
+        },
+        {
+          "question": "Why is a feature-based folder structure recommended?",
+          "answer": "It improves scalability, maintainability, and code readability."
+        },
+        {
+          "question": "What is the difference between Core and Shared folders?",
+          "answer": "Core → Singleton services like Auth, Guards, Interceptors<br>Shared → Reusable components, directives, and pipes"
+        },
+        {
+          "question": "How do standalone components improve folder structure?",
+          "answer": "They remove the dependency on modules, making the structure simpler and cleaner."
+        },
+        {
+          "question": "What are common folder structure mistakes in Angular projects?",
+          "answer": "Putting everything inside the app folder<br>No feature separation<br>Duplicating shared logic"
+        },
+        {
+          "question": "What is the use of Package.lock.json ?",
+          "answer": "when we are running npm install, package-lock.json ensures that a particular (exact) library version is installed on your local machine.<br>👉 package.json says what you want<br>👉 package-lock.json says what exactly got installed<br>package-lock.json ensures that the exact same versions of libraries and their dependencies are installed on every machine.<br>This helps avoid version mismatch issues and keeps the application consistent across development, testing, and production.<br>⚠️ Common Mistake<br>❌ Deleting package-lock.json<br>✔ Always commit it to Git"
+        }
+      ]
+    },
+    {
+      "title": "Angular 21 | Application Flow Explained | Step-by-Step | CodingTerminals",
+      "subtopics": [
+        "<p><br></p><p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉 Angular application start होने का पूरा flow&nbsp;&nbsp;</p><p>👉 index.html का role&nbsp;&nbsp;</p><p>👉 &lt;app-root&gt; कैसे work करता है&nbsp;&nbsp;</p><p>👉 main.ts entry point&nbsp;&nbsp;</p><p>👉 Bootstrap process explained&nbsp;&nbsp;</p><p>👉 Root component कैसे load होता है&nbsp;&nbsp;</p><p>👉 Interview-focused explanation</p>"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "What is Angular application flow?",
+          "answer": "It describes how an Angular application starts and how control moves from index.html to components."
+        },
+        {
+          "question": "What is the entry point of an Angular application?",
+          "answer": "main.ts"
+        },
+        {
+          "question": "What is the role of index.html in Angular?",
+          "answer": "It is the host HTML file where the Angular application is loaded."
+        },
+        {
+          "question": "<p>What is &lt;app-root&gt;  in Angular?</p>",
+          "answer": "It is the selector of the root component where the application is rendered."
+        },
+        {
+          "question": "Which file bootstraps the Angular application?",
+          "answer": "main.ts"
+        },
+        {
+          "question": "What happens when an Angular application starts?",
+          "answer": "<p>index.html loads, Angular finds , main.ts bootstraps</p><p> the root component, and the component tree is rendered.</p>"
+        },
+        {
+          "question": "What is bootstrapping in Angular?",
+          "answer": "It is the process of initializing and launching the Angular application."
+        },
+        {
+          "question": "<p>What is the role of <strong>bootstrapApplication() or bootstrapModule()</strong>?</p>",
+          "answer": "They initialize the Angular app and load the root component."
+        },
+        {
+          "question": "How does Angular render a component on the screen?",
+          "answer": "By linking the component class with its template and inserting it into the DOM."
+        },
+        {
+          "question": "What is the difference between module-based and standalone bootstrapping?",
+          "answer": "Module-based uses AppModule, while standalone bootstraps directly from a component."
+        },
+        {
+          "question": "What role does change detection play in application flow?",
+          "answer": "It keeps the view updated with the latest component data."
+        },
+        {
+          "question": "What are common issues in Angular application flow?",
+          "answer": "Incorrect bootstrap setup, missing root component, routing misconfiguration, or service scope issues."
+        },
+        {
+          "question": "<p>Why is Angular application flow important?</p>",
+          "answer": "It helps understand how Angular works internally."
+        },
+        {
+          "question": "<p>What is selector in angular ?</p>",
+          "answer": "<p>Selector is use to <strong>target component</strong> in angular.</p><p>ex:- in component app-root is selector</p>"
+        },
+        {
+          "question": "<p><strong style=\"color: rgb(0, 138, 0);\">📍Explanation of Complete Angular Application Flow end to end .</strong></p>",
+          "answer": "<p>1️⃣ <code><strong>npm start</strong></code></p><p>Runs the script defined in <code>package.json</code></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">\"start\": \"ng serve\"</span></p><p><br></p><p><span style=\"color: rgb(33, 37, 41); background-color: white;\">2️⃣ </span><strong style=\"color: rgb(33, 37, 41); background-color: white;\">Angular CLI reads </strong><code><strong>angular.json</strong></code></p><ul><li><code>angular.json</code> contains <strong>project configuration</strong></li><li>Angular CLI checks:</li><li class=\"ql-indent-1\">Project name</li><li class=\"ql-indent-1\">Build &amp; serve options</li><li class=\"ql-indent-1\">Assets, styles, scripts</li><li class=\"ql-indent-1\"><strong>Default port (4200)</strong> and other dev-server settings</li></ul><p>📌 Example: we can set port if required other than 4200.</p><p><br></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">\"serve\": {</span></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">&nbsp;\"options\": {</span></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">&nbsp;&nbsp;\"port\": 4200</span></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">&nbsp;}</span></p><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">}</span></p><p><br></p><p>3️⃣ <strong>Dev server starts</strong></p><ul><li>Angular CLI starts the development server on the configured port</li><li>Browser opens:</li></ul><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">http://localhost:4200</span></p><p>4️⃣ <code><strong>index.html</strong></code><strong> loads</strong></p><ul><li>First file rendered in the browser</li></ul><p>Contains:</p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">&lt;app-root&gt;&lt;/app-root&gt;</span></p><p><span style=\"background-color: rgb(0, 0, 0); color: rgb(255, 255, 255);\">&lt;script src=\"main.js\"</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></p><p>5️⃣ <code><strong>main.ts</strong></code><strong> executes</strong></p><ul><li>Entry point of Angular</li><li>Bootstraps the app:</li></ul><p><span style=\"color: rgb(255, 255, 255); background-color: rgb(0, 0, 0);\">bootstrapApplication(AppComponent, appConfig);</span></p><p><br></p><p>6️⃣ app.config.ts loads</p><ul><li>Registers:</li><li class=\"ql-indent-1\">Providers</li><li class=\"ql-indent-1\">Routing</li><li class=\"ql-indent-1\">Interceptors</li><li class=\"ql-indent-1\">Global configuration</li></ul><p>7️⃣ <code><strong>AppComponent</strong></code><strong> loads</strong></p><ul><li>Root component with selector <code>app-root</code></li></ul><p>8️⃣ <strong>Selector matches in </strong><code><strong>index.html</strong></code></p><ul><li>Angular replaces <code>&lt;app-root&gt;</code> with:</li><li class=\"ql-indent-1\">HTML</li><li class=\"ql-indent-1\">CSS</li><li class=\"ql-indent-1\">TS logic</li></ul><p>9️⃣ <strong>Lifecycle hooks run</strong></p><ul><li><code>constructor</code></li><li><code>ngOnInit</code></li></ul><p>🔟 <strong>UI is rendered</strong></p><p><br></p><p><strong style=\"color: rgb(230, 0, 0);\"><u>Diagram Representation</u></strong></p><p><br></p><p>npm start</p><p>&nbsp;|</p><p>&nbsp;|&nbsp;(package.json)</p><p>&nbsp;|</p><p>ng serve</p><p>&nbsp;|</p><p>&nbsp;|&nbsp;(Angular CLI)</p><p>&nbsp;|</p><p>angular.json</p><p>&nbsp;|&nbsp;→ Port (4200)</p><p>&nbsp;|&nbsp;→ Build &amp; Serve config</p><p>&nbsp;|</p><p>Dev Server Running</p><p>&nbsp;|</p><p>Browser loads</p><p>&nbsp;|</p><p>index.html</p><p>&nbsp;|&nbsp;→ &lt;app-root&gt;</p><p>&nbsp;|</p><p>main.ts</p><p>&nbsp;|&nbsp;→ bootstrapApplication()</p><p>&nbsp;|</p><p>app.config.ts</p><p>&nbsp;|&nbsp;→ providers</p><p>&nbsp;|&nbsp;→ routing</p><p>&nbsp;|</p><p>AppComponent</p><p>&nbsp;|&nbsp;→ selector: app-root</p><p>&nbsp;|</p><p>Component Lifecycle</p><p>&nbsp;|&nbsp;→ constructor</p><p>&nbsp;|&nbsp;→ ngOnInit</p><p>&nbsp;|</p><p>UI Rendered</p>"
+        }
+      ]
+    },
+    {
+      "title": "Angular 21 | Component Explained | From Scratch to Advanced | Hindi | CodingTerminals",
+      "subtopics": [
+        "<p><br></p><p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉 Create Component.</p><p>👉 What is Selector ?</p><p>👉 Template &amp; styles url</p><p>👉Template &amp; style </p><p>👉 UI renders</p><p>👉 Interview-focused explanation</p>"
+      ],
+      "interviewQuestions": [
+        {
+          "question": "<p>How to create component ?</p>",
+          "answer": "<p>Using command <strong>ng g c componentname</strong></p>"
+        },
+        {
+          "question": "<p>What are meta data in component ?</p>",
+          "answer": "<ul><li>selector</li><li>templateurl</li><li>template</li><li>styleUrl</li><li>style</li><li>provider</li><li>preservewhitespace</li></ul><p>...etc</p>"
+        },
+        {
+          "question": "What is a component in Angular?",
+          "answer": "<p>A component is a TypeScript class with @Component decorator that controls a view (HTML template).</p><p>It consists of 3 parts:</p><ul><li>Template (HTML)</li><li>Class (TypeScript)</li><li>Styles (CSS/SCSS)</li></ul><p><br></p>"
+        },
+        {
+          "question": "Which decorator is used to create a component?",
+          "answer": "<p>The <strong>@Component</strong> decorator is used to define a component in Angular.</p>"
+        },
+        {
+          "question": "<p>What are the main parts of an Angular component?</p>",
+          "answer": "<ul><li>@Component decorator (metadata)</li><li>selector (to use component in HTML)</li><li>templateUrl or template (HTML view)</li><li>styleUrls or styles (CSS)</li><li>Component class (TypeScript logic)</li></ul>"
+        },
+        {
+          "question": "What is a selector in Angular?",
+          "answer": "<p>A selector in angular is used to target the component. It will use to load UI on DOM.</p><ul><li>Element selector: selector: 'app-header' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li><li>Attribute selector: selector: '[<span style=\"color: rgb(206, 145, 120);\">app-header</span>]' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">div</span> <span style=\"color: rgb(156, 220, 254);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">div</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li><li>Class selector: selector: '.app-header' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">div</span> <span style=\"color: rgb(156, 220, 254);\">class</span>=<span style=\"color: rgb(206, 145, 120);\">\"app-header\"</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">div</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li></ul>"
+        },
+        {
+          "question": "<p>How to link html file in component ?</p>",
+          "answer": "<ul><li>templateUrl: Points to an external HTML file</li><li>template: Inline HTML within the component decorator</li></ul><p><br></p><p>Example:</p><pre class=\"ql-syntax\" spellcheck=\"false\">template: `&lt;h1&gt;Hello&lt;/h1&gt;` &nbsp;// Inline\ntemplateUrl: './app.component.html' &nbsp;// External file\n</pre>"
+        },
+        {
+          "question": "Can a component exist without a template?",
+          "answer": "No, every component must have a template, either inline or in a separate HTML file."
+        },
+        {
+          "question": "What is the role of the @Component decorator?",
+          "answer": "<p><strong>@Component</strong> is a decorator that marks a class as an Angular component and provides metadata:</p><ul><li>selector</li><li>template/templateUrl</li><li>styles/styleUrls</li><li>providers</li><li>changeDetection</li></ul>"
+        },
+        {
+          "question": "What is the difference between component and directive?",
+          "answer": "A component is a directive with a template, while directives do not have templates."
+        },
+        {
+          "question": "How does Angular load a component?",
+          "answer": "Angular matches the component selector in the DOM, then loads its template, styles, and executes its TypeScript logic."
+        },
+        {
+          "question": "What is ngOnInit() in a component?",
+          "answer": "ngOnInit() is a lifecycle hook that runs once after the component is initialized and input properties are set."
+        },
+        {
+          "question": "What is the purpose of the constructor in a component?",
+          "answer": "The constructor is mainly used for dependency injection, not for initialization logic."
+        },
+        {
+          "question": "<p>What is the difference between constructor and ngOnInit?</p>",
+          "answer": "<ul><li><strong>Constructor</strong>: TypeScript feature, called when class is instantiated. Use for dependency injection only.</li></ul><p><br></p><ul><li><strong>ngOnInit</strong>: Angular lifecycle hook, called after component initialization. Use for component logic and API calls.</li></ul>"
+        },
+        {
+          "question": "How many times is a component created?",
+          "answer": "A component is created each time its selector appears in the DOM."
+        },
+        {
+          "question": "What happens when a component is destroyed?",
+          "answer": "<p>Angular calls the ngOnDestroy() lifecycle hook to clean up resources like:-</p><ul><li>Unsubscribe from observables</li><li>Clear intervals/timeouts</li><li>Remove event listeners</li><li>Clean up resources to prevent memory leaks</li></ul>"
+        },
+        {
+          "question": "Why is ngOnDestroy() important?",
+          "answer": "It helps prevent memory leaks by unsubscribing from observables and clearing resources."
+        },
+        {
+          "question": "Can a component communicate with another component?",
+          "answer": "<p>Yes, components can communicate using @Input(), @Output(), shared services, or signals.</p><p><br></p><p><strong><u>Parent to child:-</u></strong></p><pre class=\"ql-syntax\" spellcheck=\"false\">Using @Input() decorator\n\nParent: &lt;app-child [name]=\"parentName\"&gt;&lt;/app-child&gt;\nChild: @Input() name: string;\n</pre><p><br></p><p><strong><u>Child to parent:-</u></strong></p><pre class=\"ql-syntax\" spellcheck=\"false\">Using @Output() and EventEmitter\n\nChild: @Output() dataEvent = new EventEmitter&lt;string&gt;();\n&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;this.dataEvent.emit('data');\n&nbsp; \nParent: &lt;app-child (dataEvent)=\"receiveData($event)\"&gt;&lt;/app-child&gt;\n</pre>"
+        },
+        {
+          "question": "Can we have multiple selectors for one component?",
+          "answer": "No, a component can have only one selector."
+        },
+        {
+          "question": "Is it possible to use inline template and styles?",
+          "answer": "Yes, Angular supports inline templates and inline styles inside the @Component decorator."
+        },
+        {
+          "question": "What is change detection in components?",
+          "answer": "<p>Change Detection is the mechanism Angular uses to track changes in component state and update the view.</p><p><strong>Strategies:</strong></p><ul><li>Default: Checks entire component tree</li><li>OnPush: Checks only when @Input changes or events occur</li></ul>"
+        },
+        {
+          "question": "What is OnPush change detection strategy?",
+          "answer": "It tells Angular to check the component only when input references change or events occur, improving performance."
+        },
+        {
+          "question": "What is a standalone component?",
+          "answer": "A standalone component does not need to be declared in an NgModule and can be directly used and bootstrapped."
+        },
+        {
+          "question": "Why are components important in Angular?",
+          "answer": "Components make the UI."
+        },
+        {
+          "question": "<p>What is @ViewChild in Angular?</p>",
+          "answer": "<p>@ViewChild is used to access child component, directive, or DOM element from parent component.</p><p><br></p><p>Example:</p><pre class=\"ql-syntax\" spellcheck=\"false\">@ViewChild(ChildComponent) child: ChildComponent;\nngAfterViewInit() {\nthis.child.someMethod();\n}\n</pre>"
+        },
+        {
+          "question": "<p>What are the different ways components can communicate?</p>",
+          "answer": "<p> <span style=\"color: rgb(103, 150, 230);\">-</span> Parent to Child: @Input()</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Child to Parent: @Output() with EventEmitter</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> ViewChild/ContentChild: Direct reference</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Service: Shared service with Subject/BehaviorSubject</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Router: Pass data via route parameters</p>"
+        },
+        {
+          "question": "<p>What is a standalone component in Angular?</p>",
+          "answer": "<p>Standalone components (Angular 14+) don't need NgModule.</p><p>They can import dependencies directly in the component decorator.</p><pre class=\"ql-syntax\" spellcheck=\"false\">@Component({\n&nbsp; standalone: true,\n&nbsp; imports: [CommonModule, FormsModule],\n&nbsp; selector: 'app-standalone'\n})\n</pre>"
+        },
+        {
+          "question": "<p>What is ViewEncapsulation in Angular?</p>",
+          "answer": "<p>ViewEncapsulation determines how styles are applied:</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Emulated (default): Styles scoped to component</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> None: Global styles</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> ShadowDom: Uses browser's Shadow DOM</p>"
+        },
+        {
+          "question": "<p>How do you create a dynamic component in Angular?</p>",
+          "answer": "<p>Using ComponentFactoryResolver or ViewContainerRef (Angular 13+).</p><p>this.viewContainer.createComponent(DynamicComponent);</p>"
+        },
+        {
+          "question": "<p>How do you make a component reusable? - <strong>Practical Question</strong></p>",
+          "answer": "<p><span style=\"color: rgb(103, 150, 230);\">-</span> Use @Input() for configuration</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Use @Output() for events</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Keep logic generic</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Avoid hardcoded values</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Use content projection</p>"
+        }
+      ]
+    }
+  ],
+  "upcomingTopic": {
+    "title": "Angular 21 | What is Component ?🤔 | Step-by-Step | CodingTerminals",
+    "description": "",
+    "subtopics": [
+      "<p><strong>📌 इस वीडियो में आप सीखेंगे:</strong></p><p>👉 Create Component.</p><p>👉 What is Selector ?</p><p>👉 Template &amp; styles url</p><p>👉Template &amp; style </p><p>👉 UI renders</p><p>👉 Interview-focused explanation</p>"
+    ],
+    "interviewQuestions": [
+      {
+        "question": "<p>How to create component ?</p>",
+        "answer": "<p>Using command <strong>ng g c componentname</strong></p>"
+      },
+      {
+        "question": "<p>What are meta data in component ?</p>",
+        "answer": "<ul><li>selector</li><li>templateurl</li><li>template</li><li>styleUrl</li><li>style</li><li>provider</li><li>preservewhitespace</li></ul><p>...etc</p>"
+      },
+      {
+        "question": "What is a component in Angular?",
+        "answer": "<p>A component is a TypeScript class with @Component decorator that controls a view (HTML template).</p><p>It consists of 3 parts:</p><ul><li>Template (HTML)</li><li>Class (TypeScript)</li><li>Styles (CSS/SCSS)</li></ul><p><br></p>"
+      },
+      {
+        "question": "Which decorator is used to create a component?",
+        "answer": "<p>The <strong>@Component</strong> decorator is used to define a component in Angular.</p>"
+      },
+      {
+        "question": "<p>What are the main parts of an Angular component?</p>",
+        "answer": "<ul><li>@Component decorator (metadata)</li><li>selector (to use component in HTML)</li><li>templateUrl or template (HTML view)</li><li>styleUrls or styles (CSS)</li><li>Component class (TypeScript logic)</li></ul>"
+      },
+      {
+        "question": "What is a selector in Angular?",
+        "answer": "<p>A selector in angular is used to target the component. It will use to load UI on DOM.</p><ul><li>Element selector: selector: 'app-header' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li><li>Attribute selector: selector: '[<span style=\"color: rgb(206, 145, 120);\">app-header</span>]' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">div</span> <span style=\"color: rgb(156, 220, 254);\">app-header</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">div</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li><li>Class selector: selector: '.app-header' &nbsp;→ <span style=\"color: rgb(128, 128, 128);\">&lt;</span><span style=\"color: rgb(86, 156, 214);\">div</span> <span style=\"color: rgb(156, 220, 254);\">class</span>=<span style=\"color: rgb(206, 145, 120);\">\"app-header\"</span><span style=\"color: rgb(128, 128, 128);\">&gt;&lt;/</span><span style=\"color: rgb(86, 156, 214);\">div</span><span style=\"color: rgb(128, 128, 128);\">&gt;</span></li></ul>"
+      },
+      {
+        "question": "<p>How to link html file in component ?</p>",
+        "answer": "<ul><li>templateUrl: Points to an external HTML file</li><li>template: Inline HTML within the component decorator</li></ul><p><br></p><p>Example:</p><pre class=\"ql-syntax\" spellcheck=\"false\">template: `&lt;h1&gt;Hello&lt;/h1&gt;` &nbsp;// Inline\ntemplateUrl: './app.component.html' &nbsp;// External file\n</pre>"
+      },
+      {
+        "question": "Can a component exist without a template?",
+        "answer": "No, every component must have a template, either inline or in a separate HTML file."
+      },
+      {
+        "question": "What is the role of the @Component decorator?",
+        "answer": "<p><strong>@Component</strong> is a decorator that marks a class as an Angular component and provides metadata:</p><ul><li>selector</li><li>template/templateUrl</li><li>styles/styleUrls</li><li>providers</li><li>changeDetection</li></ul>"
+      },
+      {
+        "question": "What is the difference between component and directive?",
+        "answer": "A component is a directive with a template, while directives do not have templates."
+      },
+      {
+        "question": "How does Angular load a component?",
+        "answer": "Angular matches the component selector in the DOM, then loads its template, styles, and executes its TypeScript logic."
+      },
+      {
+        "question": "What is ngOnInit() in a component?",
+        "answer": "ngOnInit() is a lifecycle hook that runs once after the component is initialized and input properties are set."
+      },
+      {
+        "question": "What is the purpose of the constructor in a component?",
+        "answer": "The constructor is mainly used for dependency injection, not for initialization logic."
+      },
+      {
+        "question": "<p>What is the difference between constructor and ngOnInit?</p>",
+        "answer": "<ul><li><strong>Constructor</strong>: TypeScript feature, called when class is instantiated. Use for dependency injection only.</li></ul><p><br></p><ul><li><strong>ngOnInit</strong>: Angular lifecycle hook, called after component initialization. Use for component logic and API calls.</li></ul>"
+      },
+      {
+        "question": "How many times is a component created?",
+        "answer": "A component is created each time its selector appears in the DOM."
+      },
+      {
+        "question": "What happens when a component is destroyed?",
+        "answer": "<p>Angular calls the ngOnDestroy() lifecycle hook to clean up resources like:-</p><ul><li>Unsubscribe from observables</li><li>Clear intervals/timeouts</li><li>Remove event listeners</li><li>Clean up resources to prevent memory leaks</li></ul>"
+      },
+      {
+        "question": "Why is ngOnDestroy() important?",
+        "answer": "It helps prevent memory leaks by unsubscribing from observables and clearing resources."
+      },
+      {
+        "question": "Can a component communicate with another component?",
+        "answer": "<p>Yes, components can communicate using @Input(), @Output(), shared services, or signals.</p><p><br></p><p><strong><u>Parent to child:-</u></strong></p><pre class=\"ql-syntax\" spellcheck=\"false\">Using @Input() decorator\n\nParent: &lt;app-child [name]=\"parentName\"&gt;&lt;/app-child&gt;\nChild: @Input() name: string;\n</pre><p><br></p><p><strong><u>Child to parent:-</u></strong></p><pre class=\"ql-syntax\" spellcheck=\"false\">Using @Output() and EventEmitter\n\nChild: @Output() dataEvent = new EventEmitter&lt;string&gt;();\n&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;this.dataEvent.emit('data');\n&nbsp; \nParent: &lt;app-child (dataEvent)=\"receiveData($event)\"&gt;&lt;/app-child&gt;\n</pre>"
+      },
+      {
+        "question": "Can we have multiple selectors for one component?",
+        "answer": "No, a component can have only one selector."
+      },
+      {
+        "question": "Is it possible to use inline template and styles?",
+        "answer": "Yes, Angular supports inline templates and inline styles inside the @Component decorator."
+      },
+      {
+        "question": "What is change detection in components?",
+        "answer": "<p>Change Detection is the mechanism Angular uses to track changes in component state and update the view.</p><p><strong>Strategies:</strong></p><ul><li>Default: Checks entire component tree</li><li>OnPush: Checks only when @Input changes or events occur</li></ul>"
+      },
+      {
+        "question": "What is OnPush change detection strategy?",
+        "answer": "It tells Angular to check the component only when input references change or events occur, improving performance."
+      },
+      {
+        "question": "What is a standalone component?",
+        "answer": "A standalone component does not need to be declared in an NgModule and can be directly used and bootstrapped."
+      },
+      {
+        "question": "Why are components important in Angular?",
+        "answer": "Components make the UI."
+      },
+      {
+        "question": "<p>What is @ViewChild in Angular?</p>",
+        "answer": "<p>@ViewChild is used to access child component, directive, or DOM element from parent component.</p><p><br></p><p>Example:</p><pre class=\"ql-syntax\" spellcheck=\"false\">@ViewChild(ChildComponent) child: ChildComponent;\nngAfterViewInit() {\nthis.child.someMethod();\n}\n</pre>"
+      },
+      {
+        "question": "<p>What are the different ways components can communicate?</p>",
+        "answer": "<p> <span style=\"color: rgb(103, 150, 230);\">-</span> Parent to Child: @Input()</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Child to Parent: @Output() with EventEmitter</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> ViewChild/ContentChild: Direct reference</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Service: Shared service with Subject/BehaviorSubject</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Router: Pass data via route parameters</p>"
+      },
+      {
+        "question": "<p>What is a standalone component in Angular?</p>",
+        "answer": "<p>Standalone components (Angular 14+) don't need NgModule.</p><p>They can import dependencies directly in the component decorator.</p><pre class=\"ql-syntax\" spellcheck=\"false\">@Component({\n&nbsp; standalone: true,\n&nbsp; imports: [CommonModule, FormsModule],\n&nbsp; selector: 'app-standalone'\n})\n</pre>"
+      },
+      {
+        "question": "<p>What is ViewEncapsulation in Angular?</p>",
+        "answer": "<p>ViewEncapsulation determines how styles are applied:</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Emulated (default): Styles scoped to component</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> None: Global styles</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> ShadowDom: Uses browser's Shadow DOM</p>"
+      },
+      {
+        "question": "<p>How do you create a dynamic component in Angular?</p>",
+        "answer": "<p>Using ComponentFactoryResolver or ViewContainerRef (Angular 13+).</p><p>this.viewContainer.createComponent(DynamicComponent);</p>"
+      },
+      {
+        "question": "<p>How do you make a component reusable? - <strong>Practical Question</strong></p>",
+        "answer": "<p><span style=\"color: rgb(103, 150, 230);\">-</span> Use @Input() for configuration</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Use @Output() for events</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Keep logic generic</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Avoid hardcoded values</p><p><span style=\"color: rgb(103, 150, 230);\">-</span> Use content projection</p>"
+      }
+    ],
+    "estimatedDate": "2025-12-27"
+  }
+}
