@@ -1,0 +1,139 @@
+# ==============================================
+# RENDER.YAML - Deployment Configuration
+# ==============================================
+# This file tells Render how to deploy your application
+# Official Render Blueprints documentation:
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: coding-terminals-fullstack
+    runtime: node                    # ✅ REQUIRED: Node.js runtime
+    startCommand: npm start
+    buildCommand: npm install
+    
+    # Root directory where package.json is located
+    rootDir: youtube&studynote/backend
+    
+    # Region
+    region: oregon
+    
+    # Plan (free or paid)
+    plan: free
+    
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: production
+      
+      - key: DB_ENVIRONMENT
+        value: cloud
+      
+      - key: PORT
+        value: 3000
+      
+      # MongoDB Connection (use your actual credentials)
+      - key: MONGODB_CLOUD
+        sync: false
+      
+      # Frontend URL (update with your domain)
+      - key: FRONTEND_URL
+        value: https://your-production-domain.com
+      
+      # API URL
+      - key: API_URL
+        value: https://your-production-domain.com/api
+      
+      # Authentication Secrets (use Render dashboard to set these)
+      - key: JWT_SECRET
+        sync: false
+      
+      - key: SESSION_SECRET
+        sync: false
+      
+      # Logging
+      - key: LOG_LEVEL
+        value: warn
+    
+    # AutoDeploy on Git push
+    autoDeploy: true
+    
+    # Health check
+    healthCheckPath: /api/health
+
+# ==============================================
+# HOW TO USE THIS FILE
+# ==============================================
+# 
+# Option 1: Using Render Dashboard (Recommended)
+# 1. Go to render.com
+# 2. Create new Web Service
+# 3. Connect GitHub repository
+# 4. Select branch (main)
+# 5. Render will detect this render.yaml file automatically
+# 6. Add sensitive variables in Render dashboard
+#
+# Option 2: Manual Setup
+# 1. Create Web Service manually
+# 2. Set environment variables in dashboard
+# 3. Deploy
+#
+# ==============================================
+# REQUIRED PROPERTIES
+# ==============================================
+#
+# ✅ type: web (the service type)
+# ✅ runtime: node (programming language/runtime)
+# ✅ name: (service name)
+# ✅ startCommand: (how to start your app)
+# ✅ buildCommand: (build steps)
+#
+# ==============================================
+# ENVIRONMENT VARIABLE SETUP IN RENDER DASHBOARD
+# ==============================================
+#
+# Add these sensitive variables in Render Dashboard:
+# 
+# 1. MONGODB_CLOUD
+#    Value: mongodb+srv://username:password@cluster.mongodb.net/dbname
+#
+# 2. JWT_SECRET
+#    Value: your-secure-random-jwt-secret-key
+#
+# 3. SESSION_SECRET
+#    Value: your-secure-random-session-secret-key
+#
+# ==============================================
+# FILE LOADING PRIORITY
+# ==============================================
+#
+# Your application loads environment variables in this order:
+#
+# 1. .env.production (if NODE_ENV=production)
+# 2. Render dashboard environment variables (override .env)
+# 3. .env (fallback)
+#
+# This means:
+# - .env.production provides default values
+# - Render dashboard variables override defaults
+# - No need to expose secrets in repository
+#
+# ==============================================
+# SECURITY BEST PRACTICES
+# ==============================================
+#
+# ✅ Safe to commit:
+#    - render.yaml (configuration only)
+#    - .env.production (with placeholder values)
+#    - .env.staging (with placeholder values)
+#    - .env.development (with dev values)
+#
+# ❌ Never commit:
+#    - .env (your actual secrets)
+#    - Real MongoDB credentials
+#    - Real JWT secrets
+#    - Real API keys
+#
+# Use Render dashboard for sensitive values
+#
+# ==============================================

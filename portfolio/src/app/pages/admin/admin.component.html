@@ -1,0 +1,600 @@
+<div class="admin-container">
+  <!-- Header -->
+  <header class="admin-header">
+    <h1>🔐 Admin Dashboard - Resume & Portfolio Manager</h1>
+    <div class="header-actions">
+      <a href="/resume" class="btn btn-outline">📋 View Resume</a>
+      <a href="/viewer" class="btn btn-outline">👁️ View Gallery</a>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <div class="tabs-nav">
+    <button [class.active]="activeTab === 'profile'" (click)="switchTab('profile')">
+      👤 Profile
+    </button>
+    <button [class.active]="activeTab === 'experience'" (click)="switchTab('experience')">
+      🏢 Experience
+    </button>
+    <button [class.active]="activeTab === 'education'" (click)="switchTab('education')">
+      🎓 Education
+    </button>
+    <button [class.active]="activeTab === 'skills'" (click)="switchTab('skills')">
+      🛠️ Skills
+    </button>
+    <button [class.active]="activeTab === 'portfolio'" (click)="switchTab('portfolio')">
+      📁 Portfolio Projects
+    </button>
+  </div>
+
+  <!-- ========== PROFILE TAB ========== -->
+  <div class="tab-content" *ngIf="activeTab === 'profile'">
+    <div class="section-header">
+      <h2>👤 Personal Profile</h2>
+      <button class="btn btn-primary" (click)="saveProfile()">💾 Save Profile</button>
+    </div>
+
+    <form class="profile-form">
+      <!-- Resume Type -->
+      <div class="form-group">
+        <label>Resume Template Type</label>
+        <select [(ngModel)]="profileForm.resumeType" name="resumeType">
+          <option value="modern">🎨 Modern</option>
+          <option value="classic">📄 Classic</option>
+          <option value="creative">🎭 Creative</option>
+          <option value="minimal">⚪ Minimal</option>
+          <option value="professional">💼 Professional</option>
+        </select>
+      </div>
+
+      <!-- Basic Info -->
+      <div class="form-section">
+        <h3>Basic Information</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" [(ngModel)]="profileForm.fullName" name="fullName" placeholder="Kaushal Kumar">
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" [(ngModel)]="profileForm.email" name="email" placeholder="your.email@example.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Professional Title *</label>
+          <input type="text" [(ngModel)]="profileForm.title" name="title" placeholder="Full Stack Developer | Angular Expert">
+        </div>
+
+        <div class="form-group">
+          <label>Bio</label>
+          <textarea [(ngModel)]="profileForm.bio" name="bio" rows="3" placeholder="Brief introduction about yourself"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" [(ngModel)]="profileForm.phone" name="phone" placeholder="+91-9876543210">
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" [(ngModel)]="profileForm.location" name="location" placeholder="India">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Profile Image URL</label>
+          <input type="url" [(ngModel)]="profileForm.profileImage" name="profileImage" placeholder="https://example.com/photo.jpg">
+        </div>
+
+        <div class="form-group">
+          <label>Resume PDF URL</label>
+          <input type="url" [(ngModel)]="profileForm.resumePdfUrl" name="resumePdfUrl" placeholder="https://example.com/resume.pdf">
+        </div>
+      </div>
+
+      <!-- Social Links -->
+      <div class="form-section">
+        <h3>Social Media Links</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>📺 YouTube</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.youtube" name="youtube" placeholder="https://youtube.com/@channel">
+          </div>
+          <div class="form-group">
+            <label>💼 LinkedIn</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.linkedin" name="linkedin" placeholder="https://linkedin.com/in/profile">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>🐙 GitHub</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.github" name="github" placeholder="https://github.com/username">
+          </div>
+          <div class="form-group">
+            <label>🐦 Twitter</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.twitter" name="twitter" placeholder="https://twitter.com/handle">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>📷 Instagram</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.instagram" name="instagram" placeholder="https://instagram.com/username">
+          </div>
+          <div class="form-group">
+            <label>🌐 Portfolio Website</label>
+            <input type="url" [(ngModel)]="profileForm.socialLinks.portfolio" name="portfolio" placeholder="https://yourwebsite.com">
+          </div>
+        </div>
+      </div>
+
+      <!-- Professional Info -->
+      <div class="form-section">
+        <h3>Professional Summary</h3>
+        <div class="form-group">
+          <label>Summary</label>
+          <textarea [(ngModel)]="profileForm.summary" name="summary" rows="4" placeholder="Write a brief professional summary"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Years of Experience</label>
+            <input type="number" [(ngModel)]="profileForm.yearsOfExperience" name="yearsOfExperience" min="0" placeholder="5">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="profileForm.availableForWork" name="availableForWork">
+              Available for Work
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-large" (click)="saveProfile()">💾 Save Profile</button>
+    </form>
+  </div>
+
+  <!-- ========== EXPERIENCE TAB ========== -->
+  <div class="tab-content" *ngIf="activeTab === 'experience'">
+    <div class="section-header">
+      <h2>🏢 Work Experience ({{experiences.length}})</h2>
+      <button class="btn btn-primary" (click)="openExperienceForm()">➕ Add Experience</button>
+    </div>
+
+    <div class="items-list">
+      <div class="item-card" *ngFor="let exp of experiences">
+        <h3>{{exp.position}}</h3>
+        <h4>{{exp.company}} | {{exp.location}}</h4>
+        <p class="date-range">{{exp.startDate | date:'MMM yyyy'}} - {{exp.current ? 'Present' : (exp.endDate | date:'MMM yyyy')}}</p>
+        <p>{{exp.description}}</p>
+        <div class="tech-tags" *ngIf="exp.technologies?.length">
+          <span *ngFor="let tech of exp.technologies">{{tech}}</span>
+        </div>
+        <div class="item-actions">
+          <button class="btn-edit" (click)="openExperienceForm(exp)">✏️ Edit</button>
+          <button class="btn-delete" (click)="deleteExperience(exp._id)">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="experiences.length === 0">
+      <p>No work experience added yet. Click "Add Experience" to get started.</p>
+    </div>
+  </div>
+
+  <!-- ========== EDUCATION TAB ========== -->
+  <div class="tab-content" *ngIf="activeTab === 'education'">
+    <div class="section-header">
+      <h2>🎓 Education ({{education.length}})</h2>
+      <button class="btn btn-primary" (click)="openEducationForm()">➕ Add Education</button>
+    </div>
+
+    <div class="items-list">
+      <div class="item-card" *ngFor="let edu of education">
+        <h3>{{edu.degree}}</h3>
+        <h4>{{edu.institution}}</h4>
+        <p class="date-range">{{edu.startDate | date:'MMM yyyy'}} - {{edu.current ? 'Present' : (edu.endDate | date:'MMM yyyy')}}</p>
+        <p *ngIf="edu.fieldOfStudy">{{edu.fieldOfStudy}}</p>
+        <p *ngIf="edu.grade"><strong>Grade:</strong> {{edu.grade}}</p>
+        <div class="item-actions">
+          <button class="btn-edit" (click)="openEducationForm(edu)">✏️ Edit</button>
+          <button class="btn-delete" (click)="deleteEducation(edu._id)">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="education.length === 0">
+      <p>No education records added yet. Click "Add Education" to get started.</p>
+    </div>
+  </div>
+
+  <!-- ========== SKILLS TAB ========== -->
+  <div class="tab-content" *ngIf="activeTab === 'skills'">
+    <div class="section-header">
+      <h2>🛠️ Skills ({{skills.length}})</h2>
+      <button class="btn btn-primary" (click)="openSkillForm()">➕ Add Skill</button>
+    </div>
+
+    <div class="skills-grid">
+      <div class="skill-card" *ngFor="let skill of skills">
+        <div class="skill-header">
+          <h3>{{skill.name}}</h3>
+          <span class="skill-category">{{skill.category}}</span>
+        </div>
+        <div class="skill-bar">
+          <div class="skill-progress" [style.width.%]="skill.proficiency" [style.background]="skill.color"></div>
+        </div>
+        <p class="skill-percentage">{{skill.proficiency}}%</p>
+        <p class="skill-experience" *ngIf="skill.yearsOfExperience">{{skill.yearsOfExperience}} years</p>
+        <div class="item-actions">
+          <button class="btn-edit" (click)="openSkillForm(skill)">✏️ Edit</button>
+          <button class="btn-delete" (click)="deleteSkill(skill._id)">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="skills.length === 0">
+      <p>No skills added yet. Click "Add Skill" to get started.</p>
+    </div>
+  </div>
+
+  <!-- ========== PORTFOLIO TAB ========== -->
+  <div class="tab-content" *ngIf="activeTab === 'portfolio'">
+    <div class="section-header">
+      <h2>📁 Portfolio Projects ({{portfolios.length}})</h2>
+      <button class="btn btn-primary" (click)="openCreateForm()">➕ Add Project</button>
+    </div>
+
+    <div class="stats-dashboard" *ngIf="stats">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-info">
+          <h3>{{stats.total}}</h3>
+          <p>Total Projects</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-info">
+          <h3>{{stats.featured}}</h3>
+          <p>Featured</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="portfolio-grid">
+      <div class="portfolio-card" *ngFor="let portfolio of portfolios">
+        <div class="card-image">
+          <img [src]="portfolio.imageUrl" [alt]="portfolio.title">
+          <span class="badge" [class.featured]="portfolio.featured">
+            {{portfolio.featured ? '⭐ Featured' : portfolio.status}}
+          </span>
+        </div>
+        <div class="card-content">
+          <h3>{{portfolio.title}}</h3>
+          <p class="description">{{portfolio.description}}</p>
+          <div class="card-meta">
+            <span class="category">📂 {{portfolio.category}}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn-edit" (click)="openEditForm(portfolio)">✏️ Edit</button>
+            <button class="btn-delete" (click)="deletePortfolio(portfolio)">🗑️ Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="portfolios.length === 0">
+      <p>No portfolio projects yet. Click "Add Project" to get started.</p>
+    </div>
+  </div>
+
+  <!-- ========== MODAL FORMS ========== -->
+  
+  <!-- Experience Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm && activeTab === 'experience'" (click)="closeForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{editMode ? '✏️ Edit Experience' : '➕ Add Experience'}}</h2>
+        <button class="btn-close" (click)="closeForm()">✕</button>
+      </div>
+      
+      <form class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Company *</label>
+            <input type="text" [(ngModel)]="experienceForm.company" name="company" placeholder="Company Name">
+          </div>
+          <div class="form-group">
+            <label>Position *</label>
+            <input type="text" [(ngModel)]="experienceForm.position" name="position" placeholder="Job Title">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" [(ngModel)]="experienceForm.location" name="location" placeholder="City, Country">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" [(ngModel)]="experienceForm.current" name="current">
+              Currently Working Here
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" [(ngModel)]="experienceForm.startDate" name="startDate">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" [(ngModel)]="experienceForm.endDate" name="endDate" [disabled]="experienceForm.current">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="experienceForm.description" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Responsibilities</label>
+          <div class="array-input-group">
+            <input type="text" [(ngModel)]="respInput" name="respInput" placeholder="Add responsibility" (keyup.enter)="addResponsibility()">
+            <button type="button" class="btn-add" (click)="addResponsibility()">➕</button>
+          </div>
+          <div class="tags-list">
+            <span class="tag" *ngFor="let resp of experienceForm.responsibilities; let i = index">
+              {{resp}}
+              <button type="button" (click)="removeResponsibility(i)">✕</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Technologies Used</label>
+          <div class="array-input-group">
+            <input type="text" [(ngModel)]="techInput" name="techInput" placeholder="Add technology" (keyup.enter)="addTechnology()">
+            <button type="button" class="btn-add" (click)="addTechnology()">➕</button>
+          </div>
+          <div class="tags-list">
+            <span class="tag" *ngFor="let tech of experienceForm.technologies; let i = index">
+              {{tech}}
+              <button type="button" (click)="removeTechnology(i)">✕</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="saveExperience()">💾 Save</button>
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">❌ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Education Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm && activeTab === 'education'" (click)="closeForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{editMode ? '✏️ Edit Education' : '➕ Add Education'}}</h2>
+        <button class="btn-close" (click)="closeForm()">✕</button>
+      </div>
+      
+      <form class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Institution *</label>
+            <input type="text" [(ngModel)]="educationForm.institution" name="institution" placeholder="University Name">
+          </div>
+          <div class="form-group">
+            <label>Degree *</label>
+            <input type="text" [(ngModel)]="educationForm.degree" name="degree" placeholder="Bachelor of Technology">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Field of Study</label>
+            <input type="text" [(ngModel)]="educationForm.fieldOfStudy" name="fieldOfStudy" placeholder="Computer Science">
+          </div>
+          <div class="form-group">
+            <label>Grade</label>
+            <input type="text" [(ngModel)]="educationForm.grade" name="grade" placeholder="8.5 CGPA">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input type="date" [(ngModel)]="educationForm.startDate" name="startDate">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" [(ngModel)]="educationForm.endDate" name="endDate" [disabled]="educationForm.current">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="educationForm.current" name="current">
+            Currently Studying
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="educationForm.description" name="description" rows="3"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Achievements</label>
+          <div class="array-input-group">
+            <input type="text" [(ngModel)]="achievementInput" name="achievementInput" placeholder="Add achievement" (keyup.enter)="addAchievement()">
+            <button type="button" class="btn-add" (click)="addAchievement()">➕</button>
+          </div>
+          <div class="tags-list">
+            <span class="tag" *ngFor="let achievement of educationForm.achievements; let i = index">
+              {{achievement}}
+              <button type="button" (click)="removeAchievement(i)">✕</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="saveEducation()">💾 Save</button>
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">❌ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Skill Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm && activeTab === 'skills'" (click)="closeForm()">
+    <div class="modal-content modal-small" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{editMode ? '✏️ Edit Skill' : '➕ Add Skill'}}</h2>
+        <button class="btn-close" (click)="closeForm()">✕</button>
+      </div>
+      
+      <form class="modal-form">
+        <div class="form-group">
+          <label>Skill Name *</label>
+          <input type="text" [(ngModel)]="skillForm.name" name="name" placeholder="Angular">
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select [(ngModel)]="skillForm.category" name="category">
+            <option value="Frontend">Frontend</option>
+            <option value="Backend">Backend</option>
+            <option value="Database">Database</option>
+            <option value="DevOps">DevOps</option>
+            <option value="Tools">Tools</option>
+            <option value="Soft Skills">Soft Skills</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Proficiency (0-100)</label>
+          <input type="range" [(ngModel)]="skillForm.proficiency" name="proficiency" min="0" max="100">
+          <span class="range-value">{{skillForm.proficiency}}%</span>
+        </div>
+
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input type="number" [(ngModel)]="skillForm.yearsOfExperience" name="yearsOfExperience" min="0" step="0.5" placeholder="3">
+        </div>
+
+        <div class="form-group">
+          <label>Color</label>
+          <input type="color" [(ngModel)]="skillForm.color" name="color">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="saveSkill()">💾 Save</button>
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">❌ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Portfolio Form Modal -->
+  <div class="modal-overlay" *ngIf="showForm && activeTab === 'portfolio'" (click)="closeForm()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{editMode ? '✏️ Edit Portfolio' : '➕ Create New Portfolio'}}</h2>
+        <button class="btn-close" (click)="closeForm()">✕</button>
+      </div>
+      
+      <form class="modal-form">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" [(ngModel)]="formData.title" name="title" placeholder="Project Title">
+        </div>
+
+        <div class="form-group">
+          <label>Description *</label>
+          <textarea [(ngModel)]="formData.description" name="description" rows="4" placeholder="Project Description"></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select [(ngModel)]="formData.category" name="category">
+              <option value="Web Development">Web Development</option>
+              <option value="Mobile App">Mobile App</option>
+              <option value="UI/UX Design">UI/UX Design</option>
+              <option value="Data Science">Data Science</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select [(ngModel)]="formData.status" name="status">
+              <option value="completed">Completed</option>
+              <option value="in-progress">In Progress</option>
+              <option value="planned">Planned</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Technologies</label>
+          <div class="array-input-group">
+            <input type="text" [(ngModel)]="techInput" name="techInput" placeholder="Add technology" (keyup.enter)="addTechnology()">
+            <button type="button" class="btn-add" (click)="addTechnology()">➕</button>
+          </div>
+          <div class="tags-list">
+            <span class="tag" *ngFor="let tech of formData.technologies; let i = index">
+              {{tech}}
+              <button type="button" (click)="removeTechnology(i)">✕</button>
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Image URL</label>
+          <input type="url" [(ngModel)]="formData.imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Project URL</label>
+            <input type="url" [(ngModel)]="formData.projectUrl" name="projectUrl" placeholder="https://project.com">
+          </div>
+
+          <div class="form-group">
+            <label>GitHub URL</label>
+            <input type="url" [(ngModel)]="formData.githubUrl" name="githubUrl" placeholder="https://github.com/user/repo">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="formData.featured" name="featured">
+            Featured Project
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-primary" (click)="savePortfolio()">💾 Save</button>
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">❌ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Processing...</p>
+  </div>
+</div>
