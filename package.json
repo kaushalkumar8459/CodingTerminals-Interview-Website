@@ -4,10 +4,9 @@
   "description": "CodingTerminals YouTube Roadmap and Study Notes Platform",
   "main": "youtube&studynote/backend/server.js",
   "scripts": {
-    "start": "node youtube&studynote/backend/server.js",
-    "dev": "node youtube&studynote/backend/server.js",
-    "install-backend": "npm install --prefix youtube&studynote/backend",
-    "install": "npm run install-backend"
+    "start": "npm --prefix 'youtube&studynote/backend' start",
+    "dev": "npm --prefix 'youtube&studynote/backend' run dev:watch",
+    "install": "npm --prefix 'youtube&studynote/backend' install"
   },
   "keywords": ["youtube", "roadmap", "study-notes"],
   "author": "Coding Terminals",
