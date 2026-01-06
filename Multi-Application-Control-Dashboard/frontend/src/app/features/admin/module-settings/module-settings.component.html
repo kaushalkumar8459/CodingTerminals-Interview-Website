@@ -1,0 +1,286 @@
+<div class="container-fluid p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Module Settings</h2>
+    <button class="btn btn-primary" (click)="openForm()">
+      <i class="fas fa-plus"></i> Add Module
+    </button>
+  </div>
+
+  <!-- Success Alert -->
+  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
+    {{ success }}
+    <button type="button" class="btn-close" (click)="success = null"></button>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div *ngIf="stats" class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Total Modules</h5>
+          <h2 class="text-primary">{{ stats.totalModules || 0 }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Enabled</h5>
+          <h2 class="text-success">{{ stats.enabledModules || 0 }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Disabled</h5>
+          <h2 class="text-warning">{{ stats.disabledModules || 0 }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center">
+        <div class="card-body">
+          <h5 class="card-title">Active Users</h5>
+          <h2 class="text-info">{{ stats.totalUsers || 0 }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="mb-4">
+    <div class="btn-group" role="group">
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        (click)="showAllModules()"
+      >
+        <i class="fas fa-list"></i> All Modules
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-success"
+        (click)="getModulesByCategory('content')"
+      >
+        <i class="fas fa-file-alt"></i> Content
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-info"
+        (click)="getModulesByCategory('management')"
+      >
+        <i class="fas fa-cog"></i> Management
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-primary"
+        (click)="getModulesByCategory('admin')"
+      >
+        <i class="fas fa-lock"></i> Admin
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="text-center">
+    <div class="spinner-border" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Modules Grid -->
+  <div *ngIf="!loading && filteredModules.length > 0" class="row">
+    <div *ngFor="let module of filteredModules" class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100" [style.border-left]="module.enabled ? '4px solid #28a745' : '4px solid #6c757d'">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h5 class="card-title">
+                <i [class]="module.icon || 'fas fa-puzzle-piece'" class="me-2"></i>
+                {{ module.name }}
+              </h5>
+              <p class="card-text text-muted small">{{ module.description }}</p>
+            </div>
+            <span class="badge" [ngClass]="getStatusClass(module.enabled)">
+              {{ getStatusText(module.enabled) }}
+            </span>
+          </div>
+
+          <div class="mb-3">
+            <small class="text-muted">
+              <i class="fas fa-users"></i>
+              {{ module.usersCount || 0 }} users
+            </small>
+            <br />
+            <small class="text-muted" *ngIf="module.category">
+              <i class="fas fa-tag"></i>
+              {{ module.category }}
+            </small>
+          </div>
+
+          <div class="card-footer bg-white border-top">
+            <div class="btn-group btn-group-sm w-100" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                (click)="openForm(module)"
+                title="Edit"
+              >
+                <i class="fas fa-edit"></i>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-outline-success"
+                (click)="enableModule(module.id!)"
+                *ngIf="!module.enabled"
+                title="Enable"
+              >
+                <i class="fas fa-check"></i>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-outline-warning"
+                (click)="disableModule(module.id!)"
+                *ngIf="module.enabled"
+                title="Disable"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-outline-danger"
+                (click)="deleteModule(module.id!, module.name)"
+                title="Delete"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!loading && filteredModules.length === 0"
+    class="alert alert-info text-center"
+  >
+    No modules found. Create your first module!
+  </div>
+
+  <!-- Module Form Modal -->
+  <div class="modal fade" [class.show]="isFormVisible" [style.display]="isFormVisible ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            {{ isEditing ? 'Edit Module' : 'Create New Module' }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            (click)="closeForm()"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="moduleForm">
+            <div class="mb-3">
+              <label for="name" class="form-label">Module Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="name"
+                formControlName="name"
+                placeholder="e.g., LinkedIn Management"
+              />
+              <small class="text-danger" *ngIf="moduleForm.get('name')?.invalid && moduleForm.get('name')?.touched">
+                Name is required (min 3 characters)
+              </small>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Description</label>
+              <textarea
+                class="form-control"
+                id="description"
+                formControlName="description"
+                rows="3"
+                placeholder="Module description"
+              ></textarea>
+              <small class="text-danger" *ngIf="moduleForm.get('description')?.invalid && moduleForm.get('description')?.touched">
+                Description is required
+              </small>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" formControlName="category">
+                  <option value="">Select Category</option>
+                  <option value="content">Content Management</option>
+                  <option value="management">User Management</option>
+                  <option value="admin">Admin</option>
+                  <option value="analytics">Analytics</option>
+                </select>
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label for="icon" class="form-label">Icon (Font Awesome)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="icon"
+                  formControlName="icon"
+                  placeholder="e.g., fas fa-linkedin"
+                />
+              </div>
+            </div>
+
+            <div class="mb-3 form-check">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="enabled"
+                formControlName="enabled"
+              />
+              <label class="form-check-label" for="enabled">
+                Enable this module
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="saveModule()"
+            [disabled]="moduleForm.invalid"
+          >
+            {{ isEditing ? 'Update' : 'Create' }} Module
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Backdrop -->
+  <div
+    class="modal-backdrop fade"
+    [class.show]="isFormVisible"
+    *ngIf="isFormVisible"
+  ></div>
+</div>

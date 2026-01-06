@@ -1,0 +1,140 @@
+// LinkedIn View Component Styles
+.card {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  .card-header {
+    padding: 2rem;
+
+    h2 {
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 1rem;
+    }
+  }
+
+  .card-body {
+    padding: 2rem;
+  }
+
+  .card-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+.post-content {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+
+  p {
+    margin-bottom: 1rem;
+
+    &.lead {
+      font-weight: 500;
+      font-size: 1.25rem;
+    }
+  }
+}
+
+.metric-box {
+  text-align: center;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: #e9ecef;
+    transform: translateY(-3px);
+  }
+
+  i {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  h5 {
+    font-weight: 700;
+    font-size: 1.75rem;
+    margin: 0.5rem 0;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+}
+
+.btn {
+  transition: all 0.3s ease;
+  border-radius: 0.375rem;
+  font-weight: 500;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  .btn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+.badge {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.alert {
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+
+  h6 {
+    font-weight: 600;
+    color: #333;
+  }
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  color: #0d6efd;
+}
+
+@media (max-width: 768px) {
+  .card {
+    .card-header,
+    .card-body,
+    .card-footer {
+      padding: 1rem;
+    }
+  }
+
+  .metric-box {
+    margin-bottom: 1rem;
+  }
+
+  .btn-group {
+    .btn {
+      min-width: auto;
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+}

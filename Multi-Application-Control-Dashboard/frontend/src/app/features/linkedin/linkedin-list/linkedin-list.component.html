@@ -1,0 +1,226 @@
+<div class="container-fluid p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>LinkedIn Post Management</h2>
+    <button class="btn btn-primary" (click)="openForm()">
+      <i class="fas fa-plus"></i> New Post
+    </button>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Filter Tabs -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'all'"
+        (click)="setFilter('all')"
+      >
+        All
+      </button>
+    </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'draft'"
+        (click)="setFilter('draft')"
+      >
+        Drafts
+      </button>
+    </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'scheduled'"
+        (click)="setFilter('scheduled')"
+      >
+        Scheduled
+      </button>
+    </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'published'"
+        (click)="setFilter('published')"
+      >
+        Published
+      </button>
+    </li>
+  </ul>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="text-center">
+    <div class="spinner-border" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Posts List -->
+  <div *ngIf="!loading && filteredPosts.length > 0" class="row">
+    <div *ngFor="let post of filteredPosts" class="col-md-6 col-lg-4 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">{{ post.title }}</h5>
+          <p class="card-text text-truncate">{{ post.content }}</p>
+          <div class="mb-3">
+            <span class="badge" [ngClass]="getStatusClass(post.status)">
+              {{ post.status | uppercase }}
+            </span>
+          </div>
+          <div class="small text-muted">
+            <p *ngIf="post.likes">
+              <i class="fas fa-thumbs-up"></i> {{ post.likes }} likes
+            </p>
+            <p *ngIf="post.comments">
+              <i class="fas fa-comments"></i> {{ post.comments }} comments
+            </p>
+          </div>
+        </div>
+        <div class="card-footer bg-white">
+          <div class="btn-group btn-group-sm w-100" role="group">
+            <button
+              type="button"
+              class="btn btn-outline-primary"
+              (click)="openForm(post)"
+              title="Edit"
+            >
+              <i class="fas fa-edit"></i>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="publishPost(post.id!)"
+              *ngIf="post.status !== 'published'"
+              title="Publish"
+            >
+              <i class="fas fa-share"></i>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-warning"
+              (click)="schedulePost(post.id!)"
+              *ngIf="post.status === 'draft'"
+              title="Schedule"
+            >
+              <i class="fas fa-calendar"></i>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-info"
+              (click)="viewAnalytics(post.id!)"
+              *ngIf="post.status === 'published'"
+              title="Analytics"
+            >
+              <i class="fas fa-chart-bar"></i>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-danger"
+              (click)="deletePost(post.id!)"
+              title="Delete"
+            >
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!loading && filteredPosts.length === 0"
+    class="alert alert-info text-center"
+  >
+    No posts found. Create your first post!
+  </div>
+
+  <!-- Post Form Modal -->
+  <div class="modal fade" [class.show]="isFormVisible" [style.display]="isFormVisible ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            {{ isEditing ? 'Edit Post' : 'Create New Post' }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            (click)="closeForm()"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="postForm">
+            <div class="mb-3">
+              <label for="title" class="form-label">Title</label>
+              <input
+                type="text"
+                class="form-control"
+                id="title"
+                formControlName="title"
+                placeholder="Post title"
+              />
+              <small class="text-danger" *ngIf="postForm.get('title')?.invalid && postForm.get('title')?.touched">
+                Title is required (min 5 characters)
+              </small>
+            </div>
+            <div class="mb-3">
+              <label for="content" class="form-label">Content</label>
+              <textarea
+                class="form-control"
+                id="content"
+                formControlName="content"
+                rows="5"
+                placeholder="Post content"
+              ></textarea>
+              <small class="text-danger" *ngIf="postForm.get('content')?.invalid && postForm.get('content')?.touched">
+                Content is required (min 10 characters)
+              </small>
+            </div>
+            <div class="mb-3">
+              <label for="scheduledDate" class="form-label">Scheduled Date (Optional)</label>
+              <input
+                type="datetime-local"
+                class="form-control"
+                id="scheduledDate"
+                formControlName="scheduledDate"
+              />
+            </div>
+            <div class="mb-3">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select" id="status" formControlName="status">
+                <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="savePost()"
+            [disabled]="postForm.invalid"
+          >
+            {{ isEditing ? 'Update' : 'Create' }} Post
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Backdrop -->
+  <div
+    class="modal-backdrop fade"
+    [class.show]="isFormVisible"
+    *ngIf="isFormVisible"
+  ></div>
+</div>

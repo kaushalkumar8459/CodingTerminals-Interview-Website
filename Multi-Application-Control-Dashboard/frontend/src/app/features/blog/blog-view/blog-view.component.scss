@@ -1,0 +1,168 @@
+// Blog View Component Styles
+.blog-card {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+  .card-header {
+    padding: 2rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+
+    h1 {
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+
+    .lead {
+      font-size: 1.15rem;
+      font-weight: 500;
+    }
+  }
+
+  .card-body {
+    padding: 2.5rem;
+  }
+
+  .card-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+}
+
+.blog-content {
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: #333;
+  letter-spacing: 0.3px;
+
+  p {
+    margin-bottom: 1.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.tags-section {
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    .tag-badge {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #e9ecef !important;
+        transform: translateY(-2px);
+      }
+
+      i {
+        margin-right: 0.3rem;
+      }
+    }
+  }
+}
+
+.engagement-section,
+.share-section {
+  .btn {
+    transition: all 0.3s ease;
+    font-weight: 500;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    i {
+      margin-right: 0.5rem;
+    }
+  }
+
+  .btn-group-sm {
+    .btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+.badge {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-right: 0.5rem;
+}
+
+.btn {
+  transition: all 0.3s ease;
+  border-radius: 0.375rem;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+  color: #0d6efd;
+}
+
+.alert-info {
+  background-color: #e7f3ff;
+  border-color: #b3d9ff;
+  color: #004085;
+
+  i {
+    margin-right: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .blog-card {
+    .card-header,
+    .card-body,
+    .card-footer {
+      padding: 1.25rem;
+    }
+
+    .card-header {
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  }
+
+  .blog-content {
+    font-size: 1rem;
+  }
+
+  .tags-section .tags-container {
+    gap: 0.3rem;
+
+    .tag-badge {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  .engagement-section .btn,
+  .share-section .btn {
+    font-size: 0.875rem;
+  }
+}

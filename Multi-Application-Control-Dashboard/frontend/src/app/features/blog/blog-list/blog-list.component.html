@@ -1,0 +1,276 @@
+<div class="container-fluid p-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Blog Management</h2>
+    <button class="btn btn-primary" (click)="openForm()">
+      <i class="fas fa-plus"></i> New Post
+    </button>
+  </div>
+
+  <!-- Error Alert -->
+  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="btn-close" (click)="error = null"></button>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="mb-4">
+    <div class="input-group">
+      <input
+        type="text"
+        class="form-control"
+        placeholder="Search blog posts..."
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="searchPosts()"
+      />
+      <button class="btn btn-outline-secondary" type="button" (click)="searchPosts()">
+        <i class="fas fa-search"></i> Search
+      </button>
+      <button class="btn btn-outline-info" type="button" (click)="loadTrendingPosts()">
+        <i class="fas fa-fire"></i> Trending
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'all'"
+        (click)="setFilter('all')"
+      >
+        All Posts
+      </button>
+    </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'draft'"
+        (click)="setFilter('draft')"
+      >
+        Drafts
+      </button>
+    </li>
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        [class.active]="filter === 'published'"
+        (click)="setFilter('published')"
+      >
+        Published
+      </button>
+    </li>
+  </ul>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading" class="text-center">
+    <div class="spinner-border" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+
+  <!-- Posts Table -->
+  <div *ngIf="!loading && filteredPosts.length > 0" class="table-responsive">
+    <table class="table table-hover">
+      <thead class="table-light">
+        <tr>
+          <th>Title</th>
+          <th>Author</th>
+          <th>Status</th>
+          <th>Tags</th>
+          <th>Views</th>
+          <th>Likes</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let post of filteredPosts">
+          <td class="fw-bold">{{ post.title }}</td>
+          <td>{{ post.author || 'N/A' }}</td>
+          <td>
+            <span class="badge" [ngClass]="getStatusClass(post.status)">
+              {{ post.status | uppercase }}
+            </span>
+          </td>
+          <td>
+            <span *ngFor="let tag of post.tags" class="badge bg-info me-1">
+              {{ tag }}
+            </span>
+          </td>
+          <td>{{ post.views || 0 }}</td>
+          <td><i class="fas fa-heart text-danger"></i> {{ post.likes || 0 }}</td>
+          <td class="small">{{ post.createdAt | date: 'short' }}</td>
+          <td>
+            <div class="btn-group btn-group-sm" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                (click)="openForm(post)"
+                title="Edit"
+              >
+                <i class="fas fa-edit"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-success"
+                (click)="publishPost(post.id!)"
+                *ngIf="post.status === 'draft'"
+                title="Publish"
+              >
+                <i class="fas fa-check"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-warning"
+                (click)="saveDraft(post.id!)"
+                *ngIf="post.status === 'draft'"
+                title="Save Draft"
+              >
+                <i class="fas fa-save"></i>
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-danger"
+                (click)="deletePost(post.id!)"
+                title="Delete"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!loading && filteredPosts.length === 0"
+    class="alert alert-info text-center"
+  >
+    No blog posts found. Create your first post!
+  </div>
+
+  <!-- Blog Post Form Modal -->
+  <div class="modal fade" [class.show]="isFormVisible" [style.display]="isFormVisible ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            {{ isEditing ? 'Edit Blog Post' : 'Create New Blog Post' }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            (click)="closeForm()"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <form [formGroup]="postForm">
+            <div class="mb-3">
+              <label for="title" class="form-label">Title</label>
+              <input
+                type="text"
+                class="form-control"
+                id="title"
+                formControlName="title"
+                placeholder="Blog post title"
+              />
+              <small class="text-danger" *ngIf="postForm.get('title')?.invalid && postForm.get('title')?.touched">
+                Title is required (min 5 characters)
+              </small>
+            </div>
+
+            <div class="mb-3">
+              <label for="excerpt" class="form-label">Excerpt</label>
+              <input
+                type="text"
+                class="form-control"
+                id="excerpt"
+                formControlName="excerpt"
+                placeholder="Short summary of your post"
+              />
+              <small class="text-danger" *ngIf="postForm.get('excerpt')?.invalid && postForm.get('excerpt')?.touched">
+                Excerpt is required (min 10 characters)
+              </small>
+            </div>
+
+            <div class="mb-3">
+              <label for="content" class="form-label">Content</label>
+              <textarea
+                class="form-control"
+                id="content"
+                formControlName="content"
+                rows="8"
+                placeholder="Blog post content"
+              ></textarea>
+              <small class="text-danger" *ngIf="postForm.get('content')?.invalid && postForm.get('content')?.touched">
+                Content is required (min 20 characters)
+              </small>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="author" class="form-label">Author</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="author"
+                  formControlName="author"
+                  placeholder="Your name"
+                />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="tags" class="form-label">Tags (comma separated)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="tags"
+                  formControlName="tags"
+                  placeholder="angular, typescript, web"
+                />
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select" id="status" formControlName="status">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeForm()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-light"
+            (click)="saveDraft(selectedPost?.id!)"
+            *ngIf="isEditing && selectedPost?.status === 'draft'"
+          >
+            <i class="fas fa-save"></i> Save Draft
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="savePost()"
+            [disabled]="postForm.invalid"
+          >
+            {{ isEditing ? 'Update' : 'Create' }} Post
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Backdrop -->
+  <div
+    class="modal-backdrop fade"
+    [class.show]="isFormVisible"
+    *ngIf="isFormVisible"
+  ></div>
+</div>
