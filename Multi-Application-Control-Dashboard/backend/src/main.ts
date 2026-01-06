@@ -1,22 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
 
   // Enable CORS
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN'),
+    origin: process.env.CORS_ORIGIN || 'http://localhost:4200',
     credentials: true,
   });
 
-  // Set API prefix
-  app.setGlobalPrefix(configService.get<string>('API_PREFIX'));
-
-  // Enable validation
+  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -25,10 +20,15 @@ async function bootstrap() {
     }),
   );
 
-  const port = configService.get<number>('PORT') || 3000;
-  await app.listen(port);
-  console.log(`🚀 Application running on: http://localhost:${port}`);
-  console.log(`📚 Swagger docs available at: http://localhost:${port}/api-docs`);
+  // Global prefix for API routes
+  app.setGlobalPrefix('api');
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port, () => {
+    console.log(`🚀 Server is running on port ${port}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV}`);
+    console.log(`🗄️  Database: ${process.env.MONGODB_URI?.split('@')[1] || 'MongoDB'}`);
+  });
 }
 
 bootstrap();

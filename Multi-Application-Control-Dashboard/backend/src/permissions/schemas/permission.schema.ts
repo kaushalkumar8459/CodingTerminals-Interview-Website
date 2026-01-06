@@ -1,10 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type PermissionDocument = Permission & Document;
-
 @Schema({ timestamps: true })
-export class Permission {
+export class Permission extends Document {
   @Prop({ required: true, unique: true })
   name: string;
 
@@ -14,11 +12,8 @@ export class Permission {
   @Prop({ required: true })
   module: string;
 
-  @Prop({ required: true })
+  @Prop({ enum: ['create', 'read', 'update', 'delete'], required: true })
   action: string;
-
-  @Prop({ default: true })
-  isActive: boolean;
 }
 
 export const PermissionSchema = SchemaFactory.createForClass(Permission);

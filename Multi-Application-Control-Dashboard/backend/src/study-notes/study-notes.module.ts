@@ -6,8 +6,8 @@ import { StudyNote, StudyNoteSchema } from './schemas/study-note.schema';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: StudyNote.name, schema: StudyNoteSchema }])],
-  controllers: [StudyNotesController],
   providers: [StudyNotesService],
+  controllers: [StudyNotesController],
   exports: [StudyNotesService],
 })
 export class StudyNotesModule {}

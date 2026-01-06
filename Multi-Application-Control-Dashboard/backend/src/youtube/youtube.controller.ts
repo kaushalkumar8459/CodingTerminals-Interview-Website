@@ -1,82 +1,50 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, Request } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { YouTubeService } from './youtube.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateYouTubePostDto, UpdateYouTubePostDto } from './dto/youtube-post.dto';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('youtube')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class YouTubeController {
   constructor(private youtubeService: YouTubeService) {}
 
   @Post()
-  @Roles('admin', 'super_admin')
-  async createVideo(@Body() createData: any, @Request() req) {
-    return await this.youtubeService.createVideo(createData, req.user.sub);
+  async create(@Body() createYouTubeDto: CreateYouTubePostDto, @Request() req) {
+    return this.youtubeService.create({ ...createYouTubeDto, author: req.user.sub });
   }
 
   @Get()
-  async getAllVideos(@Query('page') page: number = 1, @Query('limit') limit: number = 10) {
-    return await this.youtubeService.getAllVideos(page, limit);
-  }
-
-  @Get('trending')
-  async getTrendingVideos(@Query('limit') limit: number = 10) {
-    return await this.youtubeService.getTrendingVideos(limit);
-  }
-
-  @Get('category/:category')
-  async getVideosByCategory(
-    @Param('category') category: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return await this.youtubeService.getVideosByCategory(category, page, limit);
-  }
-
-  @Get('search/:query')
-  async searchVideos(
-    @Param('query') query: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return await this.youtubeService.searchVideos(query, page, limit);
-  }
-
-  @Get(':id')
-  async getVideoById(@Param('id') videoId: string) {
-    return await this.youtubeService.getVideoById(videoId);
-  }
-
-  @Put(':id')
-  @Roles('admin', 'super_admin')
-  async updateVideo(@Param('id') videoId: string, @Body() updateData: any, @Request() req) {
-    return await this.youtubeService.updateVideo(videoId, updateData, req.user.sub);
-  }
-
-  @Delete(':id')
-  @Roles('admin', 'super_admin')
-  async deleteVideo(@Param('id') videoId: string) {
-    return await this.youtubeService.deleteVideo(videoId);
+  async findAll(@Query('status') status?: string) {
+    return this.youtubeService.findAll(status);
   }
 
   @Get('stats')
-  getStats() {
+  async getStats() {
     return this.youtubeService.getStats();
   }
 
-  @Get('playlist/:playlistId')
-  getByPlaylist(@Param('playlistId') playlistId: string) {
-    return this.youtubeService.getByPlaylist(playlistId);
+  @Get('author/:authorId')
+  async findByAuthor(@Param('authorId') authorId: string) {
+    return this.youtubeService.findByAuthor(authorId);
   }
 
-  @Post(':id/schedule')
-  schedule(@Param('id') id: string, @Body('scheduledDate') scheduledDate: Date) {
-    return this.youtubeService.schedule(id, scheduledDate);
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.youtubeService.findOne(id);
+  }
+
+  @Put(':id')
+  async update(@Param('id') id: string, @Body() updateYouTubeDto: UpdateYouTubePostDto) {
+    return this.youtubeService.update(id, updateYouTubeDto);
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.youtubeService.delete(id);
   }
 
   @Post(':id/publish')
-  publish(@Param('id') id: string) {
+  async publish(@Param('id') id: string) {
     return this.youtubeService.publish(id);
   }
 }

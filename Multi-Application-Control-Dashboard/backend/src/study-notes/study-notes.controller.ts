@@ -1,68 +1,21 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  UseGuards,
-  Query,
-  Request,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { StudyNotesService } from './study-notes.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateStudyNoteDto, UpdateStudyNoteDto } from './dto/study-note.dto';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('study-notes')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class StudyNotesController {
   constructor(private studyNotesService: StudyNotesService) {}
 
   @Post()
-  @Roles('admin', 'super_admin')
-  async createNote(@Body() createData: any, @Request() req) {
-    const { title, content, category, createdBy, visibility } = createData;
-    return this.studyNotesService.create(title, content, category, createdBy, visibility);
+  async create(@Body() createStudyNoteDto: CreateStudyNoteDto, @Request() req) {
+    return this.studyNotesService.create({ ...createStudyNoteDto, author: req.user.sub });
   }
 
   @Get()
-  async getAllNotes(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('userId') userId?: string,
-    @Query('visibility') visibility?: string,
-  ) {
-    return await this.studyNotesService.getAllNotes(page, limit, userId, visibility);
-  }
-
-  @Get('featured')
-  async getFeaturedNotes(@Query('limit') limit: number = 5) {
-    return await this.studyNotesService.getFeaturedNotes(limit);
-  }
-
-  @Get('category/:category')
-  async getNotesByCategory(
-    @Param('category') category: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return await this.studyNotesService.getNotesByCategory(category, page, limit);
-  }
-
-  @Get('search/:query')
-  async searchNotes(
-    @Param('query') query: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ) {
-    return await this.studyNotesService.searchNotes(query, page, limit);
-  }
-
-  @Get('stats')
-  async getStats() {
-    return this.studyNotesService.getStats();
+  async findAll(@Query('isPublic') isPublic?: boolean) {
+    return this.studyNotesService.findAll(isPublic);
   }
 
   @Get('search')
@@ -70,25 +23,33 @@ export class StudyNotesController {
     return this.studyNotesService.search(query);
   }
 
-  @Get('user/:userId')
-  async getByUser(@Param('userId') userId: string) {
-    return this.studyNotesService.getByUser(userId);
+  @Get('category/:category')
+  async findByCategory(@Param('category') category: string) {
+    return this.studyNotesService.findByCategory(category);
+  }
+
+  @Get('stats')
+  async getStats() {
+    return this.studyNotesService.getStats();
+  }
+
+  @Get('author/:authorId')
+  async findByAuthor(@Param('authorId') authorId: string) {
+    return this.studyNotesService.findByAuthor(authorId);
   }
 
   @Get(':id')
-  async getNoteById(@Param('id') noteId: string) {
-    return await this.studyNotesService.getNoteById(noteId);
+  async findOne(@Param('id') id: string) {
+    return this.studyNotesService.findOne(id);
   }
 
   @Put(':id')
-  @Roles('admin', 'super_admin')
-  async updateNote(@Param('id') noteId: string, @Body() updateData: any, @Request() req) {
-    return await this.studyNotesService.update(noteId, updateData, req.user.sub);
+  async update(@Param('id') id: string, @Body() updateStudyNoteDto: UpdateStudyNoteDto) {
+    return this.studyNotesService.update(id, updateStudyNoteDto);
   }
 
   @Delete(':id')
-  @Roles('admin', 'super_admin')
-  async deleteNote(@Param('id') noteId: string) {
-    return await this.studyNotesService.deleteNote(noteId);
+  async delete(@Param('id') id: string) {
+    return this.studyNotesService.delete(id);
   }
 }

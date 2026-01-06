@@ -1,157 +1,104 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs/operators';
-
-export interface User {
-  id: string;
-  email: string;
-  username: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  isSuperAdmin: boolean;
-  assignedModules: string[];
-}
 
 export interface AuthResponse {
   accessToken: string;
-  user: User;
+  refreshToken: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api';
-  private currentUser$ = new BehaviorSubject<User | null>(null);
-  private token: string | null = null;
+  private apiUrl = 'http://localhost:3000/api/auth';
+  private currentUserSubject: BehaviorSubject<any>;
+  public currentUser$: Observable<any>;
 
   constructor(private http: HttpClient) {
-    this.loadFromStorage();
+    this.currentUserSubject = new BehaviorSubject<any>(this.getUserFromStorage());
+    this.currentUser$ = this.currentUserSubject.asObservable();
   }
 
-  /**
-   * Load user and token from localStorage on app initialization
-   */
-  private loadFromStorage(): void {
-    const token = localStorage.getItem('auth_token');
-    const user = localStorage.getItem('current_user');
-    
-    if (token && user) {
-      this.token = token;
-      this.currentUser$.next(JSON.parse(user));
-    }
+  register(firstName: string, lastName: string, email: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, {
+      firstName,
+      lastName,
+      email,
+      password
+    }).pipe(
+      tap(response => this.handleAuthResponse(response))
+    );
   }
 
-  /**
-   * Login user with email and password
-   */
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, { email, password })
-      .pipe(
-        tap((response) => {
-          this.token = response.accessToken;
-          this.currentUser$.next(response.user);
-          localStorage.setItem('auth_token', response.accessToken);
-          localStorage.setItem('current_user', JSON.stringify(response.user));
-        }),
-      );
+    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, {
+      email,
+      password
+    }).pipe(
+      tap(response => this.handleAuthResponse(response))
+    );
   }
 
-  /**
-   * Register new user (Super Admin only)
-   */
-  register(registerData: any): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, registerData)
-      .pipe(
-        tap((response) => {
-          this.token = response.accessToken;
-          this.currentUser$.next(response.user);
-          localStorage.setItem('auth_token', response.accessToken);
-          localStorage.setItem('current_user', JSON.stringify(response.user));
-        }),
-      );
-  }
-
-  /**
-   * Logout current user
-   */
-  logout(): void {
-    this.token = null;
-    this.currentUser$.next(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('current_user');
-  }
-
-  /**
-   * Check if user is authenticated
-   */
-  isAuthenticated(): boolean {
-    return !!this.token && this.currentUser$.value !== null;
-  }
-
-  /**
-   * Get current user
-   */
-  getCurrentUser(): User | null {
-    return this.currentUser$.value;
-  }
-
-  /**
-   * Get current user role
-   */
-  getCurrentUserRole(): string {
-    return this.currentUser$.value?.role || 'viewer';
-  }
-
-  /**
-   * Check if current user is super admin
-   */
-  isSuperAdmin(): boolean {
-    return this.currentUser$.value?.isSuperAdmin || false;
-  }
-
-  /**
-   * Get current user observable
-   */
-  getCurrentUser$(): Observable<User | null> {
-    return this.currentUser$.asObservable();
-  }
-
-  /**
-   * Get JWT token
-   */
-  getToken(): string | null {
-    return this.token;
-  }
-
-  /**
-   * Check if user has access to module
-   */
-  hasModuleAccess(moduleId: string): boolean {
-    const user = this.currentUser$.value;
-    return user?.isSuperAdmin || user?.assignedModules.includes(moduleId) || false;
-  }
-
-  /**
-   * Get user accessible modules
-   */
-  getAccessibleModules(): string[] {
-    return this.currentUser$.value?.assignedModules || [];
-  }
-
-  /**
-   * Refresh token (if needed)
-   */
   refreshToken(): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/refresh`, {})
-      .pipe(
-        tap((response) => {
-          this.token = response.accessToken;
-          this.currentUser$.next(response.user);
-          localStorage.setItem('auth_token', response.accessToken);
-        }),
-      );
+    const refreshToken = this.getRefreshToken();
+    return this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, {
+      refreshToken
+    }).pipe(
+      tap(response => this.handleAuthResponse(response))
+    );
+  }
+
+  logout(): void {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    this.currentUserSubject.next(null);
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.getToken();
+  }
+
+  getToken(): string | null {
+    return localStorage.getItem('access_token');
+  }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refresh_token');
+  }
+
+  getCurrentUser(): any {
+    return this.currentUserSubject.value;
+  }
+
+  getUserRole(): string {
+    const user = this.getUserFromStorage();
+    return user?.role || 'VIEWER';
+  }
+
+  getAssignedModules(): string[] {
+    const user = this.getUserFromStorage();
+    return user?.assignedModules || [];
+  }
+
+  private handleAuthResponse(response: AuthResponse): void {
+    localStorage.setItem('access_token', response.accessToken);
+    localStorage.setItem('refresh_token', response.refreshToken);
+    localStorage.setItem('user', JSON.stringify(response.user));
+    this.currentUserSubject.next(response.user);
+  }
+
+  private getUserFromStorage(): any {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
   }
 }

@@ -1,43 +1,37 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('permissions')
+@UseGuards(JwtAuthGuard)
 export class PermissionsController {
   constructor(private permissionsService: PermissionsService) {}
 
   @Post()
-  create(@Body() createPermissionDto: any) {
-    const { name, description, module, action } = createPermissionDto;
-    return this.permissionsService.create(name, description, module, action);
+  async create(@Body() permissionData: any) {
+    return this.permissionsService.create(permissionData);
   }
 
   @Get()
-  findAll() {
+  async findAll(@Query('module') module?: string) {
+    if (module) {
+      return this.permissionsService.findByModule(module);
+    }
     return this.permissionsService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.permissionsService.findById(id);
-  }
-
-  @Get('module/:module')
-  findByModule(@Param('module') module: string) {
-    return this.permissionsService.findByModule(module);
+  async findOne(@Param('id') id: string) {
+    return this.permissionsService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updatePermissionDto: any) {
-    return this.permissionsService.update(id, updatePermissionDto);
+  async update(@Param('id') id: string, @Body() permissionData: any) {
+    return this.permissionsService.update(id, permissionData);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string) {
     return this.permissionsService.delete(id);
-  }
-
-  @Get('action/:action')
-  getByAction(@Param('action') action: string) {
-    return this.permissionsService.getPermissionsByAction(action);
   }
 }

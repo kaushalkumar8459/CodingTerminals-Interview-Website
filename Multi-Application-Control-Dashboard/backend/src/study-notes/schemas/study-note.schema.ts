@@ -1,53 +1,34 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
-export type StudyNoteDocument = StudyNote & Document;
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
-export class StudyNote {
+export class StudyNote extends Document {
   @Prop({ required: true })
   title: string;
 
   @Prop({ required: true })
   content: string;
 
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  author: Types.ObjectId;
+
   @Prop()
   category?: string;
 
-  @Prop({ type: [String] })
-  tags?: string[];
+  @Prop({ type: [String], default: [] })
+  tags: string[];
 
-  @Prop()
-  subject?: string;
+  @Prop({ default: false })
+  isPublic: boolean;
 
   @Prop({ default: 0 })
   views: number;
 
-  @Prop({ type: [String] })
-  attachments?: string[];
-
-  @Prop({ 
-    enum: ['public', 'private'],
-    default: 'private'
-  })
-  visibility: string;
-
-  @Prop({ required: true })
-  createdBy: string;
+  @Prop()
+  subject?: string;
 
   @Prop()
-  lastModifiedBy?: string;
-
-  @Prop({ default: false })
-  isDeleted: boolean;
-
-  @Prop()
-  createdAt?: Date;
-
-  @Prop()
-  updatedAt?: Date;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export const StudyNoteSchema = SchemaFactory.createForClass(StudyNote);
-StudyNoteSchema.index({ category: 1, createdAt: -1 });
-StudyNoteSchema.index({ tags: 1 });

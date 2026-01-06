@@ -1,29 +1,22 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards, Request } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { BlogService } from './blog.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateBlogPostDto, UpdateBlogPostDto } from './dto/blog-post.dto';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
+import { BlogPostStatus } from './schemas/blog-post.schema';
 
 @Controller('blog')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class BlogController {
   constructor(private blogService: BlogService) {}
 
   @Post()
-  @Roles('admin', 'super_admin')
-  async create(@Body() createBlogDto: any, @Request() req) {
-    const { title, content, author, excerpt, tags } = createBlogDto;
-    return this.blogService.create(title, content, author, excerpt, tags, req.user.sub);
+  async create(@Body() createBlogDto: CreateBlogPostDto, @Request() req) {
+    return this.blogService.create({ ...createBlogDto, author: req.user.sub });
   }
 
   @Get()
-  async findAll(@Query('status') status?: string) {
+  async findAll(@Query('status') status?: BlogPostStatus) {
     return this.blogService.findAll(status);
-  }
-
-  @Get('stats')
-  async getStats() {
-    return this.blogService.getStats();
   }
 
   @Get('search')
@@ -31,36 +24,38 @@ export class BlogController {
     return this.blogService.search(query);
   }
 
-  @Get('tag/:tag')
-  async getByTag(@Param('tag') tag: string) {
-    return this.blogService.getByTag(tag);
+  @Get('stats')
+  async getStats() {
+    return this.blogService.getStats();
+  }
+
+  @Get('author/:authorId')
+  async findByAuthor(@Param('authorId') authorId: string) {
+    return this.blogService.findByAuthor(authorId);
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.blogService.findById(id);
+    return this.blogService.findOne(id);
   }
 
   @Put(':id')
-  @Roles('admin', 'super_admin')
-  async update(@Param('id') id: string, @Body() updateBlogDto: any, @Request() req) {
-    return this.blogService.update(id, updateBlogDto, req.user.sub);
+  async update(@Param('id') id: string, @Body() updateBlogDto: UpdateBlogPostDto) {
+    return this.blogService.update(id, updateBlogDto);
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return this.blogService.delete(id);
   }
 
   @Post(':id/publish')
-  @Roles('admin', 'super_admin')
   async publish(@Param('id') id: string) {
     return this.blogService.publish(id);
   }
 
-  @Post(':id/like')
-  async like(@Param('id') id: string) {
-    return this.blogService.like(id);
-  }
-
-  @Delete(':id')
-  @Roles('admin', 'super_admin')
-  async delete(@Param('id') id: string) {
-    return this.blogService.delete(id);
+  @Post(':id/unpublish')
+  async unpublish(@Param('id') id: string) {
+    return this.blogService.unpublish(id);
   }
 }

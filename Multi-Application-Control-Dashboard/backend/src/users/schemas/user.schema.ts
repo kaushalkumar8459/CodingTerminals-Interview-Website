@@ -1,40 +1,44 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-import { Exclude } from 'class-transformer';
+import { Document, Types } from 'mongoose';
+import { RoleType } from '../roles/schemas/role.schema';
 
-export type UserDocument = User & Document;
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+}
 
 @Schema({ timestamps: true })
-export class User {
+export class User extends Document {
   @Prop({ required: true })
-  name: string;
+  firstName: string;
+
+  @Prop({ required: true })
+  lastName: string;
 
   @Prop({ required: true, unique: true })
   email: string;
 
   @Prop({ required: true })
-  @Exclude()
   password: string;
 
-  @Prop({ default: 'user', enum: ['super_admin', 'admin', 'moderator', 'user'] })
-  role: string;
+  @Prop({ required: true, enum: RoleType, default: RoleType.VIEWER })
+  role: RoleType;
 
-  @Prop({ default: 'active', enum: ['active', 'inactive', 'suspended'] })
-  status: string;
+  @Prop({ enum: UserStatus, default: UserStatus.ACTIVE })
+  status: UserStatus;
 
-  @Prop({ type: [String], default: [] })
-  assignedModules: string[];
-
-  @Prop({ default: null })
-  lastLogin: Date;
+  @Prop({ type: [Types.ObjectId], ref: 'Module', default: [] })
+  assignedModules: Types.ObjectId[];
 
   @Prop({ default: false })
-  isEmailVerified: boolean;
+  emailVerified: boolean;
 
-  @Prop({ default: null })
-  profileImage: string;
+  @Prop()
+  lastLogin?: Date;
+
+  @Prop()
+  refreshToken?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-UserSchema.index({ email: 1 });
-UserSchema.index({ username: 1 });

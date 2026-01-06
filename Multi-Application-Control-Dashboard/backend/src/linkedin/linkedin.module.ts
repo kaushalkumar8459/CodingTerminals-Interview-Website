@@ -6,8 +6,8 @@ import { LinkedInPost, LinkedInPostSchema } from './schemas/linkedin-post.schema
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: LinkedInPost.name, schema: LinkedInPostSchema }])],
-  controllers: [LinkedInController],
   providers: [LinkedInService],
+  controllers: [LinkedInController],
   exports: [LinkedInService],
 })
 export class LinkedInModule {}

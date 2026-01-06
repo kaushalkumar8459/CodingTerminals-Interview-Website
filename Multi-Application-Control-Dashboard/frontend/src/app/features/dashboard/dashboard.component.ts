@@ -1,210 +1,169 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
-import { ApiService } from '../../../core/services/api.service';
-import { SidebarComponent } from '../../../shared/components/sidebar/sidebar.component';
+import { RouterModule } from '@angular/router';
+import { AdminService } from '../../core/services/admin.service';
+import { YouTubeService } from '../services/youtube.service';
+import { StudyNotesService } from '../services/study-notes.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, SidebarComponent],
+  imports: [CommonModule, RouterModule],
   template: `
-    <div class="flex h-screen bg-slate-50">
-      <!-- Sidebar -->
-      <app-sidebar></app-sidebar>
+    <div class="p-6">
+      <!-- Welcome Header -->
+      <div class="mb-8">
+        <h1 class="text-4xl font-bold text-gray-900">Dashboard</h1>
+        <p class="text-gray-600 mt-2">Welcome back, {{ currentUser?.firstName }}</p>
+      </div>
 
-      <!-- Main Content -->
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Top Navbar -->
-        <nav class="bg-white shadow px-6 py-4 flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <div class="flex items-center gap-4">
-            <span class="text-sm text-slate-600">{{ currentUser?.username }}</span>
-            <span class="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-              {{ currentUser?.role | titlecase }}
-            </span>
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Users Card -->
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-blue-100 text-sm">Total Users</p>
+              <p class="text-4xl font-bold mt-2">{{ dashboardStats.totalUsers }}</p>
+            </div>
+            <span class="text-4xl">👥</span>
           </div>
-        </nav>
+          <p class="text-blue-100 text-sm mt-4">Active this month</p>
+        </div>
 
-        <!-- Dashboard Content -->
-        <div class="flex-1 overflow-auto p-6">
-          <!-- Welcome Section -->
-          <div class="mb-8">
-            <h2 class="text-3xl font-bold text-slate-900">
-              Welcome back, {{ currentUser?.firstName }}! 👋
-            </h2>
-            <p class="text-slate-600 mt-2">Here's an overview of your available modules</p>
+        <!-- YouTube Posts Card -->
+        <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow-lg p-6 text-white">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-red-100 text-sm">YouTube Posts</p>
+              <p class="text-4xl font-bold mt-2">{{ dashboardStats.youtubePosts }}</p>
+            </div>
+            <span class="text-4xl">📹</span>
           </div>
+          <p class="text-red-100 text-sm mt-4">{{ dashboardStats.youtubePublished }} published</p>
+        </div>
 
-          <!-- Modules Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <!-- Study Notes Card -->
-            <div
-              *ngIf="canAccessModule('study_notes')"
-              class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-              (click)="navigateToModule('study-notes')"
-            >
-              <div class="text-4xl mb-3">📚</div>
-              <h3 class="text-lg font-bold text-slate-900">Study Notes</h3>
-              <p class="text-sm text-slate-600 mt-2">Create and manage study materials</p>
-              <div class="mt-4 flex items-center justify-between">
-                <span class="text-xs text-slate-500">{{ moduleStats?.studyNotes || 0 }} notes</span>
-                <span class="text-blue-600 font-semibold">→</span>
-              </div>
+        <!-- Study Notes Card -->
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-green-100 text-sm">Study Notes</p>
+              <p class="text-4xl font-bold mt-2">{{ dashboardStats.studyNotes }}</p>
             </div>
+            <span class="text-4xl">📚</span>
+          </div>
+          <p class="text-green-100 text-sm mt-4">{{ dashboardStats.studyNotesPublic }} public</p>
+        </div>
 
-            <!-- YouTube Card -->
-            <div
-              *ngIf="canAccessModule('youtube')"
-              class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-              (click)="navigateToModule('youtube')"
-            >
-              <div class="text-4xl mb-3">▶️</div>
-              <h3 class="text-lg font-bold text-slate-900">YouTube</h3>
-              <p class="text-sm text-slate-600 mt-2">Manage video content</p>
-              <div class="mt-4 flex items-center justify-between">
-                <span class="text-xs text-slate-500">{{ moduleStats?.videos || 0 }} videos</span>
-                <span class="text-blue-600 font-semibold">→</span>
-              </div>
+        <!-- Admin Tasks Card -->
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-purple-100 text-sm">Applications</p>
+              <p class="text-4xl font-bold mt-2">{{ dashboardStats.totalApplications }}</p>
             </div>
+            <span class="text-4xl">📊</span>
+          </div>
+          <p class="text-purple-100 text-sm mt-4">Ready to manage</p>
+        </div>
+      </div>
 
-            <!-- LinkedIn Card -->
-            <div
-              *ngIf="canAccessModule('linkedin')"
-              class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-              (click)="navigateToModule('linkedin')"
-            >
-              <div class="text-4xl mb-3">💼</div>
-              <h3 class="text-lg font-bold text-slate-900">LinkedIn</h3>
-              <p class="text-sm text-slate-600 mt-2">Schedule posts and track analytics</p>
-              <div class="mt-4 flex items-center justify-between">
-                <span class="text-xs text-slate-500">{{ moduleStats?.linkedinPosts || 0 }} posts</span>
-                <span class="text-blue-600 font-semibold">→</span>
+      <!-- Charts and Recent Activity -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Users -->
+        <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Recent Users</h2>
+          <div class="space-y-3">
+            <div *ngFor="let user of recentUsers" class="flex items-center justify-between py-3 border-b">
+              <div>
+                <p class="font-medium text-gray-900">{{ user.firstName }} {{ user.lastName }}</p>
+                <p class="text-sm text-gray-600">{{ user.email }}</p>
               </div>
-            </div>
-
-            <!-- Blog Card -->
-            <div
-              *ngIf="canAccessModule('blog')"
-              class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-              (click)="navigateToModule('blog')"
-            >
-              <div class="text-4xl mb-3">✍️</div>
-              <h3 class="text-lg font-bold text-slate-900">Blog</h3>
-              <p class="text-sm text-slate-600 mt-2">Write and publish articles</p>
-              <div class="mt-4 flex items-center justify-between">
-                <span class="text-xs text-slate-500">{{ moduleStats?.blogPosts || 0 }} articles</span>
-                <span class="text-blue-600 font-semibold">→</span>
-              </div>
+              <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                {{ user.role }}
+              </span>
             </div>
           </div>
+        </div>
 
-          <!-- Admin Panel Access -->
-          <div *ngIf="isAdmin" class="mt-8">
-            <h3 class="text-xl font-bold text-slate-900 mb-4">Admin Functions</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div
-                class="bg-red-50 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-                (click)="navigateToAdmin('users')"
-              >
-                <div class="text-4xl mb-3">👥</div>
-                <h4 class="font-bold text-slate-900">User Management</h4>
-                <p class="text-xs text-slate-600 mt-2">Create, edit, and manage users</p>
-              </div>
-
-              <div
-                class="bg-red-50 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-                (click)="navigateToAdmin('roles')"
-              >
-                <div class="text-4xl mb-3">🔐</div>
-                <h4 class="font-bold text-slate-900">Role Management</h4>
-                <p class="text-xs text-slate-600 mt-2">Assign roles and permissions</p>
-              </div>
-
-              <div
-                class="bg-red-50 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer"
-                (click)="navigateToAdmin('modules')"
-              >
-                <div class="text-4xl mb-3">⚙️</div>
-                <h4 class="font-bold text-slate-900">Module Settings</h4>
-                <p class="text-xs text-slate-600 mt-2">Enable/disable modules</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Stats -->
-          <div class="mt-12 bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-bold text-slate-900 mb-4">Quick Statistics</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div class="p-4 bg-blue-50 rounded">
-                <div class="text-2xl font-bold text-blue-600">{{ moduleStats?.totalContent || 0 }}</div>
-                <div class="text-sm text-slate-600">Total Content</div>
-              </div>
-              <div class="p-4 bg-green-50 rounded">
-                <div class="text-2xl font-bold text-green-600">{{ moduleStats?.modulesEnabled || 0 }}</div>
-                <div class="text-sm text-slate-600">Modules Enabled</div>
-              </div>
-              <div class="p-4 bg-yellow-50 rounded">
-                <div class="text-2xl font-bold text-yellow-600">{{ moduleStats?.drafts || 0 }}</div>
-                <div class="text-sm text-slate-600">Drafts</div>
-              </div>
-              <div class="p-4 bg-purple-50 rounded">
-                <div class="text-2xl font-bold text-purple-600">{{ moduleStats?.published || 0 }}</div>
-                <div class="text-sm text-slate-600">Published</div>
-              </div>
-            </div>
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div class="space-y-2">
+            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition text-sm font-medium">
+              Add User
+            </button>
+            <button class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg transition text-sm font-medium">
+              Create YouTube Post
+            </button>
+            <button class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition text-sm font-medium">
+              Create Study Note
+            </button>
+            <button class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg transition text-sm font-medium">
+              View Reports
+            </button>
           </div>
         </div>
       </div>
     </div>
   `,
-  styles: [],
+  styles: []
 })
 export class DashboardComponent implements OnInit {
   currentUser: any;
-  isAdmin = false;
-  moduleStats: any = {
+  dashboardStats = {
+    totalUsers: 0,
+    youtubePosts: 0,
+    youtubePublished: 0,
     studyNotes: 0,
-    videos: 0,
-    linkedinPosts: 0,
-    blogPosts: 0,
-    totalContent: 0,
-    modulesEnabled: 0,
+    studyNotesPublic: 0,
+    totalApplications: 0
   };
+  recentUsers: any[] = [];
 
   constructor(
-    private authService: AuthService,
-    private apiService: ApiService,
-    private router: Router,
+    private adminService: AdminService,
+    private youtubeService: YouTubeService,
+    private studyNotesService: StudyNotesService,
+    private authService: AuthService
   ) {}
 
-  ngOnInit(): void {
-    this.currentUser = this.authService.getCurrentUser();
-    this.isAdmin = ['super_admin', 'admin'].includes(this.currentUser?.role);
-    this.loadModuleStats();
+  ngOnInit() {
+    this.loadCurrentUser();
+    this.loadDashboardStats();
+    this.loadRecentUsers();
   }
 
-  loadModuleStats(): void {
-    this.apiService.getModuleStats().subscribe({
-      next: (data) => {
-        this.moduleStats = data;
-      },
-      error: (err) => {
-        console.error('Error loading module stats:', err);
-      },
+  loadCurrentUser() {
+    this.authService.getCurrentUser().subscribe(user => {
+      this.currentUser = user;
     });
   }
 
-  canAccessModule(moduleName: string): boolean {
-    return this.authService.hasModuleAccess(moduleName);
+  loadDashboardStats() {
+    // Load admin stats
+    this.adminService.getDashboardStats().subscribe(stats => {
+      this.dashboardStats.totalUsers = stats.totalUsers;
+      this.dashboardStats.totalApplications = stats.totalApplications;
+    });
+
+    // Load YouTube stats
+    this.youtubeService.getStats().subscribe(stats => {
+      this.dashboardStats.youtubePosts = stats.total;
+      this.dashboardStats.youtubePublished = stats.published;
+    });
+
+    // Load Study Notes stats
+    this.studyNotesService.getStats().subscribe(stats => {
+      this.dashboardStats.studyNotes = stats.total;
+      this.dashboardStats.studyNotesPublic = stats.public_notes;
+    });
   }
 
-  navigateToModule(moduleName: string): void {
-    this.router.navigate([`/${moduleName}`]);
-  }
-
-  navigateToAdmin(section: string): void {
-    this.router.navigate([`/admin/${section}`]);
+  loadRecentUsers() {
+    this.adminService.getRecentUsers(5).subscribe(users => {
+      this.recentUsers = users;
+    });
   }
 }

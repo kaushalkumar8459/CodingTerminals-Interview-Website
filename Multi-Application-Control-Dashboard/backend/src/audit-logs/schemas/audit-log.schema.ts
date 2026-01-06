@@ -1,30 +1,22 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
-export type AuditLogDocument = AuditLog & Document;
+import { Document, Types } from 'mongoose';
 
 @Schema({ timestamps: true })
-export class AuditLog {
-  @Prop({ required: true })
-  userId: string;
+export class AuditLog extends Document {
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId: Types.ObjectId;
 
   @Prop({ required: true })
   action: string;
 
   @Prop({ required: true })
-  module: string;
+  resource: string;
 
   @Prop()
   resourceId?: string;
 
-  @Prop()
-  resourceType?: string;
-
   @Prop({ type: Object })
-  changes?: {
-    before?: any;
-    after?: any;
-  };
+  changes?: Record<string, any>;
 
   @Prop()
   ipAddress?: string;
@@ -32,19 +24,8 @@ export class AuditLog {
   @Prop()
   userAgent?: string;
 
-  @Prop({ 
-    enum: ['success', 'failed'],
-    default: 'success'
-  })
+  @Prop({ enum: ['success', 'failure'], default: 'success' })
   status: string;
-
-  @Prop()
-  errorMessage?: string;
-
-  @Prop()
-  createdAt?: Date;
 }
 
 export const AuditLogSchema = SchemaFactory.createForClass(AuditLog);
-AuditLogSchema.index({ userId: 1, createdAt: -1 });
-AuditLogSchema.index({ module: 1, action: 1 });

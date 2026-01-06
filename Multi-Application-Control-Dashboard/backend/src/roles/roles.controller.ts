@@ -1,38 +1,44 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { RolesService } from './roles.service';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('roles')
+@UseGuards(JwtAuthGuard)
 export class RolesController {
   constructor(private rolesService: RolesService) {}
 
   @Post()
-  create(@Body() createRoleDto: any) {
-    const { name, description, level, permissions } = createRoleDto;
-    return this.rolesService.create(name, description, level, permissions);
+  async create(@Body() roleData: any) {
+    return this.rolesService.create(roleData);
   }
 
   @Get()
-  findAll() {
+  async findAll() {
     return this.rolesService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findById(id);
+  async findOne(@Param('id') id: string) {
+    return this.rolesService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateRoleDto: any) {
-    return this.rolesService.update(id, updateRoleDto);
+  async update(@Param('id') id: string, @Body() roleData: any) {
+    return this.rolesService.update(id, roleData);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string) {
     return this.rolesService.delete(id);
   }
 
-  @Get('level/:level')
-  getRolesByLevel(@Param('level') level: string) {
-    return this.rolesService.getRolesByLevel(level);
+  @Post(':id/permissions')
+  async assignPermissions(@Param('id') id: string, @Body('permissions') permissions: string[]) {
+    return this.rolesService.assignPermissions(id, permissions);
+  }
+
+  @Post(':id/modules')
+  async assignModules(@Param('id') id: string, @Body('modules') modules: string[]) {
+    return this.rolesService.assignModules(id, modules);
   }
 }

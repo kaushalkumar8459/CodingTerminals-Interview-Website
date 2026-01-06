@@ -11,24 +11,21 @@ export enum PostStatus {
 }
 
 @Schema({ timestamps: true })
-export class LinkedInPost {
+export class LinkedInPost extends Document {
   @Prop({ required: true })
   title: string;
 
   @Prop({ required: true })
   content: string;
 
-  @Prop({ 
-    enum: ['draft', 'scheduled', 'published'],
-    default: 'draft'
-  })
-  status: string;
+  @Prop({ type: String, enum: PostStatus, default: PostStatus.DRAFT })
+  status: PostStatus;
 
-  @Prop({ type: Date })
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  author: Types.ObjectId;
+
+  @Prop()
   scheduledDate?: Date;
-
-  @Prop({ type: Date })
-  publishedDate?: Date;
 
   @Prop({ default: 0 })
   likes: number;
@@ -40,20 +37,39 @@ export class LinkedInPost {
   shares: number;
 
   @Prop()
-  linkedinUrl?: string;
-
-  @Prop({ type: Object })
-  analytics?: {
-    impressions?: number;
-    engagementRate?: number;
-    clickThroughRate?: number;
-  };
-
-  @Prop({ required: true })
-  createdBy: string;
+  imageUrl?: string;
 
   @Prop({ default: false })
-  isDeleted: boolean;
+  published: boolean;
+
+  @Prop({ default: null })
+  publishedDate: Date;
+
+  @Prop({ default: 0 })
+  views: number;
+
+  @Prop({ type: [String], default: [] })
+  hashtags: string[];
+
+  @Prop()
+  linkedInPostId: string;
+
+  @Prop({ required: true })
+  createdBy: string; // User ID
+
+  @Prop()
+  updatedBy: string;
+
+  @Prop({ type: Object, default: {} })
+  analytics: {
+    impressions?: number;
+    clicks?: number;
+    engagementRate?: number;
+    reach?: number;
+  };
+
+  @Prop({ type: Object, default: {} })
+  metadata: Record<string, any>;
 
   @Prop()
   createdAt?: Date;

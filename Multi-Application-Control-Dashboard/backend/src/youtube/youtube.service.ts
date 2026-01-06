@@ -1,62 +1,72 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { YouTubePost, YouTubePostDocument } from './schemas/youtube-post.schema';
+import { Model } from 'mongoose';
+import { YouTubePost } from './schemas/youtube-post.schema';
+import { CreateYouTubePostDto, UpdateYouTubePostDto } from './dto/youtube-post.dto';
 
 @Injectable()
 export class YouTubeService {
-  constructor(@InjectModel(YouTubePost.name) private youtubeModel: Model<YouTubePostDocument>) {}
+  constructor(@InjectModel(YouTubePost.name) private youtubeModel: Model<YouTubePost>) {}
 
-  async create(title: string, videoId: string, description: string, createdBy: string) {
-    const post = new this.youtubeModel({ title, videoId, description, createdBy, status: 'draft' });
+  async create(createYouTubeDto: CreateYouTubePostDto) {
+    const post = new this.youtubeModel(createYouTubeDto);
     return post.save();
   }
 
   async findAll(status?: string) {
-    const query = status ? { status, isDeleted: false } : { isDeleted: false };
-    return this.youtubeModel.find(query).sort({ createdAt: -1 }).exec();
+    if (status) {
+      return this.youtubeModel
+        .find({ status })
+        .sort({ createdAt: -1 })
+        .populate('author', 'email firstName lastName')
+        .exec();
+    }
+    return this.youtubeModel
+      .find()
+      .sort({ createdAt: -1 })
+      .populate('author', 'email firstName lastName')
+      .exec();
   }
 
-  async findById(id: string) {
-    return this.youtubeModel.findById(id).exec();
-  }
-
-  async update(id: string, updateData: any) {
-    return this.youtubeModel.findByIdAndUpdate(id, updateData, { new: true }).exec();
-  }
-
-  async schedule(id: string, scheduledDate: Date) {
-    return this.youtubeModel.findByIdAndUpdate(
+  async findOne(id: string) {
+    const post = await this.youtubeModel.findByIdAndUpdate(
       id,
-      { status: 'scheduled', scheduledDate },
+      { $inc: { views: 1 } },
       { new: true }
-    ).exec();
+    ).populate('author', 'email firstName lastName').exec();
+    return post;
   }
 
-  async publish(id: string) {
-    return this.youtubeModel.findByIdAndUpdate(
-      id,
-      { status: 'published', publishedDate: new Date() },
-      { new: true }
-    ).exec();
+  async update(id: string, updateYouTubeDto: UpdateYouTubePostDto) {
+    return this.youtubeModel
+      .findByIdAndUpdate(id, updateYouTubeDto, { new: true })
+      .populate('author', 'email firstName lastName')
+      .exec();
   }
 
   async delete(id: string) {
-    return this.youtubeModel.findByIdAndUpdate(id, { isDeleted: true }, { new: true }).exec();
+    return this.youtubeModel.findByIdAndDelete(id).exec();
   }
 
-  async getByPlaylist(playlistId: string) {
-    return this.youtubeModel.find({ playlistId, status: 'published', isDeleted: false }).exec();
+  async publish(id: string) {
+    return this.youtubeModel
+      .findByIdAndUpdate(
+        id,
+        { status: 'published', publishedDate: new Date() },
+        { new: true }
+      )
+      .exec();
+  }
+
+  async findByAuthor(authorId: string) {
+    return this.youtubeModel.find({ author: authorId }).sort({ createdAt: -1 }).exec();
   }
 
   async getStats() {
-    const total = await this.youtubeModel.countDocuments({ isDeleted: false });
-    const published = await this.youtubeModel.countDocuments({ status: 'published', isDeleted: false });
-    const scheduled = await this.youtubeModel.countDocuments({ status: 'scheduled', isDeleted: false });
-    const totalViews = await this.youtubeModel.aggregate([
-      { $match: { isDeleted: false } },
-      { $group: { _id: null, total: { $sum: '$views' } } }
-    ]);
-    return { total, published, scheduled, totalViews: totalViews[0]?.total || 0 };
+    const total = await this.youtubeModel.countDocuments();
+    const published = await this.youtubeModel.countDocuments({ status: 'published' });
+    const draft = await this.youtubeModel.countDocuments({ status: 'draft' });
+    const totalViews = (await this.youtubeModel.aggregate([{ $group: { _id: null, total: { $sum: '$views' } } }]))[0]?.total || 0;
+    return { total, published, draft, totalViews };
   }
 }

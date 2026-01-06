@@ -1,76 +1,61 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  UseGuards,
-  Query,
-  Request,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { LinkedInService } from './linkedin.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateLinkedInPostDto, UpdateLinkedInPostDto } from './dto/linkedin-post.dto';
+import { JwtAuthGuard } from '../auth/guards/auth.guard';
+import { PostStatus } from './schemas/linkedin-post.schema';
 
 @Controller('linkedin')
-@UseGuards(AuthGuard('jwt'), RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class LinkedInController {
   constructor(private linkedinService: LinkedInService) {}
 
   @Post()
-  @Roles('admin', 'super_admin')
-  async createPost(@Body() createData: any, @Request() req) {
-    return await this.linkedinService.createPost(createData, req.user.sub);
+  async create(@Body() createLinkedInDto: CreateLinkedInPostDto, @Request() req) {
+    return this.linkedinService.create({ ...createLinkedInDto, author: req.user.sub });
   }
 
   @Get()
-  async getAllPosts(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('status') status?: string,
-  ) {
-    return await this.linkedinService.getAllPosts(page, limit, status as any);
+  async findAll(@Query('status') status?: PostStatus) {
+    return this.linkedinService.findAll(status);
+  }
+
+  @Get('scheduled')
+  async getScheduled() {
+    return this.linkedinService.getScheduledPosts();
   }
 
   @Get('stats')
   async getStats() {
-    return await this.linkedinService.getStats();
+    return this.linkedinService.getStats();
   }
 
-  @Get('scheduled')
-  async getScheduledPosts() {
-    return await this.linkedinService.getScheduledPosts();
+  @Get('author/:authorId')
+  async findByAuthor(@Param('authorId') authorId: string) {
+    return this.linkedinService.findByAuthor(authorId);
   }
 
   @Get(':id')
-  async getPostById(@Param('id') postId: string) {
-    return await this.linkedinService.getPostById(postId);
+  async findOne(@Param('id') id: string) {
+    return this.linkedinService.findOne(id);
   }
 
   @Put(':id')
-  @Roles('admin', 'super_admin')
-  async updatePost(@Param('id') postId: string, @Body() updateData: any, @Request() req) {
-    return await this.linkedinService.updatePost(postId, updateData, req.user.sub);
-  }
-
-  @Post(':id/schedule')
-  @Roles('admin', 'super_admin')
-  async schedulePost(@Param('id') postId: string, @Body('scheduledDate') scheduledDate: Date) {
-    return await this.linkedinService.schedulePost(postId, scheduledDate);
-  }
-
-  @Post(':id/publish')
-  @Roles('admin', 'super_admin')
-  async publishPost(@Param('id') postId: string) {
-    return await this.linkedinService.publishPost(postId);
+  async update(@Param('id') id: string, @Body() updateLinkedInDto: UpdateLinkedInPostDto) {
+    return this.linkedinService.update(id, updateLinkedInDto);
   }
 
   @Delete(':id')
-  @Roles('admin', 'super_admin')
-  async deletePost(@Param('id') postId: string) {
-    return await this.linkedinService.deletePost(postId);
+  async delete(@Param('id') id: string) {
+    return this.linkedinService.delete(id);
+  }
+
+  @Post(':id/schedule')
+  async schedule(@Param('id') id: string, @Body('scheduledDate') scheduledDate: Date) {
+    return this.linkedinService.schedule(id, scheduledDate);
+  }
+
+  @Post(':id/publish')
+  async publish(@Param('id') id: string) {
+    return this.linkedinService.publish(id);
   }
 }

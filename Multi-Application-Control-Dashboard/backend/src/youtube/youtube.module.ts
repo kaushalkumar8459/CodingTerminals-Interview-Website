@@ -6,8 +6,8 @@ import { YouTubePost, YouTubePostSchema } from './schemas/youtube-post.schema';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: YouTubePost.name, schema: YouTubePostSchema }])],
-  controllers: [YouTubeController],
   providers: [YouTubeService],
+  controllers: [YouTubeController],
   exports: [YouTubeService],
 })
 export class YouTubeModule {}

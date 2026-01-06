@@ -1,20 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type ModuleDocument = AppModule & Document;
-
 @Schema({ timestamps: true })
-export class AppModule {
+export class AppModule extends Document {
   @Prop({ required: true, unique: true })
   name: string;
 
   @Prop({ required: true })
-  displayName: string;
-
-  @Prop()
   description: string;
 
-  @Prop({ default: true })
+  @Prop({ required: true, default: true })
   enabled: boolean;
 
   @Prop()
@@ -23,17 +18,14 @@ export class AppModule {
   @Prop()
   category: string;
 
-  @Prop({ type: [String], default: [] })
-  allowedRoles: string[];
-
   @Prop({ type: Number, default: 0 })
-  usersCount: number;
+  userCount: number;
 
   @Prop()
-  route: string;
+  version: string;
 
-  @Prop({ type: Object, default: {} })
-  metadata: Record<string, any>;
+  @Prop({ type: Map, of: String, default: {} })
+  metadata: Record<string, string>;
 }
 
-export const ModuleSchema = SchemaFactory.createForClass(AppModule);
+export const AppModuleSchema = SchemaFactory.createForClass(AppModule);

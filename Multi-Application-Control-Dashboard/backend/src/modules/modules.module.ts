@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { AppModule as AppModuleEntity, ModuleSchema } from './schemas/module.schema';
 import { ModulesService } from './modules.service';
 import { ModulesController } from './modules.controller';
+import { AppModule, AppModuleSchema } from './schemas/module.schema';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: AppModuleEntity.name, schema: ModuleSchema }])],
+  imports: [MongooseModule.forFeature([{ name: AppModule.name, schema: AppModuleSchema }])],
   providers: [ModulesService],
   controllers: [ModulesController],
   exports: [ModulesService],

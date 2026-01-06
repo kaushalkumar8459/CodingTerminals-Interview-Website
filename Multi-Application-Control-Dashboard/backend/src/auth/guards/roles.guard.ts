@@ -1,36 +1,22 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private requiredRoles: string[]) {}
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
-    const user = request.user;
-
-    if (!user) {
-      throw new ForbiddenException('User not found');
+    const requiredRoles = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!requiredRoles) {
+      return true;
     }
 
-    if (!this.requiredRoles.includes(user.role)) {
-      throw new ForbiddenException('Insufficient permissions');
-    }
-
-    return true;
+    const { user } = context.switchToHttp().getRequest();
+    return requiredRoles.some((role) => user.role?.includes(role));
   }
-}
-
-export function Roles(...roles: string[]) {
-  return function (target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
-    const guard = new RolesGuard(roles);
-    if (descriptor) {
-      const originalMethod = descriptor.value;
-      descriptor.value = function (...args: any[]) {
-        if (guard.canActivate(args[0])) {
-          return originalMethod.apply(this, args);
-        }
-      };
-    }
-    return target;
-  };
 }

@@ -1,19 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type RoleDocument = Role & Document;
-
 export enum RoleType {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
-  MODERATOR = 'moderator',
-  USER = 'user',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  VIEWER = 'VIEWER',
 }
 
 @Schema({ timestamps: true })
-export class Role {
-  @Prop({ required: true, unique: true })
-  name: string;
+export class Role extends Document {
+  @Prop({ required: true, unique: true, enum: RoleType })
+  name: RoleType;
 
   @Prop({ required: true })
   description: string;
@@ -21,8 +18,8 @@ export class Role {
   @Prop({ type: [String], default: [] })
   permissions: string[];
 
-  @Prop({ default: true })
-  isActive: boolean;
+  @Prop({ type: [String], default: [] })
+  modules: string[];
 }
 
 export const RoleSchema = SchemaFactory.createForClass(Role);
