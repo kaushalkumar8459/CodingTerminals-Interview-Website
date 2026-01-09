@@ -1,12 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { RoleType } from '../roles/schemas/role.schema';
+import { RoleType } from '../../roles/schemas/role.schema';
 
 export enum UserStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',
   SUSPENDED = 'suspended',
 }
+
+export type UserDocument = User & Document;
 
 @Schema({ timestamps: true })
 export class User extends Document {

@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { ModulesService } from './modules.service';
+import { CreateModuleDto, UpdateModuleDto } from './dto/create-module.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('modules')
@@ -8,8 +9,8 @@ export class ModulesController {
   constructor(private modulesService: ModulesService) {}
 
   @Post()
-  async create(@Body() moduleData: any) {
-    return this.modulesService.create(moduleData);
+  async create(@Body() createModuleDto: CreateModuleDto) {
+    return this.modulesService.create(createModuleDto);
   }
 
   @Get()
@@ -33,8 +34,8 @@ export class ModulesController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() moduleData: any) {
-    return this.modulesService.update(id, moduleData);
+  async update(@Param('id') id: string, @Body() updateModuleDto: UpdateModuleDto) {
+    return this.modulesService.update(id, updateModuleDto);
   }
 
   @Delete(':id')

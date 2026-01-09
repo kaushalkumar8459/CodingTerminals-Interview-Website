@@ -9,10 +9,10 @@ export class AuthGuard implements CanActivate {
   constructor(private authService: AuthService, private router: Router) {}
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
-    const token = localStorage.getItem('access_token');
+    const token = this.authService.getToken();
     
-    if (!token || !this.authService.isTokenValid(token)) {
-      this.router.navigate(['/login']);
+    if (!token) {
+      this.router.navigate(['/auth']);
       return false;
     }
     return true;
@@ -32,7 +32,7 @@ export class RoleGuard implements CanActivate {
       return true;
     }
 
-    const user = this.authService.getCurrentUserSync();
+    const user = this.authService.getCurrentUser();
     
     if (!user || !requiredRoles.includes(user.role)) {
       this.router.navigate(['/dashboard']);
@@ -56,10 +56,10 @@ export class ModuleAccessGuard implements CanActivate {
       return true;
     }
 
-    const user = this.authService.getCurrentUserSync();
+    const user = this.authService.getCurrentUser();
     
     if (!user) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/auth']);
       return false;
     }
 
@@ -69,7 +69,8 @@ export class ModuleAccessGuard implements CanActivate {
     }
 
     // Check if module is assigned
-    if (user.assignedModules && user.assignedModules.includes(requiredModule)) {
+    const assignedModules = this.authService.getAssignedModules();
+    if (assignedModules && assignedModules.includes(requiredModule)) {
       return true;
     }
 

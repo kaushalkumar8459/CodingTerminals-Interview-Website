@@ -1,0 +1,118 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <h1 class="dashboard-title">Dashboard</h1>
+      <p class="header-subtitle">Welcome back, {{ currentUser?.firstName || 'User' }}</p>
+    </div>
+    <div class="header-user-info">
+      <span class="user-email">{{ currentUser?.email }}</span>
+      <span class="user-role" [class]="'role-' + (currentUser?.role || 'viewer').toLowerCase()">
+        {{ currentUser?.role || 'Viewer' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage && !isLoading" class="alert alert-error">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!isLoading" class="dashboard-content">
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <!-- Total Users Card -->
+      <div class="stat-card" [class.stat-card-primary]="true">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <p class="stat-label">Total Users</p>
+          <p class="stat-value">{{ dashboardStats.totalUsers }}</p>
+          <p class="stat-description">Active this month</p>
+        </div>
+      </div>
+
+      <!-- YouTube Posts Card -->
+      <div class="stat-card" [class.stat-card-red]="true">
+        <div class="stat-icon">📹</div>
+        <div class="stat-content">
+          <p class="stat-label">YouTube Posts</p>
+          <p class="stat-value">{{ dashboardStats.youtubePosts }}</p>
+          <p class="stat-description">{{ dashboardStats.youtubePublished }} published</p>
+        </div>
+      </div>
+
+      <!-- Study Notes Card -->
+      <div class="stat-card" [class.stat-card-green]="true">
+        <div class="stat-icon">📚</div>
+        <div class="stat-content">
+          <p class="stat-label">Study Notes</p>
+          <p class="stat-value">{{ dashboardStats.studyNotes }}</p>
+          <p class="stat-description">{{ dashboardStats.studyNotesPublic }} public</p>
+        </div>
+      </div>
+
+      <!-- Applications Card -->
+      <div class="stat-card" [class.stat-card-purple]="true">
+        <div class="stat-icon">📊</div>
+        <div class="stat-content">
+          <p class="stat-label">Applications</p>
+          <p class="stat-value">{{ dashboardStats.totalApplications }}</p>
+          <p class="stat-description">Ready to manage</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Users Section -->
+    <div class="recent-users-section">
+      <h2 class="section-title">Recent Users</h2>
+      
+      <div *ngIf="recentUsers.length > 0; else noUsers" class="users-list">
+        <div class="user-item" *ngFor="let user of recentUsers">
+          <div class="user-info">
+            <p class="user-name">{{ user.firstName }} {{ user.lastName }}</p>
+            <p class="user-email-small">{{ user.email }}</p>
+          </div>
+          <span class="user-role-badge" [class]="'role-badge-' + (user.role || 'viewer').toLowerCase()">
+            {{ user.role || 'Viewer' }}
+          </span>
+        </div>
+      </div>
+
+      <ng-template #noUsers>
+        <div class="no-data-message">
+          <p>No recent users found</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="quick-actions-section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="actions-grid">
+        <button class="action-btn action-btn-primary" routerLink="/admin">
+          <span class="action-icon">➕</span>
+          <span class="action-text">Add User</span>
+        </button>
+        <button class="action-btn action-btn-red" routerLink="/youtube">
+          <span class="action-icon">📹</span>
+          <span class="action-text">Create YouTube Post</span>
+        </button>
+        <button class="action-btn action-btn-green" routerLink="/study-notes">
+          <span class="action-icon">📚</span>
+          <span class="action-text">Create Study Note</span>
+        </button>
+        <button class="action-btn action-btn-purple" routerLink="/admin">
+          <span class="action-icon">📊</span>
+          <span class="action-text">View Reports</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

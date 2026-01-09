@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
+import { CreatePermissionDto, UpdatePermissionDto } from './dto/create-permission.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('permissions')
@@ -8,8 +9,8 @@ export class PermissionsController {
   constructor(private permissionsService: PermissionsService) {}
 
   @Post()
-  async create(@Body() permissionData: any) {
-    return this.permissionsService.create(permissionData);
+  async create(@Body() createPermissionDto: CreatePermissionDto) {
+    return this.permissionsService.create(createPermissionDto);
   }
 
   @Get()
@@ -26,8 +27,8 @@ export class PermissionsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() permissionData: any) {
-    return this.permissionsService.update(id, permissionData);
+  async update(@Param('id') id: string, @Body() updatePermissionDto: UpdatePermissionDto) {
+    return this.permissionsService.update(id, updatePermissionDto);
   }
 
   @Delete(':id')

@@ -1,0 +1,76 @@
+<div class="blog-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">Blog</h1>
+      <p class="page-subtitle">Create and manage your blog articles</p>
+    </div>
+    <button class="btn btn-primary" routerLink="/blog/create">
+      <span>✍️ Write Article</span>
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-row">
+    <div class="stat-mini-card">
+      <span class="stat-number">{{ stats.total }}</span>
+      <span class="stat-label">Total Articles</span>
+    </div>
+    <div class="stat-mini-card">
+      <span class="stat-number">{{ stats.published }}</span>
+      <span class="stat-label">Published</span>
+    </div>
+    <div class="stat-mini-card">
+      <span class="stat-number">{{ stats.drafts }}</span>
+      <span class="stat-label">Drafts</span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading articles...</p>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage && !isLoading" class="alert alert-error">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Articles Grid -->
+  <div *ngIf="!isLoading && articles.length > 0; else noArticles" class="articles-grid">
+    <div class="article-card" *ngFor="let article of articles">
+      <div class="article-image">
+        <img [src]="article.image || 'assets/placeholder.jpg'" [alt]="article.title" />
+        <span class="article-status" [class]="'status-' + (article.status || 'draft').toLowerCase()">
+          {{ article.status || 'Draft' }}
+        </span>
+      </div>
+      <div class="article-content">
+        <h3 class="article-title">{{ article.title }}</h3>
+        <p class="article-excerpt">{{ article.excerpt }}</p>
+        <div class="article-meta">
+          <span class="meta-item">📅 {{ article.publishedDate | date:'short' }}</span>
+          <span class="meta-item">👁️ {{ article.views || 0 }} views</span>
+        </div>
+      </div>
+      <div class="article-actions">
+        <button class="action-btn" [routerLink]="['/blog', article.id]">Read</button>
+        <button class="action-btn" [routerLink]="['/blog', article.id, 'edit']">Edit</button>
+        <button class="action-btn delete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Articles Message -->
+  <ng-template #noArticles>
+    <div class="empty-state">
+      <span class="empty-icon">📝</span>
+      <h3>No Articles Yet</h3>
+      <p>Start writing your first blog article</p>
+      <button class="btn btn-primary" routerLink="/blog/create">
+        Write Article
+      </button>
+    </div>
+  </ng-template>
+</div>

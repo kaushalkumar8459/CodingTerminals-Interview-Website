@@ -1,16 +1,10 @@
+import 'reflect-metadata';
 import { Injectable } from '@nestjs/common';
 import { CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RoleType } from '../../roles/schemas/role.schema';
 
 export const ROLES_KEY = 'roles';
-
-export const RequireRole = (...roles: RoleType[]) => {
-  return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
-    Reflector.createDecorator()(target, propertyName);
-    Reflect.setMetadata(ROLES_KEY, roles, descriptor.value);
-  };
-};
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -54,15 +48,3 @@ export class PermissionGuard implements CanActivate {
     return true;
   }
 }
-
-export const SuperAdminOnly = () => {
-  return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
-    Reflect.setMetadata(ROLES_KEY, [RoleType.SUPER_ADMIN], descriptor.value);
-  };
-};
-
-export const AdminOnly = () => {
-  return (target: any, propertyName: string, descriptor: PropertyDescriptor) => {
-    Reflect.setMetadata(ROLES_KEY, [RoleType.SUPER_ADMIN, RoleType.ADMIN], descriptor.value);
-  };
-};

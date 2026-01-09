@@ -1,0 +1,120 @@
+<div class="space-y-6">
+  <div class="flex justify-between items-center">
+    <h2 class="text-3xl font-bold text-gray-800">YouTube Posts</h2>
+    <button 
+      (click)="toggleForm()"
+      class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+    >
+      {{ showForm ? 'Cancel' : 'New Post' }}
+    </button>
+  </div>
+
+  <!-- Form Section -->
+  <div *ngIf="showForm" class="bg-white rounded-lg shadow-md p-6">
+    <h3 class="text-xl font-semibold mb-4">{{ editingId ? 'Edit' : 'Create' }} YouTube Post</h3>
+    <form [formGroup]="youtubeForm" (ngSubmit)="submitForm()" class="space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-gray-700 font-semibold mb-2">Title</label>
+          <input 
+            type="text"
+            formControlName="title"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label class="block text-gray-700 font-semibold mb-2">Category</label>
+          <input 
+            type="text"
+            formControlName="category"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Description</label>
+        <textarea 
+          formControlName="description"
+          rows="4"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-gray-700 font-semibold mb-2">Video URL</label>
+          <input 
+            type="url"
+            formControlName="videoUrl"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div>
+          <label class="block text-gray-700 font-semibold mb-2">Thumbnail URL</label>
+          <input 
+            type="url"
+            formControlName="thumbnailUrl"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Tags (comma-separated)</label>
+        <input 
+          type="text"
+          formControlName="tags"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Publish</label>
+        <input 
+          type="checkbox"
+          formControlName="published"
+          class="w-4 h-4"
+        />
+      </div>
+
+      <button 
+        type="submit"
+        [disabled]="youtubeForm.invalid || isSubmitting"
+        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
+      >
+        {{ isSubmitting ? 'Saving...' : 'Save Post' }}
+      </button>
+    </form>
+  </div>
+
+  <!-- Posts List -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let post of posts$ | async" class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
+      <img *ngIf="post.thumbnailUrl" [src]="post.thumbnailUrl" alt="{{ post.title }}" class="w-full h-48 object-cover">
+      <div class="p-4">
+        <h3 class="text-lg font-semibold text-gray-800 truncate">{{ post.title }}</h3>
+        <p class="text-sm text-gray-600 text-center mt-2">{{ post.category }}</p>
+        <p class="text-sm text-gray-500 mt-2 line-clamp-2">{{ post.description }}</p>
+        <div class="mt-4 flex gap-2">
+          <button 
+            (click)="editPost(post)"
+            class="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition"
+          >
+            Edit
+          </button>
+          <button 
+            (click)="deletePost(post.id)"
+            class="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="(posts$ | async)?.length === 0" class="text-center py-12">
+    <p class="text-gray-500 text-lg">No YouTube posts yet. Create one to get started!</p>
+  </div>
+</div>

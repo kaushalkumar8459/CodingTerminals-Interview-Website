@@ -1,0 +1,74 @@
+<div class="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+  <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
+    <!-- Header -->
+    <div class="bg-blue-600 text-white p-8 text-center">
+      <h1 class="text-3xl font-bold mb-2">📊 Control Dashboard</h1>
+      <p class="text-blue-100">Multi-Application Management System</p>
+    </div>
+
+    <!-- Login Form -->
+    <div class="p-8">
+      <!-- Error Message -->
+      <div *ngIf="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        {{ error }}
+      </div>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <!-- Email Field -->
+        <div class="mb-4">
+          <label class="block text-gray-700 font-semibold mb-2">Email Address</label>
+          <input 
+            type="email"
+            formControlName="email"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            placeholder="your@email.com"
+          >
+          <div *ngIf="submitted && f['email']?.errors" class="text-red-500 text-sm mt-1">
+            <span *ngIf="f['email']?.errors?.['required']">Email is required</span>
+            <span *ngIf="f['email']?.errors?.['email']">Please enter a valid email</span>
+          </div>
+        </div>
+
+        <!-- Password Field -->
+        <div class="mb-6">
+          <label class="block text-gray-700 font-semibold mb-2">Password</label>
+          <input 
+            type="password"
+            formControlName="password"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            placeholder="••••••••"
+          >
+          <div *ngIf="submitted && f['password']?.errors" class="text-red-500 text-sm mt-1">
+            <span *ngIf="f['password']?.errors?.['required']">Password is required</span>
+            <span *ngIf="f['password']?.errors?.['minlength']">Password must be at least 6 characters</span>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button 
+          type="submit"
+          [disabled]="loading"
+          class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+        >
+          <span *ngIf="!loading">Login</span>
+          <span *ngIf="loading">Loading...</span>
+        </button>
+      </form>
+
+      <!-- Demo Credentials -->
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <p class="text-gray-700 font-semibold text-sm mb-2">Demo Credentials:</p>
+        <p class="text-gray-600 text-xs mb-1"><strong>Super Admin:</strong> admin&#64;example.com</p>
+        <p class="text-gray-600 text-xs">Password: AdminPass123!</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-50 px-8 py-4 border-t text-center">
+      <p class="text-gray-600 text-sm">
+        Don't have an account? 
+        <a routerLink="/auth/register" class="text-blue-600 font-semibold hover:underline">Register here</a>
+      </p>
+    </div>
+  </div>
+</div>

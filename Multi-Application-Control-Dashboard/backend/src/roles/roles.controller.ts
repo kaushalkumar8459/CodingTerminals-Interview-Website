@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { RolesService } from './roles.service';
+import { CreateRoleDto, UpdateRoleDto } from './dto/create-role.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('roles')
@@ -8,8 +9,8 @@ export class RolesController {
   constructor(private rolesService: RolesService) {}
 
   @Post()
-  async create(@Body() roleData: any) {
-    return this.rolesService.create(roleData);
+  async create(@Body() createRoleDto: CreateRoleDto) {
+    return this.rolesService.create(createRoleDto);
   }
 
   @Get()
@@ -23,8 +24,8 @@ export class RolesController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() roleData: any) {
-    return this.rolesService.update(id, roleData);
+  async update(@Param('id') id: string, @Body() updateRoleDto: UpdateRoleDto) {
+    return this.rolesService.update(id, updateRoleDto);
   }
 
   @Delete(':id')

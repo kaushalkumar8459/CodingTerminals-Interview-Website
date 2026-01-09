@@ -9,25 +9,8 @@ import { HeaderComponent } from '../../shared/components/header/header.component
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, RouterModule, RouterOutlet, SidebarComponent, HeaderComponent],
-  template: `
-    <div class="flex h-screen bg-gray-50">
-      <!-- Sidebar -->
-      <app-sidebar />
-
-      <!-- Main Content -->
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Header -->
-        <app-header />
-
-        <!-- Page Content -->
-        <main class="flex-1 overflow-auto">
-          <div class="p-6">
-            <router-outlet />
-          </div>
-        </main>
-      </div>
-    </div>
-  `,
+  templateUrl: './dashboard-layout.component.html',
+  styleUrl: './dashboard-layout.component.scss',
 })
 export class DashboardLayoutComponent implements OnInit {
   currentUser$ = this.authService.currentUser$;

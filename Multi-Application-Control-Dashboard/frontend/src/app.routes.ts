@@ -1,50 +1,60 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './core/guards/auth.guard';
-import { roleGuard } from './core/guards/role.guard';
+import { AuthGuard, RoleGuard, ModuleAccessGuard } from './app/core/guards/auth.guard';
 
 export const routes: Routes = [
   {
+    path: '',
+    redirectTo: 'dashboard',
+    pathMatch: 'full'
+  },
+  {
     path: 'auth',
-    loadChildren: () => import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
+    loadComponent: () => import('./app/features/auth/auth.component')
+      .then(m => m.AuthComponent)
   },
   {
     path: 'dashboard',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES),
+    canActivate: [AuthGuard],
+    loadComponent: () => import('./app/features/dashboard/dashboard.component')
+      .then(m => m.DashboardComponent)
   },
   {
     path: 'study-notes',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/study-notes/study-notes.routes').then(m => m.STUDY_NOTES_ROUTES),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'STUDY_NOTES' },
+    loadComponent: () => import('./app/features/study-notes/study-notes.component')
+      .then(m => m.StudyNotesComponent)
   },
   {
     path: 'youtube',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/youtube/youtube.routes').then(m => m.YOUTUBE_ROUTES),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'YOUTUBE' },
+    loadComponent: () => import('./app/features/youtube/youtube.component')
+      .then(m => m.YouTubeComponent)
   },
   {
     path: 'linkedin',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/linkedin/linkedin.routes').then(m => m.LINKEDIN_ROUTES),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'LINKEDIN' },
+    loadComponent: () => import('./app/features/linkedin/linkedin.component')
+      .then(m => m.LinkedInComponent)
   },
   {
     path: 'blog',
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/blog/blog.routes').then(m => m.BLOG_ROUTES),
+    canActivate: [AuthGuard, ModuleAccessGuard],
+    data: { module: 'BLOG' },
+    loadComponent: () => import('./app/features/blog/blog.component')
+      .then(m => m.BlogComponent)
   },
   {
     path: 'admin',
-    canActivate: [authGuard, roleGuard],
-    data: { roles: ['super_admin', 'admin'] },
-    loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-  },
-  {
-    path: '',
-    redirectTo: '/dashboard',
-    pathMatch: 'full',
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['SUPER_ADMIN', 'ADMIN'] },
+    loadComponent: () => import('./app/features/admin/admin.component')
+      .then(m => m.AdminComponent)
   },
   {
     path: '**',
-    redirectTo: '/dashboard',
-  },
+    redirectTo: 'dashboard'
+  }
 ];

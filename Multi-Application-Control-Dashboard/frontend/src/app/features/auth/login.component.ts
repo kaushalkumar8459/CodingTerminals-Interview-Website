@@ -1,99 +1,15 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div class="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-4">
-      <div class="w-full max-w-md">
-        <!-- Card -->
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
-          <!-- Header -->
-          <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span class="text-3xl">📊</span>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-900">Control Dashboard</h1>
-            <p class="text-gray-600 mt-2">Sign in to your account</p>
-          </div>
-
-          <!-- Form -->
-          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
-            <!-- Email -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <input
-                type="email"
-                formControlName="email"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="you@example.com"
-              />
-              <p *ngIf="isFieldInvalid('email')" class="text-red-500 text-sm mt-1">
-                Please enter a valid email
-              </p>
-            </div>
-
-            <!-- Password -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                formControlName="password"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="••••••••"
-              />
-              <p *ngIf="isFieldInvalid('password')" class="text-red-500 text-sm mt-1">
-                Password is required
-              </p>
-            </div>
-
-            <!-- Error Message -->
-            <div *ngIf="errorMessage" class="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p class="text-red-700 text-sm">{{ errorMessage }}</p>
-            </div>
-
-            <!-- Submit Button -->
-            <button
-              type="submit"
-              [disabled]="isLoading"
-              class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-lg transition duration-300 mt-6"
-            >
-              {{ isLoading ? 'Signing in...' : 'Sign In' }}
-            </button>
-          </form>
-
-          <!-- Divider -->
-          <div class="relative my-6">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-300"></div>
-            </div>
-            <div class="relative flex justify-center text-sm">
-              <span class="px-2 bg-white text-gray-500">or</span>
-            </div>
-          </div>
-
-          <!-- Demo Credentials -->
-          <div class="space-y-2 text-sm text-gray-600">
-            <p class="font-semibold text-gray-900">Demo Credentials:</p>
-            <p>Admin: admin@example.com / password</p>
-            <p>Viewer: viewer@example.com / password</p>
-          </div>
-
-          <!-- Footer -->
-          <p class="text-center text-sm text-gray-600 mt-6">
-            Don't have an account?
-            <a routerLink="/register" class="text-blue-600 hover:text-blue-700 font-semibold">Sign up</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: []
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss'
 })
 export class LoginComponent {
   loginForm: FormGroup;

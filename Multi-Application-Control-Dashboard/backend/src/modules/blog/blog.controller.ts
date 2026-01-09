@@ -24,7 +24,7 @@ export class BlogController {
   constructor(private blogService: BlogService) {}
 
   @Get()
-  @Roles(['SUPER_ADMIN', 'ADMIN', 'VIEWER'])
+  @Roles('SUPER_ADMIN', 'ADMIN', 'VIEWER')
   async getAllPosts(
     @CurrentUser() user: any,
     @Query('status') status?: string,
@@ -33,20 +33,20 @@ export class BlogController {
   }
 
   @Get(':id')
-  @Roles(['SUPER_ADMIN', 'ADMIN', 'VIEWER'])
+  @Roles('SUPER_ADMIN', 'ADMIN', 'VIEWER')
   async getPostById(@Param('id') id: string, @CurrentUser() user: any) {
     return this.blogService.getPostById(id, user);
   }
 
   @Post()
-  @Roles(['SUPER_ADMIN', 'ADMIN'])
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.CREATED)
   async createPost(@Body() dto: CreateBlogDto, @CurrentUser() user: any) {
     return this.blogService.createPost(dto, user);
   }
 
   @Put(':id')
-  @Roles(['SUPER_ADMIN', 'ADMIN'])
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async updatePost(
     @Param('id') id: string,
     @Body() dto: UpdateBlogDto,
@@ -56,20 +56,20 @@ export class BlogController {
   }
 
   @Delete(':id')
-  @Roles(['SUPER_ADMIN', 'ADMIN'])
+  @Roles('SUPER_ADMIN', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePost(@Param('id') id: string, @CurrentUser() user: any) {
     return this.blogService.deletePost(id, user);
   }
 
   @Put(':id/publish')
-  @Roles(['SUPER_ADMIN', 'ADMIN'])
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async publishPost(@Param('id') id: string, @CurrentUser() user: any) {
     return this.blogService.publishPost(id, user);
   }
 
   @Put(':id/unpublish')
-  @Roles(['SUPER_ADMIN', 'ADMIN'])
+  @Roles('SUPER_ADMIN', 'ADMIN')
   async unpublishPost(@Param('id') id: string, @CurrentUser() user: any) {
     return this.blogService.unpublishPost(id, user);
   }

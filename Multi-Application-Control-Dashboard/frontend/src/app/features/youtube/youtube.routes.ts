@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { YouTubeListComponent } from './youtube-list/youtube-list.component';
+import { YouTubeListComponent } from './pages/youtube-list/youtube-list.component';
 
 export const YOUTUBE_ROUTES: Routes = [
   {

@@ -12,6 +12,7 @@ import { YouTubeModule } from './youtube/youtube.module';
 import { StudyNotesModule } from './study-notes/study-notes.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { DashboardStatsModule } from './dashboard-stats/dashboard-stats.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     YouTubeModule,
     StudyNotesModule,
     AnalyticsModule,
+    DashboardStatsModule,
     AuditLogsModule,
   ],
   controllers: [],
