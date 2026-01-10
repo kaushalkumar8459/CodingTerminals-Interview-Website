@@ -1,216 +1,332 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { BlogService, BlogPost } from '../../../core/services/blog.service';
-import { Observable } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { BlogStore } from '../../../core/store/blog.store';
+import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
   selector: 'app-blog-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './blog-list.component.html',
-  styleUrls: ['./blog-list.component.scss'],
+  styleUrls: ['./blog-list.component.scss']
 })
 export class BlogListComponent implements OnInit {
-  private blogService = inject(BlogService);
-  private fb = inject(FormBuilder);
+  // ===== INJECT STORE AND SERVICES =====
+  readonly blogStore = inject(BlogStore);
+  private permissionService = inject(PermissionService);
 
-  posts$: Observable<BlogPost[]>;
-  postForm: FormGroup;
-  selectedPost: BlogPost | null = null;
-  isFormVisible = false;
-  isEditing = false;
-  filter: 'all' | 'draft' | 'published' = 'all';
-  filteredPosts: BlogPost[] = [];
-  loading = false;
-  error: string | null = null;
-  searchQuery = '';
-
-  constructor() {
-    this.posts$ = this.blogService.posts$;
-    this.postForm = this.fb.group({
-      title: ['', [Validators.required, Validators.minLength(5)]],
-      content: ['', [Validators.required, Validators.minLength(20)]],
-      excerpt: ['', [Validators.required, Validators.minLength(10)]],
-      author: [''],
-      tags: [''],
-      status: ['draft'],
-    });
-  }
+  // ===== LOCAL UI STATE (not in store) =====
+  showPublishConfirm = false;
+  postToPublish: any = null;
+  showUnpublishConfirm = false;
+  postToUnpublish: any = null;
+  showDeleteConfirm = false;
+  postToDelete: any = null;
 
   ngOnInit(): void {
-    this.loadPosts();
+    // Load blog posts from store on component init (NO direct API call)
+    this.blogStore.loadPosts();
   }
 
-  loadPosts(): void {
-    this.loading = true;
-    this.blogService.getPosts().subscribe(
-      () => {
-        this.applyFilter();
-        this.loading = false;
-      },
-      (error) => {
-        this.error = 'Failed to load blog posts';
-        this.loading = false;
-      }
-    );
+  // ===== EXPOSED STORE SIGNALS FOR TEMPLATE =====
+
+  /**
+   * Get posts list from store
+   */
+  get posts() {
+    return this.blogStore.posts();
   }
 
-  openForm(post?: BlogPost): void {
-    if (post) {
-      this.isEditing = true;
-      this.selectedPost = post;
-      this.postForm.patchValue({
-        ...post,
-        tags: post.tags?.join(', ') || '',
-      });
-    } else {
-      this.isEditing = false;
-      this.selectedPost = null;
-      this.postForm.reset({ status: 'draft' });
-    }
-    this.isFormVisible = true;
+  /**
+   * Get loading state from store
+   */
+  get loading() {
+    return this.blogStore.isLoading();
   }
 
-  closeForm(): void {
-    this.isFormVisible = false;
-    this.postForm.reset();
-    this.selectedPost = null;
+  /**
+   * Get error state from store
+   */
+  get error() {
+    return this.blogStore.error();
   }
 
-  savePost(): void {
-    if (this.postForm.invalid) return;
-
-    const formValue = this.postForm.value;
-    const postData: BlogPost = {
-      ...formValue,
-      tags: formValue.tags ? formValue.tags.split(',').map((t: string) => t.trim()) : [],
-    };
-
-    if (this.isEditing && this.selectedPost?.id) {
-      this.blogService.updatePost(this.selectedPost.id, postData).subscribe(
-        () => {
-          this.closeForm();
-          this.applyFilter();
-        },
-        (error) => {
-          this.error = 'Failed to update post';
-        }
-      );
-    } else {
-      this.blogService.createPost(postData).subscribe(
-        () => {
-          this.closeForm();
-          this.applyFilter();
-        },
-        (error) => {
-          this.error = 'Failed to create post';
-        }
-      );
-    }
+  /**
+   * Get success state from store
+   */
+  get success() {
+    return this.blogStore.success();
   }
 
-  saveDraft(id: string): void {
-    if (this.postForm.invalid) return;
-
-    const formValue = this.postForm.value;
-    const postData: BlogPost = {
-      ...formValue,
-      tags: formValue.tags ? formValue.tags.split(',').map((t: string) => t.trim()) : [],
-    };
-
-    this.blogService.saveDraft(id, postData).subscribe(
-      () => {
-        this.closeForm();
-        this.applyFilter();
-      },
-      (error) => {
-        this.error = 'Failed to save draft';
-      }
-    );
+  /**
+   * Get current page from store
+   */
+  get currentPage() {
+    return this.blogStore.currentPage();
   }
 
-  publishPost(id: string): void {
-    if (confirm('Are you sure you want to publish this post?')) {
-      this.blogService.publishPost(id).subscribe(
-        () => {
-          this.applyFilter();
-        },
-        (error) => {
-          this.error = 'Failed to publish post';
-        }
-      );
-    }
+  /**
+   * Get total pages from store
+   */
+  get totalPages() {
+    return this.blogStore.totalPages();
   }
 
-  deletePost(id: string): void {
-    if (confirm('Are you sure you want to delete this post?')) {
-      this.blogService.deletePost(id).subscribe(
-        () => {
-          this.applyFilter();
-        },
-        (error) => {
-          this.error = 'Failed to delete post';
-        }
-      );
-    }
+  /**
+   * Get draft count from store
+   */
+  get draftCount() {
+    return this.blogStore.draftCount();
   }
 
-  setFilter(status: 'all' | 'draft' | 'published'): void {
-    this.filter = status;
-    this.applyFilter();
+  /**
+   * Get published count from store
+   */
+  get publishedCount() {
+    return this.blogStore.publishedCount();
   }
 
-  searchPosts(): void {
-    if (this.searchQuery.trim()) {
-      this.loading = true;
-      this.blogService.searchPosts(this.searchQuery).subscribe(
-        (posts) => {
-          this.filteredPosts = posts;
-          this.loading = false;
-        },
-        (error) => {
-          this.error = 'Failed to search posts';
-          this.loading = false;
-        }
-      );
-    } else {
-      this.applyFilter();
-    }
+  /**
+   * Get current filter status from store
+   */
+  get selectedStatus() {
+    return this.blogStore.selectedStatus();
   }
 
-  loadTrendingPosts(): void {
-    this.loading = true;
-    this.blogService.getTrendingPosts(5).subscribe(
-      (posts) => {
-        this.filteredPosts = posts;
-        this.loading = false;
-      },
-      (error) => {
-        this.error = 'Failed to load trending posts';
-        this.loading = false;
-      }
-    );
+  /**
+   * Get search query from store
+   */
+  get searchQuery() {
+    return this.blogStore.searchQuery();
   }
 
-  private applyFilter(): void {
-    this.posts$.subscribe((posts) => {
-      if (this.filter === 'all') {
-        this.filteredPosts = posts;
-      } else {
-        this.filteredPosts = posts.filter((post) => post.status === this.filter);
-      }
-    });
+  /**
+   * Get has filters flag from store
+   */
+  get hasFilters() {
+    return this.blogStore.hasFilters();
   }
 
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'published':
-        return 'badge-success';
-      case 'draft':
-        return 'badge-secondary';
-      default:
-        return 'badge-info';
-    }
+  /**
+   * Get filtered count from store
+   */
+  get filteredCount() {
+    return this.blogStore.filteredCount();
+  }
+
+  /**
+   * Get total posts count from store
+   */
+  get totalPosts() {
+    return this.blogStore.posts().length;
+  }
+
+  // ===== PUBLISH/UNPUBLISH ACTIONS =====
+
+  /**
+   * Open publish confirmation modal
+   */
+  confirmPublish(post: any): void {
+    this.postToPublish = post;
+    this.showPublishConfirm = true;
+  }
+
+  /**
+   * Publish post through store (NO direct API call)
+   */
+  publishPost(): void {
+    if (!this.postToPublish) return;
+    this.blogStore.publishPost(this.postToPublish.id);
+    this.cancelPublish();
+  }
+
+  /**
+   * Cancel publish confirmation
+   */
+  cancelPublish(): void {
+    this.showPublishConfirm = false;
+    this.postToPublish = null;
+  }
+
+  /**
+   * Open unpublish confirmation modal
+   */
+  confirmUnpublish(post: any): void {
+    this.postToUnpublish = post;
+    this.showUnpublishConfirm = true;
+  }
+
+  /**
+   * Unpublish post through store (NO direct API call)
+   */
+  unpublishPost(): void {
+    if (!this.postToUnpublish) return;
+    this.blogStore.unpublishPost(this.postToUnpublish.id);
+    this.cancelUnpublish();
+  }
+
+  /**
+   * Cancel unpublish confirmation
+   */
+  cancelUnpublish(): void {
+    this.showUnpublishConfirm = false;
+    this.postToUnpublish = null;
+  }
+
+  // ===== DELETE ACTIONS =====
+
+  /**
+   * Open delete confirmation modal
+   */
+  confirmDelete(post: any): void {
+    this.postToDelete = post;
+    this.showDeleteConfirm = true;
+  }
+
+  /**
+   * Delete post through store (NO direct API call)
+   */
+  deletePost(): void {
+    if (!this.postToDelete) return;
+    this.blogStore.deletePost(this.postToDelete.id);
+    this.cancelDelete();
+  }
+
+  /**
+   * Cancel delete confirmation
+   */
+  cancelDelete(): void {
+    this.showDeleteConfirm = false;
+    this.postToDelete = null;
+  }
+
+  // ===== FILTER/SEARCH ACTIONS =====
+
+  /**
+   * Filter by status through store (NO direct API call)
+   */
+  filterByStatus(status: 'all' | 'draft' | 'published'): void {
+    this.blogStore.filterByStatus(status);
+  }
+
+  /**
+   * Search posts through store (NO direct API call)
+   */
+  onSearch(): void {
+    this.blogStore.searchPosts(this.searchQuery);
+  }
+
+  /**
+   * Clear all filters through store (NO direct API call)
+   */
+  clearFilters(): void {
+    this.blogStore.clearFilters();
+  }
+
+  // ===== PAGINATION ACTIONS =====
+
+  /**
+   * Navigate to specific page through store (NO direct API call)
+   */
+  goToPage(page: number): void {
+    this.blogStore.goToPage(page);
+  }
+
+  /**
+   * Go to previous page through store (NO direct API call)
+   */
+  previousPage(): void {
+    this.blogStore.previousPage();
+  }
+
+  /**
+   * Go to next page through store (NO direct API call)
+   */
+  nextPage(): void {
+    this.blogStore.nextPage();
+  }
+
+  /**
+   * Get page numbers for pagination UI
+   */
+  getPageNumbers(): number[] {
+    return this.blogStore.getPageNumbers();
+  }
+
+  // ===== UI HELPERS =====
+
+  /**
+   * Get status badge CSS classes
+   */
+  getStatusBadgeClass(status: string): string {
+    const baseClass = 'px-3 py-1 rounded-full text-sm font-semibold';
+    return status === 'published'
+      ? `${baseClass} bg-green-100 text-green-800`
+      : `${baseClass} bg-yellow-100 text-yellow-800`;
+  }
+
+  /**
+   * Get status icon emoji
+   */
+  getStatusIcon(status: string): string {
+    return status === 'published' ? '✅' : '📝';
+  }
+
+  /**
+   * Format relative time (e.g., "2 hours ago")
+   */
+  formatRelativeTime(date: Date | string | undefined): string {
+    if (!date) return 'N/A';
+    const d = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  }
+
+  // ===== PERMISSION CHECKS =====
+
+  /**
+   * Check if user can create posts
+   */
+  get canCreate(): boolean {
+    return this.permissionService.canEdit();
+  }
+
+  /**
+   * Check if user can edit posts
+   */
+  get canEdit(): boolean {
+    return this.permissionService.canEdit();
+  }
+
+  /**
+   * Check if user can delete posts
+   */
+  get canDelete(): boolean {
+    return this.permissionService.canDelete();
+  }
+
+  /**
+   * Check if user can publish posts
+   */
+  get canPublish(): boolean {
+    return this.permissionService.canEdit();
+  }
+
+  /**
+   * Check if user is viewer only
+   */
+  get isViewer(): boolean {
+    return this.permissionService.isViewer();
   }
 }

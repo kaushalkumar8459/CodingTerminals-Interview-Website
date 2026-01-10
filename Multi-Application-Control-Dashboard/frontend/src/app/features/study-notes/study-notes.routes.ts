@@ -1,9 +1,20 @@
 import { Routes } from '@angular/router';
-import { StudyNotesListComponent } from './study-notes-list/study-notes-list.component';
 
 export const STUDY_NOTES_ROUTES: Routes = [
   {
     path: '',
-    component: StudyNotesListComponent,
+    loadComponent: () => import('./study-notes-list/study-notes-list.component').then(m => m.StudyNotesListComponent)
   },
+  {
+    path: 'create',
+    loadComponent: () => import('./study-notes-form/study-notes-form.component').then(m => m.StudyNotesFormComponent)
+  },
+  {
+    path: ':id',
+    loadComponent: () => import('./study-notes-view/study-notes-view.component').then(m => m.StudyNotesViewComponent)
+  },
+  {
+    path: ':id/edit',
+    loadComponent: () => import('./study-notes-form/study-notes-form.component').then(m => m.StudyNotesFormComponent)
+  }
 ];

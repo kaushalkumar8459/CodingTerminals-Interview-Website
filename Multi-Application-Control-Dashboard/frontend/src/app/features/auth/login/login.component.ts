@@ -1,59 +1,78 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
-import { AuthService } from '../../../core/services/auth.service';
+import { Router, RouterLink } from '@angular/router';
+import { AuthStore } from '../../../core/store/auth.store';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
-  loginForm!: FormGroup;
-  isLoading = false;
-  errorMessage = '';
+  // ===== INJECT STORE =====
+  readonly authStore = inject(AuthStore);
+  private formBuilder = inject(FormBuilder);
+  private router = inject(Router);
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private router: Router,
-  ) {}
+  loginForm!: FormGroup;
+  submitted = false;
 
   ngOnInit(): void {
     this.initializeForm();
   }
 
-  initializeForm(): void {
-    this.loginForm = this.fb.group({
+  /**
+   * Initialize login form with validation
+   */
+  private initializeForm(): void {
+    this.loginForm = this.formBuilder.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
-  isFieldInvalid(fieldName: string): boolean {
-    const field = this.loginForm.get(fieldName);
-    return !!(field && field.invalid && (field.dirty || field.touched));
+  /**
+   * Get form controls for template
+   */
+  get f() {
+    return this.loginForm.controls;
   }
 
-  onLogin(): void {
-    if (this.loginForm.invalid) return;
+  /**
+   * Get loading state from store
+   */
+  get loading() {
+    return this.authStore.isLoading();
+  }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+  /**
+   * Get error state from store
+   */
+  get error() {
+    return this.authStore.error();
+  }
 
-    const { email, password } = this.loginForm.value;
+  /**
+   * Get success state from store
+   */
+  get success() {
+    return this.authStore.success();
+  }
 
-    this.authService.login(email, password).subscribe({
-      next: () => {
-        this.router.navigate(['/dashboard']);
-      },
-      error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = error.error?.message || 'Login failed. Please try again.';
-      },
-    });
+  /**
+   * Handle login form submission (NO direct API call - goes through store)
+   */
+  async onSubmit(): Promise<void> {
+    this.submitted = true;
+
+    if (this.loginForm.invalid) {
+      return;
+    }
+
+    // Call store method instead of authService
+    await this.authStore.login(this.loginForm.value);
   }
 }

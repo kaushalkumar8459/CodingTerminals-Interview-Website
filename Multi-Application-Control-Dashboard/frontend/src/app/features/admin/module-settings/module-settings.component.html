@@ -1,286 +1,176 @@
-<div class="container-fluid p-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Module Settings</h2>
-    <button class="btn btn-primary" (click)="openForm()">
-      <i class="fas fa-plus"></i> Add Module
-    </button>
-  </div>
-
-  <!-- Success Alert -->
-  <div *ngIf="success" class="alert alert-success alert-dismissible fade show" role="alert">
-    {{ success }}
-    <button type="button" class="btn-close" (click)="success = null"></button>
-  </div>
-
-  <!-- Error Alert -->
-  <div *ngIf="error" class="alert alert-danger alert-dismissible fade show" role="alert">
-    {{ error }}
-    <button type="button" class="btn-close" (click)="error = null"></button>
-  </div>
-
-  <!-- Stats Cards -->
-  <div *ngIf="stats" class="row mb-4">
-    <div class="col-md-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">Total Modules</h5>
-          <h2 class="text-primary">{{ stats.totalModules || 0 }}</h2>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-2">
+            <span class="text-blue-600">⚙️</span> Module Settings
+          </h1>
+          <p class="text-gray-600 mt-1">Enable or disable system modules globally</p>
         </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">Enabled</h5>
-          <h2 class="text-success">{{ stats.enabledModules || 0 }}</h2>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">Disabled</h5>
-          <h2 class="text-warning">{{ stats.disabledModules || 0 }}</h2>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center">
-        <div class="card-body">
-          <h5 class="card-title">Active Users</h5>
-          <h2 class="text-info">{{ stats.totalUsers || 0 }}</h2>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Action Buttons -->
-  <div class="mb-4">
-    <div class="btn-group" role="group">
-      <button
-        type="button"
-        class="btn btn-outline-secondary"
-        (click)="showAllModules()"
-      >
-        <i class="fas fa-list"></i> All Modules
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline-success"
-        (click)="getModulesByCategory('content')"
-      >
-        <i class="fas fa-file-alt"></i> Content
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline-info"
-        (click)="getModulesByCategory('management')"
-      >
-        <i class="fas fa-cog"></i> Management
-      </button>
-      <button
-        type="button"
-        class="btn btn-outline-primary"
-        (click)="getModulesByCategory('admin')"
-      >
-        <i class="fas fa-lock"></i> Admin
-      </button>
-    </div>
-  </div>
-
-  <!-- Loading Spinner -->
-  <div *ngIf="loading" class="text-center">
-    <div class="spinner-border" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
-
-  <!-- Modules Grid -->
-  <div *ngIf="!loading && filteredModules.length > 0" class="row">
-    <div *ngFor="let module of filteredModules" class="col-md-6 col-lg-4 mb-4">
-      <div class="card h-100" [style.border-left]="module.enabled ? '4px solid #28a745' : '4px solid #6c757d'">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-              <h5 class="card-title">
-                <i [class]="module.icon || 'fas fa-puzzle-piece'" class="me-2"></i>
-                {{ module.name }}
-              </h5>
-              <p class="card-text text-muted small">{{ module.description }}</p>
-            </div>
-            <span class="badge" [ngClass]="getStatusClass(module.enabled)">
-              {{ getStatusText(module.enabled) }}
-            </span>
-          </div>
-
-          <div class="mb-3">
-            <small class="text-muted">
-              <i class="fas fa-users"></i>
-              {{ module.usersCount || 0 }} users
-            </small>
-            <br />
-            <small class="text-muted" *ngIf="module.category">
-              <i class="fas fa-tag"></i>
-              {{ module.category }}
-            </small>
-          </div>
-
-          <div class="card-footer bg-white border-top">
-            <div class="btn-group btn-group-sm w-100" role="group">
-              <button
-                type="button"
-                class="btn btn-outline-primary"
-                (click)="openForm(module)"
-                title="Edit"
-              >
-                <i class="fas fa-edit"></i>
-              </button>
-
-              <button
-                type="button"
-                class="btn btn-outline-success"
-                (click)="enableModule(module.id!)"
-                *ngIf="!module.enabled"
-                title="Enable"
-              >
-                <i class="fas fa-check"></i>
-              </button>
-
-              <button
-                type="button"
-                class="btn btn-outline-warning"
-                (click)="disableModule(module.id!)"
-                *ngIf="module.enabled"
-                title="Disable"
-              >
-                <i class="fas fa-times"></i>
-              </button>
-
-              <button
-                type="button"
-                class="btn btn-outline-danger"
-                (click)="deleteModule(module.id!, module.name)"
-                title="Delete"
-              >
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Empty State -->
-  <div
-    *ngIf="!loading && filteredModules.length === 0"
-    class="alert alert-info text-center"
-  >
-    No modules found. Create your first module!
-  </div>
-
-  <!-- Module Form Modal -->
-  <div class="modal fade" [class.show]="isFormVisible" [style.display]="isFormVisible ? 'block' : 'none'" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">
-            {{ isEditing ? 'Edit Module' : 'Create New Module' }}
-          </h5>
-          <button
-            type="button"
-            class="btn-close"
-            (click)="closeForm()"
-          ></button>
-        </div>
-        <div class="modal-body">
-          <form [formGroup]="moduleForm">
-            <div class="mb-3">
-              <label for="name" class="form-label">Module Name</label>
-              <input
-                type="text"
-                class="form-control"
-                id="name"
-                formControlName="name"
-                placeholder="e.g., LinkedIn Management"
-              />
-              <small class="text-danger" *ngIf="moduleForm.get('name')?.invalid && moduleForm.get('name')?.touched">
-                Name is required (min 3 characters)
-              </small>
-            </div>
-
-            <div class="mb-3">
-              <label for="description" class="form-label">Description</label>
-              <textarea
-                class="form-control"
-                id="description"
-                formControlName="description"
-                rows="3"
-                placeholder="Module description"
-              ></textarea>
-              <small class="text-danger" *ngIf="moduleForm.get('description')?.invalid && moduleForm.get('description')?.touched">
-                Description is required
-              </small>
-            </div>
-
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="category" class="form-label">Category</label>
-                <select class="form-select" id="category" formControlName="category">
-                  <option value="">Select Category</option>
-                  <option value="content">Content Management</option>
-                  <option value="management">User Management</option>
-                  <option value="admin">Admin</option>
-                  <option value="analytics">Analytics</option>
-                </select>
-              </div>
-
-              <div class="col-md-6 mb-3">
-                <label for="icon" class="form-label">Icon (Font Awesome)</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="icon"
-                  formControlName="icon"
-                  placeholder="e.g., fas fa-linkedin"
-                />
-              </div>
-            </div>
-
-            <div class="mb-3 form-check">
-              <input
-                type="checkbox"
-                class="form-check-input"
-                id="enabled"
-                formControlName="enabled"
-              />
-              <label class="form-check-label" for="enabled">
-                Enable this module
-              </label>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeForm()">
-            Cancel
+        <div class="flex gap-2">
+          <button 
+            *ngIf="hasChanges"
+            (click)="resetChanges()"
+            class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold flex items-center gap-2 shadow-md">
+            <span>↩️</span> Revert
           </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            (click)="saveModule()"
-            [disabled]="moduleForm.invalid"
-          >
-            {{ isEditing ? 'Update' : 'Create' }} Module
+          <button 
+            *ngIf="hasChanges"
+            (click)="saveModuleChanges()"
+            [disabled]="isSaving"
+            class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2 shadow-md disabled:opacity-50">
+            <span>{{ isSaving ? '⏳' : '💾' }}</span> {{ isSaving ? 'Saving...' : 'Save Changes' }}
           </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Modal Backdrop -->
-  <div
-    class="modal-backdrop fade"
-    [class.show]="isFormVisible"
-    *ngIf="isFormVisible"
-  ></div>
+    <!-- Alert Messages -->
+    <div *ngIf="error" class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3">
+      <span class="text-xl">❌</span>
+      <div>
+        <p class="font-semibold">Error</p>
+        <p class="text-sm">{{ error }}</p>
+      </div>
+    </div>
+
+    <div *ngIf="success" class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3">
+      <span class="text-xl">✅</span>
+      <div>
+        <p class="font-semibold">Success</p>
+        <p class="text-sm">{{ success }}</p>
+      </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- Total Modules -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-600 text-sm font-semibold">Total Modules</p>
+            <p class="text-3xl font-bold text-blue-600 mt-2">{{ modules.length }}</p>
+          </div>
+          <span class="text-5xl">📦</span>
+        </div>
+      </div>
+
+      <!-- Active Modules -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-600 text-sm font-semibold">Active Modules</p>
+            <p class="text-3xl font-bold text-green-600 mt-2">{{ activeModulesCount }}</p>
+          </div>
+          <span class="text-5xl">✅</span>
+        </div>
+      </div>
+
+      <!-- Changed Modules -->
+      <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-600 text-sm font-semibold">Changed Modules</p>
+            <p class="text-3xl font-bold text-orange-600 mt-2">{{ changedModulesCount }}</p>
+          </div>
+          <span class="text-5xl">⚡</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="loading" class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <div class="inline-block animate-spin">
+        <span class="text-4xl">⏳</span>
+      </div>
+      <p class="text-gray-600 mt-4 font-semibold">Loading modules...</p>
+    </div>
+
+    <!-- Modules Grid -->
+    <div *ngIf="!loading && modules.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div 
+        *ngFor="let module of modules"
+        [class.ring-2]="module.hasChanges"
+        [class.ring-orange-400]="module.hasChanges"
+        class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100">
+        
+        <!-- Module Header -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-4xl">{{ getModuleIcon(module.name) }}</span>
+              <div>
+                <h3 class="font-bold text-lg text-gray-900">{{ module.name }}</h3>
+                <p class="text-sm text-gray-600 mt-1">{{ module.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Module Body -->
+        <div class="p-4">
+          <!-- Status -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-700">Status</span>
+              <span [ngClass]="getStatusBadgeClass(module.enabled)">
+                {{ module.enabled ? 'Enabled' : 'Disabled' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Users Count -->
+          <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p class="text-sm text-gray-600">Active Users</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1">{{ module.usersCount || 0 }}</p>
+          </div>
+
+          <!-- Changed Indicator -->
+          <div *ngIf="module.hasChanges" class="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200 flex items-center gap-2">
+            <span class="text-xl">⚡</span>
+            <p class="text-sm font-semibold text-orange-800">Changes pending</p>
+          </div>
+
+          <!-- Toggle Switch -->
+          <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+            <span class="text-sm font-semibold text-gray-700">Enable Module</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                [checked]="module.enabled"
+                (change)="toggleModule(module)"
+                class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && modules.length === 0" class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <p class="text-5xl mb-4">📦</p>
+      <h3 class="text-xl font-semibold text-gray-700 mb-2">No modules available</h3>
+      <p class="text-gray-600">Modules will appear here once they are registered in the system</p>
+    </div>
+
+    <!-- Info Box -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+      <div class="flex gap-4">
+        <span class="text-3xl">ℹ️</span>
+        <div>
+          <h4 class="font-semibold text-blue-900 mb-2">How Module Settings Work</h4>
+          <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
+            <li>Enable or disable modules to control user access globally</li>
+            <li>Disabled modules will not appear in user interfaces</li>
+            <li>Users assigned to disabled modules will lose access</li>
+            <li>Changes are applied immediately after saving</li>
+            <li>All changes are logged for audit purposes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

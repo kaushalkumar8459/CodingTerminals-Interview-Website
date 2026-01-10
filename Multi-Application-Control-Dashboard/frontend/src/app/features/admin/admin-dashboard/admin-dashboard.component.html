@@ -1,301 +1,75 @@
-<div class="container-fluid p-4">
+<div class="space-y-6">
   <!-- Header -->
-  <div class="row mb-4">
-    <div class="col-12">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h1 class="mb-2">Admin Dashboard</h1>
-          <p class="text-muted">Welcome back! Here's your system overview.</p>
-        </div>
-        <div class="btn-group" role="group">
-          <a href="/admin/users" class="btn btn-primary">
-            <i class="fas fa-users"></i> Manage Users
-          </a>
-          <a href="/admin/modules" class="btn btn-info">
-            <i class="fas fa-puzzle-piece"></i> Manage Modules
-          </a>
-        </div>
+  <h1 class="text-3xl font-bold text-gray-900">⚙️ Admin Dashboard</h1>
+
+  <!-- Statistics Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div *ngFor="let stat of stats" [class]="stat.color + ' rounded-lg p-6 shadow-md hover:shadow-lg transition'">
+      <p class="text-gray-600 text-sm font-medium">{{ stat.title }}</p>
+      <div class="flex items-center justify-between mt-4">
+        <p class="text-3xl font-bold text-gray-900">{{ stat.value }}</p>
+        <span class="text-4xl opacity-50">{{ stat.icon }}</span>
       </div>
     </div>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="text-center py-5">
-    <div class="spinner-border" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
-
-  <!-- Statistics Cards -->
-  <div *ngIf="stats$ | async as stats" class="row mb-4">
-    <!-- Users Section -->
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-primary text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Total Users</h6>
-              <h2 class="mb-0">{{ stats.totalUsers }}</h2>
-            </div>
-            <i class="fas fa-users fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            <i class="fas fa-arrow-up"></i> All registered users
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-success text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Active Users</h6>
-              <h2 class="mb-0">{{ stats.activeUsers }}</h2>
-            </div>
-            <i class="fas fa-check-circle fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            {{ ((stats.activeUsers / stats.totalUsers) * 100 | number: '1.0-0') }}% of total
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-warning text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Admins</h6>
-              <h2 class="mb-0">{{ stats.adminCount }}</h2>
-            </div>
-            <i class="fas fa-crown fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            Administrator accounts
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-danger text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Suspended Users</h6>
-              <h2 class="mb-0">{{ stats.suspendedUsers }}</h2>
-            </div>
-            <i class="fas fa-ban fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            Temporarily blocked
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-info text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Total Modules</h6>
-              <h2 class="mb-0">{{ stats.totalModules }}</h2>
-            </div>
-            <i class="fas fa-puzzle-piece fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            System features
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-success text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Enabled Modules</h6>
-              <h2 class="mb-0">{{ stats.enabledModules }}</h2>
-            </div>
-            <i class="fas fa-toggle-on fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            {{ ((stats.enabledModules / stats.totalModules) * 100 | number: '1.0-0') }}% active
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-secondary text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Moderators</h6>
-              <h2 class="mb-0">{{ stats.moderatorCount }}</h2>
-            </div>
-            <i class="fas fa-shield-alt fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            Content moderators
-          </small>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6 col-lg-3 mb-3">
-      <div class="card stats-card bg-primary text-white">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <h6 class="card-title text-white-50">Regular Users</h6>
-              <h2 class="mb-0">{{ stats.totalUsers - stats.adminCount - stats.moderatorCount }}</h2>
-            </div>
-            <i class="fas fa-user fa-2x opacity-25"></i>
-          </div>
-          <small class="text-white-50">
-            Standard accounts
-          </small>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Activity Section -->
-  <div class="row">
+  <!-- Recent Data -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <!-- Recent Users -->
-    <div class="col-lg-6 mb-4">
-      <div class="card">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Recent Users</h5>
-          <a href="/admin/users" class="btn btn-sm btn-outline-primary">View All</a>
-        </div>
-        <div class="card-body p-0">
-          <div *ngIf="recentUsers$ | async as users; else noUsers" class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let user of users">
-                  <td class="fw-bold">{{ user.name }}</td>
-                  <td class="text-muted">{{ user.email }}</td>
-                  <td>
-                    <span class="badge" [ngClass]="getRoleBadgeClass(user.role)">
-                      {{ user.role | uppercase }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getStatusBadgeClass(user.status)">
-                      {{ user.status | uppercase }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900">👥 Recent Users</h2>
+        <a routerLink="/admin/users" class="text-blue-600 hover:underline text-sm">View All</a>
+      </div>
+      <div class="space-y-3">
+        <div *ngFor="let user of recentUsers" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div>
+            <p class="font-medium text-gray-900">{{ user.name }}</p>
+            <p class="text-sm text-gray-600">{{ user.email }}</p>
           </div>
-          <ng-template #noUsers>
-            <div class="p-4 text-center text-muted">
-              No users found
-            </div>
-          </ng-template>
+          <span class="px-3 py-1 text-xs font-semibold rounded-full" [class]="user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'">
+            {{ user.role }}
+          </span>
         </div>
       </div>
     </div>
 
     <!-- Recent Modules -->
-    <div class="col-lg-6 mb-4">
-      <div class="card">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Recent Modules</h5>
-          <a href="/admin/modules" class="btn btn-sm btn-outline-primary">View All</a>
-        </div>
-        <div class="card-body p-0">
-          <div *ngIf="recentModules$ | async as modules; else noModules" class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>Module Name</th>
-                  <th>Description</th>
-                  <th>Status</th>
-                  <th>Users</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let module of modules">
-                  <td class="fw-bold">
-                    <i [class]="module.icon || 'fas fa-puzzle-piece'" class="me-2"></i>
-                    {{ module.name }}
-                  </td>
-                  <td class="text-muted text-truncate" [title]="module.description">
-                    {{ module.description }}
-                  </td>
-                  <td>
-                    <span class="badge" [ngClass]="getModuleStatusClass(module.enabled)">
-                      {{ module.enabled ? 'ENABLED' : 'DISABLED' }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge bg-light text-dark">
-                      {{ module.usersCount || 0 }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-900">🔧 Modules Status</h2>
+        <a routerLink="/admin/modules" class="text-blue-600 hover:underline text-sm">Manage</a>
+      </div>
+      <div class="space-y-3">
+        <div *ngFor="let module of recentModules" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <div>
+            <p class="font-medium text-gray-900">{{ module.name }}</p>
+            <p class="text-sm text-gray-600">{{ module.users }} users</p>
           </div>
-          <ng-template #noModules>
-            <div class="p-4 text-center text-muted">
-              No modules found
-            </div>
-          </ng-template>
+          <span [class]="module.enabled ? 'badge-success' : 'badge-warning'">
+            {{ module.enabled ? 'Enabled' : 'Disabled' }}
+          </span>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Quick Actions -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header bg-light">
-          <h5 class="mb-0">Quick Actions</h5>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6 col-lg-3 mb-3">
-              <a href="/admin/users" class="btn btn-outline-primary w-100">
-                <i class="fas fa-user-plus"></i> Add New User
-              </a>
-            </div>
-            <div class="col-md-6 col-lg-3 mb-3">
-              <a href="/admin/modules" class="btn btn-outline-info w-100">
-                <i class="fas fa-plus-square"></i> Create Module
-              </a>
-            </div>
-            <div class="col-md-6 col-lg-3 mb-3">
-              <button class="btn btn-outline-warning w-100" disabled>
-                <i class="fas fa-file-export"></i> Export Data
-              </button>
-            </div>
-            <div class="col-md-6 col-lg-3 mb-3">
-              <button class="btn btn-outline-success w-100" disabled>
-                <i class="fas fa-download"></i> Generate Report
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Quick Actions</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <a routerLink="/admin/users" class="px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition text-center font-medium">
+        Add User
+      </a>
+      <a routerLink="/admin/modules" class="px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition text-center font-medium">
+        Manage Modules
+      </a>
+      <button class="px-4 py-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition text-center font-medium">
+        View Logs
+      </button>
+      <button class="px-4 py-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition text-center font-medium">
+        Generate Report
+      </button>
     </div>
   </div>
 </div>

@@ -1,82 +1,162 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
-export interface LinkedInPost {
-  id?: string;
+export type PostStatus = 'draft' | 'scheduled' | 'published' | 'archived';
+
+export interface LinkedinPost {
+  id: string;
   title: string;
   content: string;
-  scheduledDate?: Date;
-  status: 'draft' | 'scheduled' | 'published';
-  likes?: number;
-  comments?: number;
-  shares?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  status: PostStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  scheduledAt?: Date;
+  publishedAt?: Date;
+  impressions: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  createdBy: string;
+  imageUrl?: string;
+  hashtags: string[];
+}
+
+export interface CreatePostRequest {
+  title: string;
+  content: string;
+  imageUrl?: string;
+  hashtags: string[];
+  scheduledAt?: Date;
+}
+
+export interface UpdatePostRequest extends Partial<CreatePostRequest> {
+  status?: PostStatus;
+}
+
+export interface PostFilter {
+  status?: PostStatus;
+  searchQuery?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedPostsResponse {
+  data: LinkedinPost[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
-export class LinkedInService {
-  private apiUrl = 'http://localhost:3000/api/linkedin';
-  private postsSubject = new BehaviorSubject<LinkedInPost[]>([]);
+export class LinkedinService {
+  private apiUrl = `${environment.apiUrl}/linkedin`;
+  private postsSubject = new BehaviorSubject<LinkedinPost[]>([]);
   public posts$ = this.postsSubject.asObservable();
 
-  constructor(private http: HttpClient) {
-    this.loadPosts();
+  constructor(private http: HttpClient) { }
+
+  /**
+   * Get all posts with optional filters
+   */
+  getPosts(filters?: PostFilter): Observable<PaginatedPostsResponse> {
+    let params = new HttpParams();
+    
+    if (filters) {
+      if (filters.status) params = params.set('status', filters.status);
+      if (filters.searchQuery) params = params.set('search', filters.searchQuery);
+      if (filters.page) params = params.set('page', filters.page.toString());
+      if (filters.limit) params = params.set('limit', filters.limit.toString());
+    }
+
+    return this.http.get<PaginatedPostsResponse>(`${this.apiUrl}/posts`, { params });
   }
 
-  loadPosts(): void {
-    this.http.get<LinkedInPost[]>(this.apiUrl).subscribe((posts) => {
-      this.postsSubject.next(posts);
-    });
+  /**
+   * Get single post by ID
+   */
+  getPostById(id: string): Observable<LinkedinPost> {
+    return this.http.get<LinkedinPost>(`${this.apiUrl}/posts/${id}`);
   }
 
-  getPosts(): Observable<LinkedInPost[]> {
-    return this.http.get<LinkedInPost[]>(this.apiUrl);
+  /**
+   * Create new LinkedIn post
+   */
+  createPost(data: CreatePostRequest): Observable<LinkedinPost> {
+    return this.http.post<LinkedinPost>(`${this.apiUrl}/posts`, data);
   }
 
-  getPostById(id: string): Observable<LinkedInPost> {
-    return this.http.get<LinkedInPost>(`${this.apiUrl}/${id}`);
+  /**
+   * Update existing LinkedIn post
+   */
+  updatePost(id: string, data: UpdatePostRequest): Observable<LinkedinPost> {
+    return this.http.put<LinkedinPost>(`${this.apiUrl}/posts/${id}`, data);
   }
 
-  createPost(post: LinkedInPost): Observable<LinkedInPost> {
-    return this.http.post<LinkedInPost>(this.apiUrl, post).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Delete LinkedIn post
+   */
+  deletePost(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/posts/${id}`);
   }
 
-  updatePost(id: string, post: LinkedInPost): Observable<LinkedInPost> {
-    return this.http.put<LinkedInPost>(`${this.apiUrl}/${id}`, post).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Publish a scheduled post
+   */
+  publishPost(id: string): Observable<LinkedinPost> {
+    return this.http.post<LinkedinPost>(`${this.apiUrl}/posts/${id}/publish`, {});
   }
 
-  deletePost(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Schedule a post for later
+   */
+  schedulePost(id: string, scheduledAt: Date): Observable<LinkedinPost> {
+    return this.http.post<LinkedinPost>(`${this.apiUrl}/posts/${id}/schedule`, { scheduledAt });
   }
 
-  publishPost(id: string): Observable<LinkedInPost> {
-    return this.http.post<LinkedInPost>(`${this.apiUrl}/${id}/publish`, {}).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Archive a post
+   */
+  archivePost(id: string): Observable<LinkedinPost> {
+    return this.http.post<LinkedinPost>(`${this.apiUrl}/posts/${id}/archive`, {});
   }
 
-  schedulePost(id: string, scheduledDate: Date): Observable<LinkedInPost> {
-    return this.http.post<LinkedInPost>(`${this.apiUrl}/${id}/schedule`, { scheduledDate }).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Get posts by status
+   */
+  getPostsByStatus(status: PostStatus): Observable<LinkedinPost[]> {
+    return this.http.get<LinkedinPost[]>(`${this.apiUrl}/posts/status/${status}`);
   }
 
-  getAnalytics(id: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/${id}/analytics`);
+  /**
+   * Search posts
+   */
+  searchPosts(query: string): Observable<LinkedinPost[]> {
+    const params = new HttpParams().set('search', query);
+    return this.http.get<LinkedinPost[]>(`${this.apiUrl}/posts/search`, { params });
   }
 
-  getScheduledPosts(): Observable<LinkedInPost[]> {
-    return this.http.get<LinkedInPost[]>(`${this.apiUrl}?status=scheduled`);
+  /**
+   * Get posts analytics
+   */
+  getPostAnalytics(id: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/posts/${id}/analytics`);
+  }
+
+  /**
+   * Update local posts in subject
+   */
+  setLocalPosts(posts: LinkedinPost[]): void {
+    this.postsSubject.next(posts);
+  }
+
+  /**
+   * Get current posts from subject
+   */
+  getLocalPosts(): LinkedinPost[] {
+    return this.postsSubject.value;
   }
 }

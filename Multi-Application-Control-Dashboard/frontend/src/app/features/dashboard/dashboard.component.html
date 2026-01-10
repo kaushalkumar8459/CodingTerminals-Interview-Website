@@ -1,117 +1,61 @@
-<div class="dashboard-container">
-  <!-- Header -->
-  <div class="dashboard-header">
-    <div class="header-content">
-      <h1 class="dashboard-title">Dashboard</h1>
-      <p class="header-subtitle">Welcome back, {{ currentUser?.firstName || 'User' }}</p>
-    </div>
-    <div class="header-user-info">
-      <span class="user-email">{{ currentUser?.email }}</span>
-      <span class="user-role" [class]="'role-' + (currentUser?.role || 'viewer').toLowerCase()">
-        {{ currentUser?.role || 'Viewer' }}
-      </span>
+<div class="space-y-6">
+  <!-- Welcome Header -->
+  <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg p-8">
+    <h1 class="text-4xl font-bold mb-2">{{ getGreeting() }}, {{ currentUser?.firstName }}! 👋</h1>
+    <p class="text-blue-100">Welcome back to Control Dashboard. Here's your overview for today.</p>
+  </div>
+
+  <!-- Statistics Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div *ngFor="let stat of stats" [class]="stat.color + ' rounded-lg p-6 shadow-md hover:shadow-lg transition'">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-gray-600 text-sm font-medium">{{ stat.title }}</p>
+          <p class="text-3xl font-bold text-gray-900 mt-2">{{ stat.value }}</p>
+          <p class="text-gray-600 text-xs mt-2">{{ stat.description }}</p>
+        </div>
+        <span class="text-5xl opacity-50">{{ stat.icon }}</span>
+      </div>
     </div>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="isLoading" class="loading-container">
-    <div class="spinner"></div>
-    <p>Loading dashboard...</p>
-  </div>
-
-  <!-- Error Message -->
-  <div *ngIf="errorMessage && !isLoading" class="alert alert-error">
-    {{ errorMessage }}
-  </div>
-
-  <!-- Main Content -->
-  <div *ngIf="!isLoading" class="dashboard-content">
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-      <!-- Total Users Card -->
-      <div class="stat-card" [class.stat-card-primary]="true">
-        <div class="stat-icon">👥</div>
-        <div class="stat-content">
-          <p class="stat-label">Total Users</p>
-          <p class="stat-value">{{ dashboardStats.totalUsers }}</p>
-          <p class="stat-description">Active this month</p>
-        </div>
-      </div>
-
-      <!-- YouTube Posts Card -->
-      <div class="stat-card" [class.stat-card-red]="true">
-        <div class="stat-icon">📹</div>
-        <div class="stat-content">
-          <p class="stat-label">YouTube Posts</p>
-          <p class="stat-value">{{ dashboardStats.youtubePosts }}</p>
-          <p class="stat-description">{{ dashboardStats.youtubePublished }} published</p>
-        </div>
-      </div>
-
-      <!-- Study Notes Card -->
-      <div class="stat-card" [class.stat-card-green]="true">
-        <div class="stat-icon">📚</div>
-        <div class="stat-content">
-          <p class="stat-label">Study Notes</p>
-          <p class="stat-value">{{ dashboardStats.studyNotes }}</p>
-          <p class="stat-description">{{ dashboardStats.studyNotesPublic }} public</p>
-        </div>
-      </div>
-
-      <!-- Applications Card -->
-      <div class="stat-card" [class.stat-card-purple]="true">
-        <div class="stat-icon">📊</div>
-        <div class="stat-content">
-          <p class="stat-label">Applications</p>
-          <p class="stat-value">{{ dashboardStats.totalApplications }}</p>
-          <p class="stat-description">Ready to manage</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Users Section -->
-    <div class="recent-users-section">
-      <h2 class="section-title">Recent Users</h2>
-      
-      <div *ngIf="recentUsers.length > 0; else noUsers" class="users-list">
-        <div class="user-item" *ngFor="let user of recentUsers">
-          <div class="user-info">
-            <p class="user-name">{{ user.firstName }} {{ user.lastName }}</p>
-            <p class="user-email-small">{{ user.email }}</p>
+  <!-- Main Content Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Recent Activity -->
+    <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">📝 Recent Activity</h2>
+      <div class="space-y-4">
+        <div *ngFor="let activity of recentActivities" class="flex items-center space-x-4 pb-4 border-b border-gray-200 last:border-b-0">
+          <div class="w-12 h-12 rounded-full" [class]="activity.type === 'user' ? 'bg-blue-100' : 'bg-green-100'">
+            <span class="flex items-center justify-center h-full text-lg">
+              {{ activity.type === 'user' ? '👤' : '📄' }}
+            </span>
           </div>
-          <span class="user-role-badge" [class]="'role-badge-' + (user.role || 'viewer').toLowerCase()">
-            {{ user.role || 'Viewer' }}
-          </span>
+          <div class="flex-1">
+            <p class="font-medium text-gray-900">{{ activity.action }}</p>
+            <p class="text-sm text-gray-600">By {{ activity.user }}</p>
+          </div>
+          <span class="text-sm text-gray-500">{{ getRelativeTime(activity.timestamp) }}</span>
         </div>
       </div>
-
-      <ng-template #noUsers>
-        <div class="no-data-message">
-          <p>No recent users found</p>
-        </div>
-      </ng-template>
     </div>
 
-    <!-- Quick Actions Section -->
-    <div class="quick-actions-section">
-      <h2 class="section-title">Quick Actions</h2>
-      <div class="actions-grid">
-        <button class="action-btn action-btn-primary" routerLink="/admin">
-          <span class="action-icon">➕</span>
-          <span class="action-text">Add User</span>
-        </button>
-        <button class="action-btn action-btn-red" routerLink="/youtube">
-          <span class="action-icon">📹</span>
-          <span class="action-text">Create YouTube Post</span>
-        </button>
-        <button class="action-btn action-btn-green" routerLink="/study-notes">
-          <span class="action-icon">📚</span>
-          <span class="action-text">Create Study Note</span>
-        </button>
-        <button class="action-btn action-btn-purple" routerLink="/admin">
-          <span class="action-icon">📊</span>
-          <span class="action-text">View Reports</span>
-        </button>
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-4">⚡ Quick Actions</h2>
+      <div class="space-y-3">
+        <a routerLink="/study-notes" class="block w-full px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-center">
+          📚 Study Notes
+        </a>
+        <a routerLink="/youtube" class="block w-full px-4 py-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition font-medium text-center">
+          ▶️ YouTube
+        </a>
+        <a routerLink="/linkedin" class="block w-full px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-medium text-center">
+          💼 LinkedIn
+        </a>
+        <a routerLink="/blog" class="block w-full px-4 py-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition font-medium text-center">
+          ✍️ Blog
+        </a>
       </div>
     </div>
   </div>

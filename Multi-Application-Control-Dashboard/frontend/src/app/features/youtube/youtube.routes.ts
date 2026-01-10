@@ -1,9 +1,20 @@
 import { Routes } from '@angular/router';
-import { YouTubeListComponent } from './pages/youtube-list/youtube-list.component';
 
 export const YOUTUBE_ROUTES: Routes = [
   {
     path: '',
-    component: YouTubeListComponent,
+    loadComponent: () => import('./youtube-list/youtube-list.component').then(m => m.YoutubeListComponent)
   },
+  {
+    path: 'create',
+    loadComponent: () => import('./youtube-form/youtube-form.component').then(m => m.YoutubeFormComponent)
+  },
+  {
+    path: ':id',
+    loadComponent: () => import('./youtube-view/youtube-view.component').then(m => m.YoutubeViewComponent)
+  },
+  {
+    path: ':id/edit',
+    loadComponent: () => import('./youtube-form/youtube-form.component').then(m => m.YoutubeFormComponent)
+  }
 ];

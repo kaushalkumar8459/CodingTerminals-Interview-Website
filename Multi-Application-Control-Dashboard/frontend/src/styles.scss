@@ -1,15 +1,48 @@
-/* Global Styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* You can add global styles to this file, and also import other style files */
+
+/* Global custom utilities */
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow;
+  }
+
+  .badge-success {
+    @apply inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold;
+  }
+
+  .badge-warning {
+    @apply inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold;
+  }
+
+  .badge-danger {
+    @apply inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold;
+  }
+
+  .badge-info {
+    @apply inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold;
+  }
 }
 
 html, body {
-  height: 100%;
+  @apply h-full m-0 p-0;
 }
 
 body {
-  font-family: Roboto, "Helvetica Neue", sans-serif;
-  background-color: #fafafa;
+  @apply font-sans bg-gray-50;
 }

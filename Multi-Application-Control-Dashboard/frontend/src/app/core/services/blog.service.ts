@@ -1,93 +1,144 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+
+export type BlogPostStatus = 'draft' | 'published';
 
 export interface BlogPost {
-  id?: string;
+  id: string;
   title: string;
   content: string;
   excerpt?: string;
-  author?: string;
+  status: BlogPostStatus;
+  author: string;
+  tags: string[];
+  featuredImage?: string;
+  views: number;
+  likes: number;
+  comments: number;
+  createdAt: Date;
+  updatedAt: Date;
+  publishedAt?: Date;
+}
+
+export interface CreateBlogPostRequest {
+  title: string;
+  content: string;
+  excerpt?: string;
+  author: string;
+  tags: string[];
+  featuredImage?: string;
+}
+
+export interface UpdateBlogPostRequest {
+  title?: string;
+  content?: string;
+  excerpt?: string;
   tags?: string[];
-  status: 'draft' | 'published';
-  views?: number;
-  likes?: number;
-  comments?: number;
-  publishedDate?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
+  featuredImage?: string;
+  status?: BlogPostStatus;
+}
+
+export interface BlogPostFilter {
+  status?: BlogPostStatus;
+  searchQuery?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedBlogResponse {
+  data: BlogPost[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class BlogService {
-  private apiUrl = 'http://localhost:3000/api/blog';
-  private postsSubject = new BehaviorSubject<BlogPost[]>([]);
-  public posts$ = this.postsSubject.asObservable();
+  private apiUrl = `${environment.apiUrl}/blog`;
 
-  constructor(private http: HttpClient) {
-    this.loadPosts();
+  constructor(private http: HttpClient) { }
+
+  /**
+   * Get all blog posts with optional filters
+   */
+  getPosts(filters?: BlogPostFilter): Observable<PaginatedBlogResponse> {
+    let params = new HttpParams();
+
+    if (filters) {
+      if (filters.status) params = params.set('status', filters.status);
+      if (filters.searchQuery) params = params.set('search', filters.searchQuery);
+      if (filters.page) params = params.set('page', filters.page.toString());
+      if (filters.limit) params = params.set('limit', filters.limit.toString());
+    }
+
+    return this.http.get<PaginatedBlogResponse>(`${this.apiUrl}`, { params });
   }
 
-  loadPosts(): void {
-    this.http.get<BlogPost[]>(this.apiUrl).subscribe((posts) => {
-      this.postsSubject.next(posts);
-    });
-  }
-
-  getPosts(): Observable<BlogPost[]> {
-    return this.http.get<BlogPost[]>(this.apiUrl);
-  }
-
+  /**
+   * Get single blog post by ID
+   */
   getPostById(id: string): Observable<BlogPost> {
     return this.http.get<BlogPost>(`${this.apiUrl}/${id}`);
   }
 
-  createPost(post: BlogPost): Observable<BlogPost> {
-    return this.http.post<BlogPost>(this.apiUrl, post).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Create new blog post
+   */
+  createPost(data: CreateBlogPostRequest): Observable<BlogPost> {
+    return this.http.post<BlogPost>(`${this.apiUrl}`, data);
   }
 
-  updatePost(id: string, post: BlogPost): Observable<BlogPost> {
-    return this.http.put<BlogPost>(`${this.apiUrl}/${id}`, post).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Update existing blog post
+   */
+  updatePost(id: string, data: UpdateBlogPostRequest): Observable<BlogPost> {
+    return this.http.put<BlogPost>(`${this.apiUrl}/${id}`, data);
   }
 
-  deletePost(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-      tap(() => this.loadPosts())
-    );
+  /**
+   * Delete blog post
+   */
+  deletePost(id: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 
-  saveDraft(id: string, post: BlogPost): Observable<BlogPost> {
-    return this.http.post<BlogPost>(`${this.apiUrl}/${id}/draft`, post).pipe(
-      tap(() => this.loadPosts())
-    );
-  }
-
+  /**
+   * Publish a draft post
+   */
   publishPost(id: string): Observable<BlogPost> {
-    return this.http.post<BlogPost>(`${this.apiUrl}/${id}/publish`, {}).pipe(
-      tap(() => this.loadPosts())
-    );
+    return this.http.post<BlogPost>(`${this.apiUrl}/${id}/publish`, {});
   }
 
-  getDraftPosts(): Observable<BlogPost[]> {
-    return this.http.get<BlogPost[]>(`${this.apiUrl}?status=draft`);
+  /**
+   * Unpublish a published post
+   */
+  unpublishPost(id: string): Observable<BlogPost> {
+    return this.http.post<BlogPost>(`${this.apiUrl}/${id}/unpublish`, {});
   }
 
-  getPublishedPosts(): Observable<BlogPost[]> {
-    return this.http.get<BlogPost[]>(`${this.apiUrl}?status=published`);
+  /**
+   * Get posts by status
+   */
+  getPostsByStatus(status: BlogPostStatus): Observable<BlogPost[]> {
+    return this.http.get<BlogPost[]>(`${this.apiUrl}/status/${status}`);
   }
 
+  /**
+   * Search blog posts
+   */
   searchPosts(query: string): Observable<BlogPost[]> {
-    return this.http.get<BlogPost[]>(`${this.apiUrl}/search?q=${query}`);
+    const params = new HttpParams().set('search', query);
+    return this.http.get<BlogPost[]>(`${this.apiUrl}/search`, { params });
   }
 
-  getTrendingPosts(limit: number = 5): Observable<BlogPost[]> {
-    return this.http.get<BlogPost[]>(`${this.apiUrl}/trending?limit=${limit}`);
+  /**
+   * Get blog post analytics
+   */
+  getPostAnalytics(id: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${id}/analytics`);
   }
 }

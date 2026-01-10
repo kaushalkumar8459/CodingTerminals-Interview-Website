@@ -1,206 +1,141 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { ModuleSettingsService, Module } from '../../../core/services/module-settings.service';
-import { Observable } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { ModuleStore } from '../../../core/store/module.store';
+import { PermissionService } from '../../../core/services/permission.service';
 
 @Component({
   selector: 'app-module-settings',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './module-settings.component.html',
-  styleUrls: ['./module-settings.component.scss'],
+  styleUrls: ['./module-settings.component.scss']
 })
 export class ModuleSettingsComponent implements OnInit {
-  private moduleService = inject(ModuleSettingsService);
-  private fb = inject(FormBuilder);
-
-  modules$: Observable<Module[]>;
-  moduleForm: FormGroup;
-  selectedModule: Module | null = null;
-  isFormVisible = false;
-  isEditing = false;
-  filteredModules: Module[] = [];
-  loading = false;
-  error: string | null = null;
-  success: string | null = null;
-  stats: any = null;
-
-  constructor() {
-    this.modules$ = this.moduleService.modules$;
-    this.moduleForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      description: ['', Validators.required],
-      enabled: [true],
-      icon: [''],
-      category: [''],
-    });
-  }
+  // ===== INJECT STORE AND SERVICES =====
+  readonly moduleStore = inject(ModuleStore);
+  private permissionService = inject(PermissionService);
 
   ngOnInit(): void {
-    this.loadModules();
-    this.loadStats();
+    // Load modules from store on component init
+    this.moduleStore['loadModules']();
   }
 
-  loadModules(): void {
-    this.loading = true;
-    this.moduleService.getAllModules().subscribe(
-      (modules) => {
-        this.filteredModules = modules;
-        this.loading = false;
-      },
-      (error) => {
-        this.error = 'Failed to load modules';
-        this.loading = false;
-      }
-    );
+  // ===== EXPOSED STORE SIGNALS FOR TEMPLATE =====
+
+  /**
+   * Get modules list from store
+   */
+  get modules() {
+    return this.moduleStore.modules();
   }
 
-  loadStats(): void {
-    this.moduleService.getModuleStats().subscribe(
-      (stats) => {
-        this.stats = stats;
-      },
-      (error) => {
-        console.error('Failed to load stats', error);
-      }
-    );
+  /**
+   * Get loading state from store
+   */
+  get loading() {
+    return this.moduleStore.isLoading();
   }
 
-  openForm(module?: Module): void {
-    if (module) {
-      this.isEditing = true;
-      this.selectedModule = module;
-      this.moduleForm.patchValue(module);
-    } else {
-      this.isEditing = false;
-      this.selectedModule = null;
-      this.moduleForm.reset({ enabled: true });
-    }
-    this.isFormVisible = true;
+  /**
+   * Get error state from store
+   */
+  get error() {
+    return this.moduleStore.error();
   }
 
-  closeForm(): void {
-    this.isFormVisible = false;
-    this.moduleForm.reset();
-    this.selectedModule = null;
+  /**
+   * Get success state from store
+   */
+  get success() {
+    return this.moduleStore.success();
   }
 
-  saveModule(): void {
-    if (this.moduleForm.invalid) return;
-
-    const moduleData: Module = this.moduleForm.value;
-
-    if (this.isEditing && this.selectedModule?.id) {
-      this.moduleService.updateModule(this.selectedModule.id, moduleData).subscribe(
-        () => {
-          this.success = 'Module updated successfully';
-          this.closeForm();
-          this.loadModules();
-          this.loadStats();
-          setTimeout(() => (this.success = null), 3000);
-        },
-        (error) => {
-          this.error = 'Failed to update module';
-        }
-      );
-    } else {
-      this.moduleService.createModule(moduleData).subscribe(
-        () => {
-          this.success = 'Module created successfully';
-          this.closeForm();
-          this.loadModules();
-          this.loadStats();
-          setTimeout(() => (this.success = null), 3000);
-        },
-        (error) => {
-          this.error = 'Failed to create module';
-        }
-      );
-    }
+  /**
+   * Get isSaving state from store
+   */
+  get isSaving() {
+    return this.moduleStore.isSavingState();
   }
 
-  deleteModule(id: string, name: string): void {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
-      this.moduleService.deleteModule(id).subscribe(
-        () => {
-          this.success = 'Module deleted successfully';
-          this.loadModules();
-          this.loadStats();
-          setTimeout(() => (this.success = null), 3000);
-        },
-        (error) => {
-          this.error = 'Failed to delete module';
-        }
-      );
-    }
+  /**
+   * Get active modules count from store
+   */
+  get activeModulesCount() {
+    return this.moduleStore.activeModulesCount();
   }
 
-  enableModule(id: string): void {
-    this.moduleService.enableModule(id).subscribe(
-      () => {
-        this.success = 'Module enabled successfully';
-        this.loadModules();
-        this.loadStats();
-        setTimeout(() => (this.success = null), 3000);
-      },
-      (error) => {
-        this.error = 'Failed to enable module';
-      }
-    );
+  /**
+   * Get changed modules count from store
+   */
+  get changedModulesCount() {
+    return this.moduleStore.changedModulesCount();
   }
 
-  disableModule(id: string): void {
-    this.moduleService.disableModule(id).subscribe(
-      () => {
-        this.success = 'Module disabled successfully';
-        this.loadModules();
-        this.loadStats();
-        setTimeout(() => (this.success = null), 3000);
-      },
-      (error) => {
-        this.error = 'Failed to disable module';
-      }
-    );
+  /**
+   * Get has changes flag from store
+   */
+  get hasChanges() {
+    return this.moduleStore.hasChanges();
   }
 
-  toggleModule(id: string, currentState: boolean): void {
-    this.moduleService.toggleModule(id, !currentState).subscribe(
-      () => {
-        this.success = `Module ${!currentState ? 'enabled' : 'disabled'} successfully`;
-        this.loadModules();
-        this.loadStats();
-        setTimeout(() => (this.success = null), 3000);
-      },
-      (error) => {
-        this.error = 'Failed to toggle module';
-      }
-    );
+  // ===== MODULE ACTIONS =====
+
+  /**
+   * Toggle module enabled/disabled state
+   * Dispatches action to store (NO direct API call)
+   */
+  toggleModule(module: any): void {
+    this.moduleStore['toggleModule'](module);
   }
 
-  getModulesByCategory(category: string): void {
-    this.loading = true;
-    this.moduleService.getModulesByCategory(category).subscribe(
-      (modules) => {
-        this.filteredModules = modules;
-        this.loading = false;
-      },
-      (error) => {
-        this.error = 'Failed to filter modules';
-        this.loading = false;
-      }
-    );
+  /**
+   * Save all module changes to backend
+   * Dispatches action to store (NO direct API call)
+   */
+  saveModuleChanges(): void {
+    this.moduleStore['saveModuleChanges']();
   }
 
-  showAllModules(): void {
-    this.loadModules();
+  /**
+   * Reset all changes back to previous state
+   * Dispatches action to store (NO direct API call)
+   */
+  resetChanges(): void {
+    this.moduleStore['resetChanges']();
   }
 
-  getStatusClass(enabled: boolean): string {
-    return enabled ? 'badge-success' : 'badge-secondary';
+  // ===== UI HELPERS =====
+
+  /**
+   * Get module icon emoji
+   */
+  getModuleIcon(name: string): string {
+    const icons: { [key: string]: string } = {
+      'Blog': '✍️',
+      'YouTube': '📺',
+      'LinkedIn': '💼',
+      'Study Notes': '📚',
+      'admin': '⚙️',
+      'default': '📦'
+    };
+    return icons[name] || icons['default'];
   }
 
-  getStatusText(enabled: boolean): string {
-    return enabled ? 'Enabled' : 'Disabled';
+  /**
+   * Get status badge CSS classes
+   */
+  getStatusBadgeClass(enabled: boolean): string {
+    const baseClass = 'px-3 py-1 rounded-full text-sm font-semibold';
+    return enabled
+      ? `${baseClass} bg-green-100 text-green-800`
+      : `${baseClass} bg-red-100 text-red-800`;
+  }
+
+  /**
+   * Check if user is admin (using available method)
+   */
+  get isSuperAdmin(): boolean {
+    return this.permissionService.canEdit();
   }
 }

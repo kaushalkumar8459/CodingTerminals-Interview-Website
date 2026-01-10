@@ -1,118 +1,57 @@
-<div class="container-fluid py-5">
-  <div class="row">
-    <div class="col-lg-8 mx-auto">
-      <!-- Back Navigation -->
-      <div class="mb-4">
-        <a routerLink="/blog" class="btn btn-outline-secondary">
-          <i class="fas fa-arrow-left"></i> Back to Blog Posts
-        </a>
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">✍️ {{ post?.title }}</h1>
+    <a routerLink="/blog" class="btn-secondary">← Back</a>
+  </div>
+
+  <!-- Article Container -->
+  <div *ngIf="post" class="bg-white rounded-lg shadow-md p-8 max-w-4xl">
+    <!-- Metadata -->
+    <div class="mb-6 pb-6 border-b border-gray-200">
+      <span [class]="post.status === 'published' ? 'badge-success' : 'badge-warning'">
+        {{ post.status }}
+      </span>
+      <p class="text-gray-600 text-sm mt-2">By {{ post.author }} • {{ post.createdAt | date }}</p>
+    </div>
+
+    <!-- Excerpt -->
+    <p class="text-lg text-gray-700 italic mb-6">{{ post.excerpt }}</p>
+
+    <!-- Content -->
+    <div class="prose prose-lg max-w-none mb-6 text-gray-700 leading-relaxed">
+      {{ post.content }}
+    </div>
+
+    <!-- Tags -->
+    <div *ngIf="post.tags && post.tags.length > 0" class="mb-6 flex flex-wrap gap-2">
+      <span *ngFor="let tag of post.tags" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+        #{{ tag }}
+      </span>
+    </div>
+
+    <!-- Engagement Stats -->
+    <div class="mb-6 grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Views</p>
+        <p class="text-2xl font-bold text-gray-900">{{ post.views }}</p>
       </div>
-
-      <!-- Loading State -->
-      <div *ngIf="loading" class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Likes</p>
+        <p class="text-2xl font-bold text-red-500">❤️ {{ post.likes }}</p>
       </div>
-
-      <!-- Blog Post Content -->
-      <div *ngIf="post$ | async as post" class="card blog-card">
-        <!-- Post Header -->
-        <div class="card-header bg-light">
-          <div class="mb-3">
-            <h1 class="mb-2">{{ post.title }}</h1>
-            <p class="lead text-muted mb-0">{{ post.excerpt }}</p>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <div>
-              <span class="badge" [ngClass]="getStatusBadgeClass(post.status)">
-                {{ post.status | uppercase }}
-              </span>
-              <span class="badge bg-info ms-2">
-                <i class="fas fa-eye"></i> {{ post.views || 0 }} views
-              </span>
-            </div>
-            <small class="text-muted">
-              By <strong>{{ post.author || 'Anonymous' }}</strong>
-              <br />
-              <i class="fas fa-calendar"></i> {{ post.publishedDate | date: 'long' }}
-            </small>
-          </div>
-        </div>
-
-        <!-- Post Body -->
-        <div class="card-body">
-          <article class="blog-content">
-            {{ post.content }}
-          </article>
-
-          <!-- Tags Section -->
-          <div class="tags-section mt-4 pt-4 border-top" *ngIf="post.tags && post.tags.length > 0">
-            <h6 class="mb-3">Tags</h6>
-            <div class="tags-container">
-              <span *ngFor="let tag of post.tags" class="badge bg-light text-dark tag-badge">
-                <i class="fas fa-tag"></i> {{ tag }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Engagement Section -->
-          <div class="engagement-section mt-4 pt-4 border-top">
-            <div class="row">
-              <div class="col-md-6">
-                <button class="btn btn-outline-primary w-100">
-                  <i class="fas fa-heart"></i> Like ({{ post.likes || 0 }})
-                </button>
-              </div>
-              <div class="col-md-6">
-                <button class="btn btn-outline-secondary w-100">
-                  <i class="fas fa-comment"></i> Comments ({{ post.comments || 0 }})
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Share Section -->
-          <div class="share-section mt-4 pt-4 border-top">
-            <h6 class="mb-3">Share This Article</h6>
-            <div class="btn-group btn-group-sm" role="group">
-              <button class="btn btn-outline-primary" title="Share on Twitter">
-                <i class="fab fa-twitter"></i>
-              </button>
-              <button class="btn btn-outline-info" title="Share on Facebook">
-                <i class="fab fa-facebook"></i>
-              </button>
-              <button class="btn btn-outline-secondary" title="Share on LinkedIn">
-                <i class="fab fa-linkedin"></i>
-              </button>
-              <button class="btn btn-outline-secondary" (click)="copyToClipboard(window.location.href)" title="Copy Link">
-                <i class="fas fa-copy"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Post Footer -->
-        <div class="card-footer bg-light">
-          <div class="d-flex justify-content-between align-items-center">
-            <small class="text-muted">
-              Last updated: {{ post.updatedAt | date: 'short' }}
-            </small>
-            <a routerLink="/blog" class="btn btn-sm btn-primary">
-              <i class="fas fa-edit"></i> Edit Post
-            </a>
-          </div>
-        </div>
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Comments</p>
+        <p class="text-2xl font-bold text-blue-500">💬 {{ post.comments }}</p>
       </div>
+    </div>
 
-      <!-- Related Posts Section (Optional) -->
-      <div class="mt-5">
-        <h4 class="mb-4">Related Posts</h4>
-        <div class="alert alert-info">
-          <i class="fas fa-info-circle"></i> Related posts feature coming soon
-        </div>
-      </div>
+    <!-- Share Buttons -->
+    <div class="flex flex-wrap gap-2">
+      <button (click)="shareOnSocial('twitter')" class="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500">𝕏 Twitter</button>
+      <button (click)="shareOnSocial('facebook')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">f Facebook</button>
+      <button (click)="shareOnSocial('linkedin')" class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900">in LinkedIn</button>
+      <button (click)="copyLink()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">🔗 Copy Link</button>
     </div>
   </div>
 </div>
