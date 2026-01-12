@@ -77,12 +77,6 @@ export class YoutubeStore extends signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withComputed((state: any) => ({
-    // ===== STATE ACCESSORS =====
-    videos: computed(() => state.videos()),
-    currentVideo: computed(() => state.currentVideo()),
-    error: computed(() => state.error()),
-    success: computed(() => state.success()),
-
     // ===== LOADING & UI STATES =====
     isLoading: computed(() => state.loading()),
     hasError: computed(() => state.error() !== null),
@@ -92,7 +86,6 @@ export class YoutubeStore extends signalStore(
     totalPages: computed(() => Math.ceil(state.totalVideos() / state.pageSize())),
     hasNextPage: computed(() => state.currentPage() < Math.ceil(state.totalVideos() / state.pageSize())),
     hasPreviousPage: computed(() => state.currentPage() > 1),
-    currentPage: computed(() => state.currentPage()),
 
     // ===== DATA PRESENCE CHECKS =====
     hasVideos: computed(() => state.videos().length > 0),
@@ -544,65 +537,4 @@ export class YoutubeStore extends signalStore(
     }
   }))
 ) {
-  // ===== TYPE DEFINITIONS FOR STORE STATE SIGNALS =====
-  // These properties are automatically created by signalStore with withState
-  override  readonly videos!: Signal<YoutubeVideoWithUI[]>;
-  override  readonly currentVideo!: Signal<YoutubeVideoWithUI | null>;
-  override readonly loading!: Signal<boolean>;
-  override readonly error!: Signal<string | null>;
-  override readonly success!: Signal<string | null>;
-  override  readonly currentPage!: Signal<number>;
-  override  readonly pageSize!: Signal<number>;
-  override  readonly totalVideos!: Signal<number>;
-  override readonly selectedCategory!: Signal<YoutubeCategory | 'all'>;
-  override readonly selectedStatus!: Signal<YoutubeVideoStatus | 'all'>;
-  override readonly searchQuery!: Signal<string>;
-
-  // ===== TYPE DEFINITIONS FOR COMPUTED SIGNALS =====
-  // These properties are automatically created by signalStore with withComputed
-  override  readonly totalPages!: Signal<number>;
-  override  readonly hasNextPage!: Signal<boolean>;
-  override  readonly hasPreviousPage!: Signal<boolean>;
-  override readonly hasVideos!: Signal<boolean>;
-  override readonly isEmpty!: Signal<boolean>;
-  override readonly hasCurrentVideo!: Signal<boolean>;
-  override  readonly hasFilters!: Signal<boolean>;
-  override  readonly filteredCount!: Signal<number>;
-  override readonly draftCount!: Signal<number>;
-  override readonly publishedCount!: Signal<number>;
-  override  readonly archivedCount!: Signal<number>;
-  override readonly frontendCount!: Signal<number>;
-  override readonly backendCount!: Signal<number>;
-  override readonly databaseCount!: Signal<number>;
-  override readonly devopsCount!: Signal<number>;
-  override readonly totalViews!: Signal<number>;
-  override readonly totalLikes!: Signal<number>;
-  override readonly averageViews!: Signal<number>;
-  override readonly averageLikes!: Signal<number>;
-  override readonly isDataFresh!: Signal<boolean>;
-  override readonly isLoading!: Signal<boolean>;
-  override readonly hasError!: Signal<boolean>;
-  override readonly hasSuccess!: Signal<boolean>;
-
-  // ===== TYPE DEFINITIONS FOR METHODS =====
-  // These methods are automatically created by signalStore with withMethods
-  override loadVideos!: () => Promise<void>;
-  override  loadVideoById!: (id: string) => Promise<void>;
-  override createVideo!: (data: CreateYoutubeVideoRequest) => Promise<void>;
-  override  updateVideo!: (id: string, data: UpdateYoutubeVideoRequest) => Promise<void>;
-  override updateVideoStatus!: (id: string, status: YoutubeVideoStatus) => Promise<void>;
-  override publishVideo!: (id: string) => Promise<void>;
-  override archiveVideo!: (id: string) => Promise<void>;
-  override  deleteVideo!: (id: string) => Promise<void>;
-  override filterByCategory!: (category: YoutubeCategory | 'all') => void;
-  override filterByStatus!: (status: YoutubeVideoStatus | 'all') => void;
-  override searchVideos!: (query: string) => void;
-  override  clearFilters!: () => void;
-  override  goToPage!: (page: number) => void;
-  override  previousPage!: () => void;
-  override nextPage!: () => void;
-  override getPageNumbers!: () => number[];
-  override clearCurrentVideo!: () => void;
-  override clearError!: () => void;
-  override clearSuccess!: () => void;
 }

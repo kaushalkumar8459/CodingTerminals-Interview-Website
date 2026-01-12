@@ -354,22 +354,4 @@ export class BlogStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  override loadPosts!: () => Promise<void>;
-  override loadPostById!: (id: string) => Promise<void>;
-  override createPost!: (data: CreateBlogPostRequest) => Promise<void>;
-  override updatePost!: (id: string, data: UpdateBlogPostRequest) => Promise<void>;
-  override publishPost!: (id: string) => Promise<void>;
-  override unpublishPost!: (id: string) => Promise<void>;
-  override deletePost!: (id: string) => Promise<void>;
-  override filterByStatus!: (status: 'all' | 'draft' | 'published') => void;
-  override searchPosts!: (query: string) => void;
-  override clearFilters!: () => void;
-  override goToPage!: (page: number) => void;
-  override previousPage!: () => void;
-  override nextPage!: () => void;
-  override getPageNumbers!: () => number[];
-  override clearCurrentPost!: () => void;
-  override clearError!: () => void;
-  override clearSuccess!: () => void;
 }

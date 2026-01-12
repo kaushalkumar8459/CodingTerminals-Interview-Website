@@ -34,11 +34,6 @@ export class ProfileStore extends signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withComputed((state) => ({
-    // ===== STATE ACCESSORS =====
-    currentUser: computed(() => state.currentUser()),
-    error: computed(() => state.error()),
-    success: computed(() => state.success()),
-    
     // ===== LOADING & UI STATES =====
     isLoading: computed(() => state.loading()),
     hasError: computed(() => state.error() !== null),

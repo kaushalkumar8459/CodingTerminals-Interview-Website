@@ -370,48 +370,4 @@ export class LinkedinStore extends signalStore(
     }
   }))
 ) {
-  // ===== TYPE DEFINITIONS FOR STORE STATE SIGNALS =====
-  // These properties are automatically created by signalStore with withState
-  override readonly posts!: Signal<LinkedinPostWithUI[]>;
-  override readonly currentPost!: Signal<LinkedinPostWithUI | null>;
-  override readonly loading!: Signal<boolean>;
-  override readonly error!: Signal<string | null>;
-  override readonly success!: Signal<string | null>;
-  override readonly currentPage!: Signal<number>;
-  override readonly pageSize!: Signal<number>;
-  override readonly totalPosts!: Signal<number>;
-  override readonly selectedStatus!: Signal<PostStatus | 'all'>;
-  override readonly searchQuery!: Signal<string>;
-
-  // ===== TYPE DEFINITIONS FOR COMPUTED SIGNALS =====
-  // These properties are automatically created by signalStore with withComputed
-  override readonly totalPages!: Signal<number>;
-  override readonly hasFilters!: Signal<boolean>;
-  override readonly filteredCount!: Signal<number>;
-  override readonly isLoading!: Signal<boolean>;
-  override readonly draftCount!: Signal<number>;
-  override readonly scheduledCount!: Signal<number>;
-  override readonly publishedCount!: Signal<number>;
-  override readonly archivedCount!: Signal<number>;
-  override readonly totalImpressions!: Signal<number>;
-  override readonly totalEngagement!: Signal<number>;
-  override readonly isEmpty!: Signal<boolean>;
-
-  // ===== TYPE DEFINITIONS FOR METHODS =====
-  // These methods are automatically created by signalStore with withMethods
-  override loadPosts!: () => Promise<void>;
-  override loadPostById!: (id: string) => Promise<void>;
-  override createPost!: (data: CreatePostRequest) => Promise<void>;
-  override updatePost!: (id: string, data: UpdatePostRequest) => Promise<void>;
-  override deletePost!: (id: string) => Promise<void>;
-  override publishPost!: (id: string) => Promise<void>;
-  override schedulePost!: (id: string, scheduledAt: Date) => Promise<void>;
-  override archivePost!: (id: string) => Promise<void>;
-  override filterByStatus!: (status: PostStatus | 'all') => void;
-  override searchPosts!: (query: string) => void;
-  override clearFilters!: () => void;
-  override goToPage!: (page: number) => void;
-  override previousPage!: () => void;
-  override nextPage!: () => void;
-  override getPageNumbers!: () => number[];
 }

@@ -43,11 +43,6 @@ export class SettingsStore extends signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withComputed((state) => ({
-    // ===== STATE ACCESSORS =====
-    settings: computed(() => state.settings()),
-    error: computed(() => state.error()),
-    success: computed(() => state.success()),
-    
     // ===== LOADING & UI STATES =====
     isLoading: computed(() => state.loading()),
     hasError: computed(() => state.error() !== null),
@@ -361,19 +356,4 @@ export class SettingsStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  // These methods are automatically created by signalStore with withMethods
-  override initializeSettings!: () => Promise<void>;
-  override loadSettings!: () => Promise<void>;
-  override updateSetting!: (fieldName: keyof SettingsPreferences, value: any) => Promise<void>;
-  override updateAllSettings!: (settings: SettingsPreferences) => Promise<void>;
-  override resetSettings!: () => Promise<void>;
-  override applyTheme!: (theme: 'light' | 'dark') => void;
-  override changePassword!: (currentPassword: string, newPassword: string) => Promise<void>;
-  override toggleSetting!: (fieldName: keyof SettingsPreferences) => Promise<void>;
-  override getSetting!: (fieldName: keyof SettingsPreferences) => any;
-  override isSettingEnabled!: (fieldName: keyof SettingsPreferences) => boolean;
-  override clearError!: () => void;
-  override clearSuccess!: () => void;
-  override isFieldSaving!: (fieldName: string) => boolean;
 }

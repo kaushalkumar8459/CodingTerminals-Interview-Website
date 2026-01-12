@@ -259,17 +259,4 @@ export class AuthStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  override initializeAuth!: () => Promise<void>;
-  override login!: (credentials: LoginRequest) => Promise<void>;
-  override register!: (userData: any) => Promise<void>;
-  override logout!: () => void;
-  override refreshAccessToken!: () => Promise<void>;
-  override loadProfile!: () => Promise<void>;
-  override clearAuth!: () => void;
-  override setError!: (error: string) => void;
-  override clearError!: () => void;
-  override hasRole!: (role: string) => boolean;
-  override hasModuleAccess!: (moduleName: string) => boolean;
-  override updateCurrentUser!: (user: Partial<User>) => void;
 }

@@ -340,21 +340,4 @@ export class UserStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  // These methods are automatically created by signalStore with withMethods
-  override loadUsers!: () => Promise<void>;
-  override createUser!: (user: Omit<User, 'id'>) => Promise<void>;
-  override updateUser!: (id: string, user: Partial<User>) => Promise<void>;
-  override deleteUser!: (id: string) => Promise<void>;
-  override assignModules!: (userId: string, modules: string[]) => Promise<void>;
-  override changeUserRole!: (userId: string, role: string) => Promise<void>;
-  override changeUserStatus!: (userId: string, status: string) => Promise<void>;
-  override filterByRole!: (role: string) => void;
-  override filterByStatus!: (status: string) => void;
-  override searchUsers!: (query: string) => void;
-  override clearFilters!: () => void;
-  override goToPage!: (page: number) => void;
-  override previousPage!: () => void;
-  override nextPage!: () => void;
-  override getPageNumbers!: () => number[];
 }

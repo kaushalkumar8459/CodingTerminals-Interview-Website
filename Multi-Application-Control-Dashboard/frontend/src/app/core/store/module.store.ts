@@ -171,11 +171,4 @@ export class ModuleStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  override loadModules!: () => Promise<void>;
-  override toggleModule!: (module: ModuleWithUI) => void;
-  override saveModuleChanges!: () => Promise<void>;
-  override resetChanges!: () => void;
-  override isModuleEnabled!: (moduleName: string) => boolean;
-  override getEnabledModules!: () => ModuleWithUI[];
 }

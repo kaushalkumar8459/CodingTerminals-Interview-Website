@@ -70,12 +70,6 @@ export class StudyNotesStore extends signalStore(
   { providedIn: 'root' },
   withState(initialState),
   withComputed((state) => ({
-    // ===== STATE ACCESSORS =====
-    notes: computed(() => state.notes()),
-    currentNote: computed(() => state.currentNote()),
-    error: computed(() => state.error()),
-    success: computed(() => state.success()),
-    
     // ===== LOADING & UI STATES =====
     isLoading: computed(() => state.loading()),
     hasError: computed(() => state.error() !== null),
@@ -85,7 +79,6 @@ export class StudyNotesStore extends signalStore(
     totalPages: computed(() => Math.ceil(state.totalNotes() / state.pageSize())),
     hasNextPage: computed(() => state.currentPage() < Math.ceil(state.totalNotes() / state.pageSize())),
     hasPreviousPage: computed(() => state.currentPage() > 1),
-    currentPage: computed(() => state.currentPage()),
     
     // ===== DATA PRESENCE CHECKS =====
     hasNotes: computed(() => state.notes().length > 0),
@@ -439,21 +432,4 @@ export class StudyNotesStore extends signalStore(
     }
   }))
 ) {
-  // ===== METHOD TYPE DECLARATIONS =====
-  // These methods are automatically created by signalStore with withMethods
-  override loadNotes!: () => Promise<void>;
-  override loadNoteById!: (id: string) => Promise<void>;
-  override createNote!: (data: CreateStudyNoteRequest) => Promise<void>;
-  override updateNote!: (id: string, data: UpdateStudyNoteRequest) => Promise<void>;
-  override deleteNote!: (id: string) => Promise<void>;
-  override filterByCategory!: (category: StudyNoteCategory | 'all') => void;
-  override searchNotes!: (query: string) => void;
-  override clearFilters!: () => void;
-  override goToPage!: (page: number) => void;
-  override previousPage!: () => void;
-  override nextPage!: () => void;
-  override getPageNumbers!: () => number[];
-  override clearCurrentNote!: () => void;
-  override clearError!: () => void;
-  override clearSuccess!: () => void;
 }
