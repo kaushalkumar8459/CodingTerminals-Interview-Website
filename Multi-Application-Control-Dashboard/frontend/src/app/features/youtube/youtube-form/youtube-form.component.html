@@ -1,0 +1,80 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">▶️ {{ form.get('title')?.value ? 'Edit Video' : 'Add Video' }}</h1>
+    <a routerLink="/youtube" class="btn-secondary">← Back</a>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white rounded-lg shadow-md p-8">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <!-- Title -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Video Title</label>
+        <input 
+          type="text"
+          formControlName="title"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter video title"
+        >
+        <div *ngIf="submitted && form.get('title')?.errors" class="text-red-500 text-sm mt-1">
+          Title is required
+        </div>
+      </div>
+
+      <!-- Video URL -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">YouTube URL</label>
+        <input 
+          type="url"
+          formControlName="videoUrl"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="https://youtube.com/watch?v=..."
+        >
+        <div *ngIf="submitted && form.get('videoUrl')?.errors" class="text-red-500 text-sm mt-1">
+          Valid URL is required
+        </div>
+      </div>
+
+      <!-- Category -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Category</label>
+        <select 
+          formControlName="category"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+        >
+          <option value="">Select category</option>
+          <option value="Frontend">Frontend</option>
+          <option value="Backend">Backend</option>
+          <option value="Tutorials">Tutorials</option>
+        </select>
+        <div *ngIf="submitted && form.get('category')?.errors" class="text-red-500 text-sm mt-1">
+          Category is required
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Description</label>
+        <textarea 
+          formControlName="description"
+          rows="4"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter video description"
+        ></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex space-x-4">
+        <button 
+          type="submit"
+          [disabled]="loading"
+          class="btn-primary"
+        >
+          {{ loading ? 'Saving...' : 'Save' }}
+        </button>
+        <a routerLink="/youtube" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

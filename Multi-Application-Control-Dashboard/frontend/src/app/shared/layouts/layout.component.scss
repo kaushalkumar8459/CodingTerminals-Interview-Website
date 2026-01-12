@@ -1,0 +1,101 @@
+// Layout component styles
+// Variables
+$bg-light: #F9FAFB;
+$bg-dark: #111827;
+$transition-duration: 0.3s;
+
+// Mixins
+@mixin smooth-transition {
+  transition: all $transition-duration cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// Layout wrapper
+.layout-wrapper {
+  @include smooth-transition;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: $bg-light;
+
+  &.dark-mode {
+    background-color: $bg-dark;
+  }
+}
+
+// Main content area
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  @include smooth-transition;
+
+  // Page content
+  main {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: $bg-light;
+    @include smooth-transition;
+
+    &.dark-mode {
+      background-color: $bg-dark;
+    }
+
+    // Scrollbar styling
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #D1D5DB;
+      border-radius: 4px;
+
+      &:hover {
+        background: #9CA3AF;
+      }
+    }
+
+    // Dark mode scrollbar
+    &.dark-mode {
+      &::-webkit-scrollbar-thumb {
+        background: #4B5563;
+
+        &:hover {
+          background: #6B7280;
+        }
+      }
+    }
+  }
+}
+
+// Content padding responsive
+.page-content {
+  padding: 1rem;
+
+  @media (min-width: 640px) {
+    padding: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 2rem;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Apply fade-in animation
+.layout-wrapper {
+  animation: fadeIn 0.3s ease-out;
+}

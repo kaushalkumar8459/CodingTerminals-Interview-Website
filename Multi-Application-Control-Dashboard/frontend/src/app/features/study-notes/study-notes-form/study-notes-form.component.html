@@ -1,0 +1,81 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">📚 {{ form.get('title')?.value ? 'Edit Note' : 'Create Note' }}</h1>
+    <a routerLink="/study-notes" class="btn-secondary">← Back</a>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white rounded-lg shadow-md p-8">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <!-- Title -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Title</label>
+        <input 
+          type="text"
+          formControlName="title"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter note title"
+        >
+        <div *ngIf="submitted && form.get('title')?.errors" class="text-red-500 text-sm mt-1">
+          Title is required
+        </div>
+      </div>
+
+      <!-- Category -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Category</label>
+        <select 
+          formControlName="category"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+        >
+          <option value="">Select category</option>
+          <option value="Frontend">Frontend</option>
+          <option value="Backend">Backend</option>
+          <option value="Database">Database</option>
+          <option value="DevOps">DevOps</option>
+        </select>
+        <div *ngIf="submitted && form.get('category')?.errors" class="text-red-500 text-sm mt-1">
+          Category is required
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Content</label>
+        <textarea 
+          formControlName="content"
+          rows="8"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter note content"
+        ></textarea>
+        <div *ngIf="submitted && form.get('content')?.errors" class="text-red-500 text-sm mt-1">
+          Content is required
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Tags</label>
+        <input 
+          type="text"
+          formControlName="tags"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter tags separated by commas"
+        >
+      </div>
+
+      <!-- Actions -->
+      <div class="flex space-x-4">
+        <button 
+          type="submit"
+          [disabled]="loading"
+          class="btn-primary"
+        >
+          {{ loading ? 'Saving...' : 'Save' }}
+        </button>
+        <a routerLink="/study-notes" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

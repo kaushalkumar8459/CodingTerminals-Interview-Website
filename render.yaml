@@ -2,20 +2,15 @@
 # RENDER.YAML - Deployment Configuration
 # ==============================================
 # This file tells Render how to deploy your application
-# Place this file at the ROOT of your repository (same level as .git)
 # Official Render Blueprints documentation:
 # https://render.com/docs/blueprint-spec
 
 services:
   - type: web
-    name: coding-terminals-fullstack
-    runtime: node                    # ✅ REQUIRED: Node.js runtime
+    name: coding-terminals-backend
+    runtime: node
     startCommand: npm start
     buildCommand: npm install
-    
-    # Root directory where package.json is located
-    # Path is relative to where render.yaml file is located
-    rootDir: youtube&studynote/backend
     
     # Region
     region: oregon
