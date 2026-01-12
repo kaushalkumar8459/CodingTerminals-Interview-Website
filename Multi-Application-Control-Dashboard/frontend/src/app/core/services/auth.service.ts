@@ -6,7 +6,6 @@ import { environment } from '../../../environments/environment';
 export interface User {
   id: string;
   email: string;
-  username: string;
   firstName: string;
   lastName: string;
   role: 'super_admin' | 'admin' | 'viewer';

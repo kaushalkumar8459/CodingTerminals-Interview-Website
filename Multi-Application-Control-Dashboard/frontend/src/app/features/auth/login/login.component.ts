@@ -65,6 +65,9 @@ export class LoginComponent implements OnInit {
   /**
    * Handle login form submission (NO direct API call - goes through store)
    */
+  /**
+ * Handle login form submission (NO direct API call - goes through store)
+ */
   async onSubmit(): Promise<void> {
     this.submitted = true;
 
@@ -74,5 +77,19 @@ export class LoginComponent implements OnInit {
 
     // Call store method instead of authService
     await this.authStore.login(this.loginForm.value);
+  }
+
+  /**
+   * Fill form with demo credentials
+   */
+  fillDemoCredentials(role: 'super_admin' | 'admin' | 'viewer'): void {
+    const credentials = {
+      super_admin: { email: 'admin@example.com', password: 'AdminPass123!' },
+      admin: { email: 'editor@example.com', password: 'EditorPass123!' },
+      viewer: { email: 'viewer@example.com', password: 'ViewerPass123!' }
+    };
+
+    this.loginForm.patchValue(credentials[role]);
+    this.submitted = false;
   }
 }

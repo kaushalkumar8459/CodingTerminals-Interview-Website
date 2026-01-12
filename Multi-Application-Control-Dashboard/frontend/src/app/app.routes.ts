@@ -15,6 +15,10 @@ export const routes: Routes = [
         component: LoginComponent
       },
       {
+        path: 'register',
+        loadComponent: () => import('./features/auth/registration/register.component').then(m => m.RegisterComponent)
+      },
+      {
         path: '',
         redirectTo: 'login',
         pathMatch: 'full'
@@ -32,14 +36,13 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardComponent,
-        canActivate: [AuthGuard]
       },
 
       // Study Notes Module (Protected by ModuleGuard)
       {
         path: 'study-notes',
         loadChildren: () => import('./features/study-notes/study-notes.routes').then(m => m.STUDY_NOTES_ROUTES),
-        canActivate: [AuthGuard, ModuleGuard],
+        canActivate: [ModuleGuard],
         data: { module: 'Study Notes' }
       },
 
@@ -47,7 +50,7 @@ export const routes: Routes = [
       {
         path: 'youtube',
         loadChildren: () => import('./features/youtube/youtube.routes').then(m => m.YOUTUBE_ROUTES),
-        canActivate: [AuthGuard, ModuleGuard],
+        canActivate: [ModuleGuard],
         data: { module: 'YouTube' }
       },
 
@@ -55,7 +58,7 @@ export const routes: Routes = [
       {
         path: 'linkedin',
         loadChildren: () => import('./features/linkedin/linkedin.routes').then(m => m.LINKEDIN_ROUTES),
-        canActivate: [AuthGuard, ModuleGuard],
+        canActivate: [ModuleGuard],
         data: { module: 'LinkedIn' }
       },
 
@@ -63,7 +66,7 @@ export const routes: Routes = [
       {
         path: 'blog',
         loadChildren: () => import('./features/blog/blog.routes').then(m => m.BLOG_ROUTES),
-        canActivate: [AuthGuard, ModuleGuard],
+        canActivate: [ModuleGuard],
         data: { module: 'Blog' }
       },
 
@@ -71,7 +74,7 @@ export const routes: Routes = [
       {
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
-        canActivate: [AuthGuard, RoleGuard],
+        canActivate: [RoleGuard],
         data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
       },
 
@@ -79,14 +82,12 @@ export const routes: Routes = [
       {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
-        canActivate: [AuthGuard]
       },
 
       // Settings
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
-        canActivate: [AuthGuard]
       },
 
       // Access Denied

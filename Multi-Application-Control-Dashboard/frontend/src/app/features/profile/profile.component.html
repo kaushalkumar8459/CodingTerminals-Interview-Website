@@ -52,20 +52,6 @@
         </div>
       </div>
 
-      <!-- Username -->
-      <div class="mb-6">
-        <label class="block text-gray-700 font-semibold mb-2">Username</label>
-        <input 
-          type="text"
-          formControlName="username"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          placeholder="Your username"
-        >
-        <div *ngIf="submitted && profileForm.get('username')?.errors" class="text-red-500 text-sm mt-1">
-          Username is required
-        </div>
-      </div>
-
       <!-- User Info -->
       <div class="mb-6 p-4 bg-gray-50 rounded-lg">
         <p class="text-sm text-gray-600"><strong>Role:</strong> {{ currentUser?.role }}</p>

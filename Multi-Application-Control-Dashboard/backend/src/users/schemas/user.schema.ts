@@ -41,6 +41,25 @@ export class User extends Document {
 
   @Prop()
   refreshToken?: string;
+
+  // Virtual property for isActive based on status
+  get isActive(): boolean {
+    return this.status === UserStatus.ACTIVE;
+  }
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+// Enable virtuals in JSON and Object output
+UserSchema.set('toJSON', {
+  virtuals: true,
+  transform: function (doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    return ret;
+  },
+});
+
+UserSchema.set('toObject', { virtuals: true });

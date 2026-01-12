@@ -32,8 +32,7 @@ export class ProfileComponent implements OnInit {
     this.profileForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      username: ['', [Validators.required, Validators.minLength(3)]]
+      email: ['', [Validators.required, Validators.email]]
     });
 
     // Auto-populate form with current user data from store
@@ -42,8 +41,7 @@ export class ProfileComponent implements OnInit {
       this.profileForm.patchValue({
         firstName: currentUser.firstName,
         lastName: currentUser.lastName,
-        email: currentUser.email,
-        username: currentUser.username
+        email: currentUser.email
       });
     }
   }

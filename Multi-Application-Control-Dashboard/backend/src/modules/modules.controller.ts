@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Query } from '@nestjs/common';
 import { ModulesService } from './modules.service';
 import { CreateModuleDto, UpdateModuleDto } from './dto/create-module.dto';
 import { JwtAuthGuard } from '../auth/guards/auth.guard';
@@ -26,6 +26,14 @@ export class ModulesController {
   @Get('stats')
   async getStats() {
     return this.modulesService.getModuleStats();
+  }
+
+  @Get('access')
+  async checkModuleAccess(
+    @Query('userId') userId: string,
+    @Query('module') moduleName: string
+  ) {
+    return this.modulesService.checkModuleAccess(userId, moduleName);
   }
 
   @Get(':id')

@@ -75,15 +75,20 @@ export class AuthService {
       { refreshToken },
     );
 
+    // Convert to object to ensure virtual properties are included
+    const userObj = user.toObject ? user.toObject() : user;
+
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user._id || user.id,
+        id: (user._id || user.id).toString(),
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        assignedModules: (user.assignedModules || []).map((id: any) => id.toString()),
+        isActive: userObj.isActive !== undefined ? userObj.isActive : user.status === 'active',
       },
     };
   }

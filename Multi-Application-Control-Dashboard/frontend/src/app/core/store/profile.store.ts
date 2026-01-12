@@ -8,7 +8,6 @@ export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
   email?: string;
-  username?: string;
 }
 
 export interface ProfileState {

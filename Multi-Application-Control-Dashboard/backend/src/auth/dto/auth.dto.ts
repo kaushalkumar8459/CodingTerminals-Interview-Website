@@ -51,5 +51,7 @@ export class AuthResponseDto {
     firstName: string;
     lastName: string;
     role: RoleType;
+    assignedModules: string[];
+    isActive: boolean;
   };
 }
