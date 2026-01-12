@@ -54,13 +54,9 @@ export class UserStore extends signalStore(
     activeCount: computed(() => state.users().filter(u => u.status === 'Active').length),
     isEmpty: computed(() => state.users().length === 0 && !state.loading())
   })),
-  withMethods((store, userService = inject(UserService)) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
-
-    /**
-     * Load users with current filters - ASYNC
-     */
-    async loadUsers(): Promise<void> {
+  withMethods((store, userService = inject(UserService)) => {
+    // 1. Define internal methods that are used by other methods
+    const loadUsers = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
         const filters: UserFilters = {
@@ -90,12 +86,20 @@ export class UserStore extends signalStore(
         });
         console.error('UserStore: Error loading users', err);
       }
-    },
+    };
 
-    /**
-     * Create new user - ASYNC
-     */
-    async createUser(user: Omit<User, 'id'>): Promise<void> {
+    const goToPage = (page: number): void => {
+      if (page >= 1 && page <= store.totalPages()) {
+        patchState(store, { currentPage: page });
+        loadUsers();
+      }
+    };
+
+    // 2. Return the object containing all methods
+    return {
+      loadUsers,
+      
+      async createUser(user: Omit<User, 'id'>): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         await firstValueFrom(userService.createUser(user));
@@ -105,7 +109,7 @@ export class UserStore extends signalStore(
           loading: false
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadUsers']();
+        await loadUsers();
       } catch (err: any) {
         patchState(store, { 
           error: err?.error?.message ?? 'Failed to create user',
@@ -113,12 +117,9 @@ export class UserStore extends signalStore(
         });
         console.error('UserStore: Error creating user', err);
       }
-    },
+      },
 
-    /**
-     * Update user - ASYNC
-     */
-    async updateUser(id: string, user: Partial<User>): Promise<void> {
+      async updateUser(id: string, user: Partial<User>): Promise<void> {
       // Mark user as updating
       const users = store.users().map(u =>
         u.id === id ? { ...u, isUpdating: true } : u
@@ -147,12 +148,9 @@ export class UserStore extends signalStore(
         });
         console.error('UserStore: Error updating user', err);
       }
-    },
+      },
 
-    /**
-     * Delete user - ASYNC
-     */
-    async deleteUser(id: string): Promise<void> {
+      async deleteUser(id: string): Promise<void> {
       // Mark user as deleting
       const users = store.users().map(u =>
         u.id === id ? { ...u, isDeleting: true } : u
@@ -168,7 +166,7 @@ export class UserStore extends signalStore(
           error: null
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadUsers']();
+        await loadUsers();
       } catch (err: any) {
         // Clear deleting flag
         const errorUsers = store.users().map(u =>
@@ -180,12 +178,9 @@ export class UserStore extends signalStore(
         });
         console.error('UserStore: Error deleting user', err);
       }
-    },
+      },
 
-    /**
-     * Assign modules to user - ASYNC
-     */
-    async assignModules(userId: string, modules: string[]): Promise<void> {
+      async assignModules(userId: string, modules: string[]): Promise<void> {
       // Mark user as updating
       const users = store.users().map(u =>
         u.id === userId ? { ...u, isUpdating: true } : u
@@ -213,12 +208,9 @@ export class UserStore extends signalStore(
         });
         console.error('UserStore: Error assigning modules', err);
       }
-    },
+      },
 
-    /**
-     * Change user role - ASYNC
-     */
-    async changeUserRole(userId: string, role: string): Promise<void> {
+      async changeUserRole(userId: string, role: string): Promise<void> {
       patchState(store, { error: null });
       try {
         const updatedUser = await firstValueFrom(userService.changeUserRole(userId, role));
@@ -235,12 +227,9 @@ export class UserStore extends signalStore(
         patchState(store, { error: err?.error?.message ?? 'Failed to change user role' });
         console.error('UserStore: Error changing user role', err);
       }
-    },
+      },
 
-    /**
-     * Change user status - ASYNC
-     */
-    async changeUserStatus(userId: string, status: string): Promise<void> {
+      async changeUserStatus(userId: string, status: string): Promise<void> {
       patchState(store, { error: null });
       try {
         const updatedUser = await firstValueFrom(userService.changeUserStatus(userId, status));
@@ -264,7 +253,7 @@ export class UserStore extends signalStore(
      */
     filterByRole(role: string): void {
       patchState(store, { selectedRole: role, currentPage: 1 });
-      (store as any)['loadUsers']();
+      loadUsers();
     },
 
     /**
@@ -272,7 +261,7 @@ export class UserStore extends signalStore(
      */
     filterByStatus(status: string): void {
       patchState(store, { selectedStatus: status, currentPage: 1 });
-      (store as any)['loadUsers']();
+      loadUsers();
     },
 
     /**
@@ -280,7 +269,7 @@ export class UserStore extends signalStore(
      */
     searchUsers(query: string): void {
       patchState(store, { searchQuery: query, currentPage: 1 });
-      (store as any)['loadUsers']();
+      loadUsers();
     },
 
     /**
@@ -293,31 +282,26 @@ export class UserStore extends signalStore(
         selectedStatus: 'all',
         currentPage: 1
       });
-      (store as any)['loadUsers']();
+      loadUsers();
     },
 
     /**
      * Navigate to specific page
      */
-    goToPage(page: number): void {
-      if (page >= 1 && page <= store.totalPages()) {
-        patchState(store, { currentPage: page });
-        (store as any)['loadUsers']();
-      }
-    },
+    goToPage,
 
     /**
      * Go to previous page
      */
     previousPage(): void {
-      (store as any)['goToPage'](store.currentPage() - 1);
+      goToPage(store.currentPage() - 1);
     },
 
     /**
      * Go to next page
      */
     nextPage(): void {
-      (store as any)['goToPage'](store.currentPage() + 1);
+      goToPage(store.currentPage() + 1);
     },
 
     /**
@@ -337,7 +321,8 @@ export class UserStore extends signalStore(
         pages.push(i);
       }
       return pages;
-    }
-  }))
+      }
+    };
+  })
 ) {
 }

@@ -50,13 +50,9 @@ export class BlogStore extends signalStore(
     publishedCount: computed(() => state.posts().filter(p => p.status === 'published').length),
     isEmpty: computed(() => state.posts().length === 0 && !state.loading())
   })),
-  withMethods((store, blogService = inject(BlogService)) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
-    
-    /**
-     * Load blog posts with current filters - ASYNC
-     */
-    async loadPosts(): Promise<void> {
+  withMethods((store, blogService = inject(BlogService)) => {
+    // 1. Define internal methods
+    const loadPosts = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
         const selectedStatus = store.selectedStatus();
@@ -86,12 +82,19 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error loading posts', err);
       }
-    },
+    };
 
-    /**
-     * Load single blog post by ID - ASYNC
-     */
-    async loadPostById(id: string): Promise<void> {
+    const goToPage = (page: number): void => {
+      if (page >= 1 && page <= store.totalPages()) {
+        patchState(store, { currentPage: page });
+        loadPosts();
+      }
+    };
+
+    // 2. Return methods object
+    return {
+      loadPosts,
+      async loadPostById(id: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const post = await firstValueFrom(blogService.getPostById(id));
@@ -111,12 +114,9 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error loading post', err);
       }
-    },
+      },
 
-    /**
-     * Create new blog post - ASYNC
-     */
-    async createPost(data: CreateBlogPostRequest): Promise<void> {
+      async createPost(data: CreateBlogPostRequest): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         await firstValueFrom(blogService.createPost(data));
@@ -126,7 +126,7 @@ export class BlogStore extends signalStore(
           loading: false
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadPosts']();
+        await loadPosts();
       } catch (err: any) {
         patchState(store, {
           error: err?.error?.message ?? 'Failed to create blog post',
@@ -134,12 +134,9 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error creating post', err);
       }
-    },
+      },
 
-    /**
-     * Update existing blog post - ASYNC
-     */
-    async updatePost(id: string, data: UpdateBlogPostRequest): Promise<void> {
+      async updatePost(id: string, data: UpdateBlogPostRequest): Promise<void> {
       patchState(store, { error: null });
       try {
         const updatedPost = await firstValueFrom(blogService.updatePost(id, data));
@@ -159,12 +156,9 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error updating post', err);
       }
-    },
+      },
 
-    /**
-     * Publish a draft post - ASYNC
-     */
-    async publishPost(postId: string): Promise<void> {
+      async publishPost(postId: string): Promise<void> {
       // Set publishing state for UI
       const posts = (store as any)['posts']().map((p: BlogPostWithUI) =>
         p.id === postId ? { ...p, isPublishing: true } : p
@@ -183,7 +177,7 @@ export class BlogStore extends signalStore(
           error: null
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadPosts']();
+        await loadPosts();
       } catch (err: any) {
         // Clear publishing flag on error
         const errorPosts = (store as any)['posts']().map((p: BlogPostWithUI) =>
@@ -195,12 +189,9 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error publishing post', err);
       }
-    },
+      },
 
-    /**
-     * Unpublish a published post - ASYNC
-     */
-    async unpublishPost(postId: string): Promise<void> {
+      async unpublishPost(postId: string): Promise<void> {
       const posts = (store as any)['posts']().map((p: BlogPostWithUI) =>
         p.id === postId ? { ...p, isPublishing: true } : p
       );
@@ -217,7 +208,7 @@ export class BlogStore extends signalStore(
           error: null
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadPosts']();
+        await loadPosts();
       } catch (err: any) {
         const errorPosts = (store as any)['posts']().map((p: BlogPostWithUI) =>
           p.id === postId ? { ...p, isPublishing: false } : p
@@ -228,12 +219,9 @@ export class BlogStore extends signalStore(
         });
         console.error('BlogStore: Error unpublishing post', err);
       }
-    },
+      },
 
-    /**
-     * Delete a blog post - ASYNC
-     */
-    async deletePost(postId: string): Promise<void> {
+      async deletePost(postId: string): Promise<void> {
       const posts = (store as any)['posts']().map((p: BlogPostWithUI) =>
         p.id === postId ? { ...p, isDeleting: true } : p
       );
@@ -248,7 +236,7 @@ export class BlogStore extends signalStore(
           error: null
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await (store as any)['loadPosts']();
+        await loadPosts();
       } catch (err: any) {
         const errorPosts = (store as any)['posts']().map((p: BlogPostWithUI) =>
           p.id === postId ? { ...p, isDeleting: false } : p
@@ -266,7 +254,7 @@ export class BlogStore extends signalStore(
      */
     filterByStatus(status: 'all' | 'draft' | 'published'): void {
       patchState(store, { selectedStatus: status, currentPage: 1 });
-      (store as any)['loadPosts']();
+      loadPosts();
     },
 
     /**
@@ -274,7 +262,7 @@ export class BlogStore extends signalStore(
      */
     searchPosts(query: string): void {
       patchState(store, { searchQuery: query, currentPage: 1 });
-      (store as any)['loadPosts']();
+      loadPosts();
     },
 
     /**
@@ -286,31 +274,26 @@ export class BlogStore extends signalStore(
         selectedStatus: 'all',
         currentPage: 1
       });
-      (store as any)['loadPosts']();
+      loadPosts();
     },
 
     /**
      * Navigate to specific page
      */
-    goToPage(page: number): void {
-      if (page >= 1 && page <= store.totalPages()) {
-        patchState(store, { currentPage: page });
-        (store as any)['loadPosts']();
-      }
-    },
+    goToPage,
 
     /**
      * Go to previous page
      */
     previousPage(): void {
-      (store as any)['goToPage'](store.currentPage() - 1);
+      goToPage(store.currentPage() - 1);
     },
 
     /**
      * Go to next page
      */
     nextPage(): void {
-      (store as any)['goToPage'](store.currentPage() + 1);
+      goToPage(store.currentPage() + 1);
     },
 
     /**
@@ -330,28 +313,20 @@ export class BlogStore extends signalStore(
         pages.push(i);
       }
       return pages;
-    },
+      },
 
-    /**
-     * Clear current post
-     */
-    clearCurrentPost(): void {
+      clearCurrentPost(): void {
       patchState(store, { currentPost: null });
-    },
+      },
 
-    /**
-     * Clear error message
-     */
-    clearError(): void {
+      clearError(): void {
       patchState(store, { error: null });
-    },
+      },
 
-    /**
-     * Clear success message
-     */
-    clearSuccess(): void {
+      clearSuccess(): void {
       patchState(store, { success: null });
-    }
-  }))
+      }
+    };
+  })
 ) {
 }

@@ -144,13 +144,9 @@ export class YoutubeStore extends signalStore(
     // ===== DISPLAY FLAGS =====
     isDataFresh: computed(() => true)
   })),
-  withMethods((store: any) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
-
-    /**
-     * Load all videos with filters - ASYNC
-     */
-    async loadVideos(): Promise<void> {
+  withMethods((store: any) => {
+    // 1. Define internal methods
+    const loadVideos = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
         // Simulate API call to fetch videos
@@ -234,7 +230,17 @@ export class YoutubeStore extends signalStore(
         });
         console.error('YoutubeStore: Error loading videos', err);
       }
-    },
+    };
+
+    const goToPage = (page: number): void => {
+      if (page >= 1 && page <= store.totalPages()) {
+        patchState(store, { currentPage: page });
+        loadVideos();
+      }
+    };
+
+    return {
+      loadVideos,
 
     /**
      * Load single video by ID - ASYNC
@@ -306,7 +312,7 @@ export class YoutubeStore extends signalStore(
         setTimeout(() => patchState(store, { success: null }), 3000);
 
         // Reload to apply filters
-        await store.loadVideos();
+        await loadVideos();
       } catch (err: any) {
         patchState(store, {
           error: err?.error?.message ?? 'Failed to create video',
@@ -421,7 +427,7 @@ export class YoutubeStore extends signalStore(
         setTimeout(() => patchState(store, { success: null }), 3000);
 
         // Reload to apply filters
-        await store.loadVideos();
+        await loadVideos();
       } catch (err: any) {
         // Clear deleting flag on error
         const errorVideos = store.videos().map((v: YoutubeVideoWithUI) =>
@@ -440,7 +446,7 @@ export class YoutubeStore extends signalStore(
      */
     filterByCategory(category: YoutubeCategory | 'all'): void {
       patchState(store, { selectedCategory: category, currentPage: 1 });
-      store.loadVideos();
+      loadVideos();
     },
 
     /**
@@ -448,7 +454,7 @@ export class YoutubeStore extends signalStore(
      */
     filterByStatus(status: YoutubeVideoStatus | 'all'): void {
       patchState(store, { selectedStatus: status, currentPage: 1 });
-      store.loadVideos();
+      loadVideos();
     },
 
     /**
@@ -456,7 +462,7 @@ export class YoutubeStore extends signalStore(
      */
     searchVideos(query: string): void {
       patchState(store, { searchQuery: query, currentPage: 1 });
-      store.loadVideos();
+      loadVideos();
     },
 
     /**
@@ -469,31 +475,26 @@ export class YoutubeStore extends signalStore(
         selectedStatus: 'all',
         currentPage: 1
       });
-      store.loadVideos();
+      loadVideos();
     },
 
     /**
      * Navigate to specific page
      */
-    goToPage(page: number): void {
-      if (page >= 1 && page <= store.totalPages()) {
-        patchState(store, { currentPage: page });
-        store.loadVideos();
-      }
-    },
+    goToPage,
 
     /**
      * Go to previous page
      */
     previousPage(): void {
-      store.goToPage(store.currentPage() - 1);
+      goToPage(store.currentPage() - 1);
     },
 
     /**
      * Go to next page
      */
     nextPage(): void {
-      store.goToPage(store.currentPage() + 1);
+      goToPage(store.currentPage() + 1);
     },
 
     /**
@@ -535,6 +536,7 @@ export class YoutubeStore extends signalStore(
     clearSuccess(): void {
       patchState(store, { success: null });
     }
-  }))
+    };
+  })
 ) {
 }

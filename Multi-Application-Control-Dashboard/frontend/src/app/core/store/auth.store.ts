@@ -54,13 +54,34 @@ export class AuthStore extends signalStore(
     isViewer: computed(() => state.currentUser()?.role === 'viewer'),
     userIsActive: computed(() => state.currentUser()?.isActive || false)
   })),
-  withMethods((store, authService = inject(AuthService), router = inject(Router)) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
+  withMethods((store, authService = inject(AuthService), router = inject(Router)) => {
+    // 1. Define internal methods
+    const clearAuth = (): void => {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('currentUser');
+      patchState(store, {
+        currentUser: null,
+        isAuthenticated: false,
+        token: null,
+        refreshToken: null,
+        error: null
+      });
+    };
 
-    /**
-     * Initialize auth state from localStorage - ASYNC
-     */
-    async initializeAuth(): Promise<void> {
+    const logout = (): void => {
+      clearAuth();
+      patchState(store, {
+        success: 'Logged out successfully!'
+      });
+      setTimeout(() => patchState(store, { success: null }), 3000);
+      router.navigate(['/auth/login']);
+    };
+
+    return {
+      clearAuth,
+      logout,
+      async initializeAuth(): Promise<void> {
       const token = localStorage.getItem('accessToken');
       const refreshToken = localStorage.getItem('refreshToken');
       const storedUser = localStorage.getItem('currentUser');
@@ -76,15 +97,12 @@ export class AuthStore extends signalStore(
           });
         } catch (e) {
           console.error('Error parsing stored user:', e);
-          (store as any)['clearAuth']();
+          clearAuth();
         }
       }
-    },
+      },
 
-    /**
-     * Login user with email and password - ASYNC
-     */
-    async login(credentials: LoginRequest): Promise<void> {
+      async login(credentials: LoginRequest): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const response = await firstValueFrom(authService.login(credentials));
@@ -107,12 +125,9 @@ export class AuthStore extends signalStore(
         });
         console.error('AuthStore: Error logging in', err);
       }
-    },
+      },
 
-    /**
-     * Register new user - ASYNC
-     */
-    async register(userData: any): Promise<void> {
+      async register(userData: any): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const response = await firstValueFrom(authService.register(userData));
@@ -135,31 +150,9 @@ export class AuthStore extends signalStore(
         });
         console.error('AuthStore: Error registering', err);
       }
-    },
+      },
 
-    /**
-     * Logout user
-     */
-    logout(): void {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('currentUser');
-      patchState(store, {
-        currentUser: null,
-        isAuthenticated: false,
-        token: null,
-        refreshToken: null,
-        error: null,
-        success: 'Logged out successfully!'
-      });
-      setTimeout(() => patchState(store, { success: null }), 3000);
-      router.navigate(['/auth/login']);
-    },
-
-    /**
-     * Refresh access token - ASYNC
-     */
-    async refreshAccessToken(): Promise<void> {
+      async refreshAccessToken(): Promise<void> {
       patchState(store, { isRefreshing: true, error: null });
       try {
         const response = await firstValueFrom(authService.refreshToken());
@@ -175,15 +168,12 @@ export class AuthStore extends signalStore(
           isRefreshing: false
         });
         // Auto-logout on refresh failure
-        (store as any)['logout']();
+        logout();
         console.error('AuthStore: Error refreshing token', err);
       }
-    },
+      },
 
-    /**
-     * Get user profile - ASYNC
-     */
-    async loadProfile(): Promise<void> {
+      async loadProfile(): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const user = await firstValueFrom(authService.getProfile());
@@ -200,63 +190,33 @@ export class AuthStore extends signalStore(
         });
         console.error('AuthStore: Error loading profile', err);
       }
-    },
+      },
 
-    /**
-     * Clear auth state
-     */
-    clearAuth(): void {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('currentUser');
-      patchState(store, {
-        currentUser: null,
-        isAuthenticated: false,
-        token: null,
-        refreshToken: null,
-        error: null
-      });
-    },
-
-    /**
-     * Set error message
-     */
-    setError(error: string): void {
+      setError(error: string): void {
       patchState(store, { error });
-    },
+      },
 
-    /**
-     * Clear error message
-     */
-    clearError(): void {
+      clearError(): void {
       patchState(store, { error: null });
-    },
+      },
 
-    /**
-     * Check if user has specific role
-     */
-    hasRole(role: string): boolean {
+      hasRole(role: string): boolean {
       return store.currentUser()?.role === role;
-    },
+      },
 
-    /**
-     * Check if user has module access
-     */
-    hasModuleAccess(moduleName: string): boolean {
+      hasModuleAccess(moduleName: string): boolean {
       return store.assignedModules().includes(moduleName);
-    },
+      },
 
-    /**
-     * Update current user (after profile change)
-     */
-    updateCurrentUser(user: Partial<User>): void {
+      updateCurrentUser(user: Partial<User>): void {
       const currentUser = store.currentUser();
       if (currentUser) {
         const updated = { ...currentUser, ...user };
         patchState(store, { currentUser: updated });
         localStorage.setItem('currentUser', JSON.stringify(updated));
       }
-    }
-  }))
+      }
+    };
+  })
 ) {
 }

@@ -109,13 +109,9 @@ export class StudyNotesStore extends signalStore(
       return true;
     })
   })),
-  withMethods((store) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
-
-    /**
-     * Load all study notes with filters - ASYNC
-     */
-    async loadNotes(): Promise<void> {
+  withMethods((store) => {
+    // 1. Define internal methods
+    const loadNotes = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
         // Simulate API call to fetch notes
@@ -189,7 +185,17 @@ export class StudyNotesStore extends signalStore(
         });
         console.error('StudyNotesStore: Error loading notes', err);
       }
-    },
+    };
+
+    const goToPage = (page: number): void => {
+      if (page >= 1 && page <= store.totalPages()) {
+        patchState(store, { currentPage: page });
+        loadNotes();
+      }
+    };
+
+    return {
+      loadNotes,
 
     /**
      * Load single study note by ID - ASYNC
@@ -257,7 +263,7 @@ export class StudyNotesStore extends signalStore(
         setTimeout(() => patchState(store, { success: null }), 3000);
         
         // Reload to apply filters
-        await (store as any)['loadNotes']();
+        await loadNotes();
       } catch (err: any) {
         patchState(store, {
           error: err?.error?.message ?? 'Failed to create study note',
@@ -325,7 +331,7 @@ export class StudyNotesStore extends signalStore(
         setTimeout(() => patchState(store, { success: null }), 3000);
         
         // Reload to apply filters
-        await (store as any)['loadNotes']();
+        await loadNotes();
       } catch (err: any) {
         // Clear deleting flag on error
         const errorNotes = (store as any)['notes']().map((n: StudyNoteWithUI) =>
@@ -344,7 +350,7 @@ export class StudyNotesStore extends signalStore(
      */
     filterByCategory(category: StudyNoteCategory | 'all'): void {
       patchState(store, { selectedCategory: category, currentPage: 1 });
-      (store as any)['loadNotes']();
+      loadNotes();
     },
 
     /**
@@ -352,7 +358,7 @@ export class StudyNotesStore extends signalStore(
      */
     searchNotes(query: string): void {
       patchState(store, { searchQuery: query, currentPage: 1 });
-      (store as any)['loadNotes']();
+      loadNotes();
     },
 
     /**
@@ -364,31 +370,26 @@ export class StudyNotesStore extends signalStore(
         selectedCategory: 'all',
         currentPage: 1
       });
-      (store as any)['loadNotes']();
+      loadNotes();
     },
 
     /**
      * Navigate to specific page
      */
-    goToPage(page: number): void {
-      if (page >= 1 && page <= store.totalPages()) {
-        patchState(store, { currentPage: page });
-        (store as any)['loadNotes']();
-      }
-    },
+    goToPage,
 
     /**
      * Go to previous page
      */
     previousPage(): void {
-      (store as any)['goToPage'](store.currentPage() - 1);
+      goToPage(store.currentPage() - 1);
     },
 
     /**
      * Go to next page
      */
     nextPage(): void {
-      (store as any)['goToPage'](store.currentPage() + 1);
+      goToPage(store.currentPage() + 1);
     },
 
     /**
@@ -430,6 +431,7 @@ export class StudyNotesStore extends signalStore(
     clearSuccess(): void {
       patchState(store, { success: null });
     }
-  }))
+    };
+  })
 ) {
 }

@@ -58,13 +58,9 @@ export class LinkedinStore extends signalStore(
     totalEngagement: computed(() => state.posts().reduce((sum: number, p: LinkedinPostWithUI) => sum + (p.likes || 0) + (p.comments || 0) + (p.shares || 0), 0)),
     isEmpty: computed(() => state.posts().length === 0 && !state.loading())
   })),
-  withMethods((store: any, linkedinService = inject(LinkedinService)) => ({
-    // ===== PUBLIC ACTIONS (called from components) =====
-
-    /**
-     * Load posts with current filters - ASYNC
-     */
-    async loadPosts(): Promise<void> {
+  withMethods((store: any, linkedinService = inject(LinkedinService)) => {
+    // 1. Define internal methods
+    const loadPosts = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
         const filters: PostFilter = {
@@ -95,12 +91,18 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error loading posts', err);
       }
-    },
+    };
 
-    /**
-     * Load single post by ID - ASYNC
-     */
-    async loadPostById(id: string): Promise<void> {
+    const goToPage = (page: number): void => {
+      if (page >= 1 && page <= store.totalPages()) {
+        patchState(store, { currentPage: page });
+        loadPosts();
+      }
+    };
+
+    return {
+      loadPosts,
+      async loadPostById(id: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         const post = await firstValueFrom(linkedinService.getPostById(id));
@@ -122,12 +124,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error loading post', err);
       }
-    },
+      },
 
-    /**
-     * Create new LinkedIn post - ASYNC
-     */
-    async createPost(data: CreatePostRequest): Promise<void> {
+      async createPost(data: CreatePostRequest): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
         await firstValueFrom(linkedinService.createPost(data));
@@ -137,7 +136,7 @@ export class LinkedinStore extends signalStore(
           loading: false
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await store.loadPosts();
+        await loadPosts();
       } catch (err: any) {
         patchState(store, {
           error: err?.error?.message ?? 'Failed to create LinkedIn post',
@@ -145,12 +144,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error creating post', err);
       }
-    },
+      },
 
-    /**
-     * Update existing LinkedIn post - ASYNC
-     */
-    async updatePost(id: string, data: UpdatePostRequest): Promise<void> {
+      async updatePost(id: string, data: UpdatePostRequest): Promise<void> {
       patchState(store, { error: null });
       try {
         const updatedPost = await firstValueFrom(linkedinService.updatePost(id, data));
@@ -169,12 +165,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error updating post', err);
       }
-    },
+      },
 
-    /**
-     * Delete LinkedIn post - ASYNC
-     */
-    async deletePost(id: string): Promise<void> {
+      async deletePost(id: string): Promise<void> {
       const posts = store.posts().map((p: LinkedinPostWithUI) =>
         p.id === id ? { ...p, isDeleting: true } : p
       );
@@ -189,7 +182,7 @@ export class LinkedinStore extends signalStore(
           error: null
         });
         setTimeout(() => patchState(store, { success: null }), 3000);
-        await store.loadPosts();
+        await loadPosts();
       } catch (err: any) {
         const errorPosts = store.posts().map((p: LinkedinPostWithUI) =>
           p.id === id ? { ...p, isDeleting: false } : p
@@ -200,12 +193,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error deleting post', err);
       }
-    },
+      },
 
-    /**
-     * Publish LinkedIn post immediately - ASYNC
-     */
-    async publishPost(id: string): Promise<void> {
+      async publishPost(id: string): Promise<void> {
       const posts = store.posts().map((p: LinkedinPostWithUI) =>
         p.id === id ? { ...p, isPublishing: true } : p
       );
@@ -232,12 +222,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error publishing post', err);
       }
-    },
+      },
 
-    /**
-     * Schedule LinkedIn post for later - ASYNC
-     */
-    async schedulePost(id: string, scheduledAt: Date): Promise<void> {
+      async schedulePost(id: string, scheduledAt: Date): Promise<void> {
       const posts = store.posts().map((p: LinkedinPostWithUI) =>
         p.id === id ? { ...p, isScheduling: true } : p
       );
@@ -264,12 +251,9 @@ export class LinkedinStore extends signalStore(
         });
         console.error('LinkedinStore: Error scheduling post', err);
       }
-    },
+      },
 
-    /**
-     * Archive LinkedIn post - ASYNC
-     */
-    async archivePost(id: string): Promise<void> {
+      async archivePost(id: string): Promise<void> {
       const posts = store.posts().map((p: LinkedinPostWithUI) =>
         p.id === id ? { ...p, isArchiving: true } : p
       );
@@ -303,7 +287,7 @@ export class LinkedinStore extends signalStore(
      */
     filterByStatus(status: PostStatus | 'all'): void {
       patchState(store, { selectedStatus: status, currentPage: 1 });
-      store.loadPosts();
+      loadPosts();
     },
 
     /**
@@ -311,7 +295,7 @@ export class LinkedinStore extends signalStore(
      */
     searchPosts(query: string): void {
       patchState(store, { searchQuery: query, currentPage: 1 });
-      store.loadPosts();
+      loadPosts();
     },
 
     /**
@@ -323,31 +307,26 @@ export class LinkedinStore extends signalStore(
         selectedStatus: 'all',
         currentPage: 1
       });
-      store.loadPosts();
+      loadPosts();
     },
 
     /**
      * Navigate to specific page
      */
-    goToPage(page: number): void {
-      if (page >= 1 && page <= store.totalPages()) {
-        patchState(store, { currentPage: page });
-        store.loadPosts();
-      }
-    },
+    goToPage,
 
     /**
      * Go to previous page
      */
     previousPage(): void {
-      store.goToPage(store.currentPage() - 1);
+      goToPage(store.currentPage() - 1);
     },
 
     /**
      * Go to next page
      */
     nextPage(): void {
-      store.goToPage(store.currentPage() + 1);
+      goToPage(store.currentPage() + 1);
     },
 
     /**
@@ -367,7 +346,8 @@ export class LinkedinStore extends signalStore(
         pages.push(i);
       }
       return pages;
-    }
-  }))
+      }
+    };
+  })
 ) {
 }
