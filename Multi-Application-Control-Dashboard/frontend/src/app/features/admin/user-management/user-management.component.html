@@ -10,14 +10,14 @@
           <p class="text-gray-600 mt-1">Manage users, roles, and module access</p>
         </div>
         <div class="flex gap-2">
-          <button 
-            *ngIf="isSuperAdmin"
-            (click)="openCreateForm()"
+          @if(isSuperAdmin){
+          <button (click)="openCreateForm()"
             class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 shadow-md">
             <span>➕</span> Add User
           </button>
-          <button 
-            (click)="clearFilters()"
+          }
+
+          <button (click)="clearFilters()"
             class="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 border border-gray-300 transition-colors font-semibold flex items-center gap-2">
             <span>🔄</span> Reset
           </button>
@@ -26,21 +26,28 @@
     </div>
 
     <!-- Alert Messages -->
-    <div *ngIf="error" class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3">
+    @if(error){
+    <div
+      class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3">
       <span class="text-xl">❌</span>
       <div>
         <p class="font-semibold">Error</p>
         <p class="text-sm">{{ error }}</p>
       </div>
     </div>
+    }
 
-    <div *ngIf="success" class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3">
+    @if(success){
+    <div
+      class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3">
       <span class="text-xl">✅</span>
       <div>
         <p class="font-semibold">Success</p>
         <p class="text-sm">{{ success }}</p>
       </div>
     </div>
+    }
+
 
     <!-- Filters Section -->
     <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -49,14 +56,9 @@
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Search Users</label>
           <div class="flex gap-2">
-            <input 
-              [(ngModel)]="searchQuery"
-              (keyup.enter)="onSearch()"
-              type="text" 
-              placeholder="Name or email..."
+            <input [(ngModel)]="searchQuery" (keyup.enter)="onSearch()" type="text" placeholder="Name or email..."
               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <button 
-              (click)="onSearch()"
+            <button (click)="onSearch()"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
               🔍
             </button>
@@ -67,20 +69,13 @@
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Filter by Role</label>
           <div class="flex flex-wrap gap-2">
-            <button 
-              (click)="filterByRole('all')"
-              [class.ring-2]="selectedRole === 'all'"
-              [class.ring-blue-500]="selectedRole === 'all'"
-              [class.bg-blue-50]="selectedRole === 'all'"
+            <button (click)="filterByRole('all')" [class.ring-2]="selectedRole === 'all'"
+              [class.ring-blue-500]="selectedRole === 'all'" [class.bg-blue-50]="selectedRole === 'all'"
               class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400">
               All
             </button>
-            <button 
-              *ngFor="let role of roles"
-              (click)="filterByRole(role)"
-              [class.ring-2]="selectedRole === role"
-              [class.ring-blue-500]="selectedRole === role"
-              [class.bg-blue-50]="selectedRole === role"
+            <button *ngFor="let role of roles" (click)="filterByRole(role)" [class.ring-2]="selectedRole === role"
+              [class.ring-blue-500]="selectedRole === role" [class.bg-blue-50]="selectedRole === role"
               class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400 capitalize">
               {{ role | lowercase }}
             </button>
@@ -91,19 +86,13 @@
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Filter by Status</label>
           <div class="flex flex-wrap gap-2">
-            <button 
-              (click)="filterByStatus('all')"
-              [class.ring-2]="selectedStatus === 'all'"
-              [class.ring-blue-500]="selectedStatus === 'all'"
-              [class.bg-blue-50]="selectedStatus === 'all'"
+            <button (click)="filterByStatus('all')" [class.ring-2]="selectedStatus === 'all'"
+              [class.ring-blue-500]="selectedStatus === 'all'" [class.bg-blue-50]="selectedStatus === 'all'"
               class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400">
               All
             </button>
-            <button 
-              *ngFor="let status of statusOptions"
-              (click)="filterByStatus(status)"
-              [class.ring-2]="selectedStatus === status"
-              [class.ring-blue-500]="selectedStatus === status"
+            <button *ngFor="let status of statusOptions" (click)="filterByStatus(status)"
+              [class.ring-2]="selectedStatus === status" [class.ring-blue-500]="selectedStatus === status"
               [class.bg-blue-50]="selectedStatus === status"
               class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400">
               {{ status }}
@@ -128,28 +117,33 @@
     </div>
 
     <!-- Loading State -->
-    <div *ngIf="loading" class="bg-white rounded-xl shadow-lg p-12 text-center">
+    @if(loading){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
       <div class="inline-block animate-spin">
         <span class="text-4xl">⏳</span>
       </div>
       <p class="text-gray-600 mt-4 font-semibold">Loading users...</p>
     </div>
+    }
+
 
     <!-- Empty State -->
-    <div *ngIf="!loading && users.length === 0" class="bg-white rounded-xl shadow-lg p-12 text-center">
+    @if(!loading && users.length === 0){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
       <p class="text-5xl mb-4">👥</p>
       <h3 class="text-xl font-semibold text-gray-700 mb-2">No users found</h3>
       <p class="text-gray-600 mb-6">Start by adding your first user to the system</p>
-      <button 
-        *ngIf="isSuperAdmin"
-        (click)="openCreateForm()"
+      <button *ngIf="isSuperAdmin" (click)="openCreateForm()"
         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center gap-2">
         <span>➕</span> Create User
       </button>
     </div>
+    }
+
 
     <!-- Users Table -->
-    <div *ngIf="!loading && users.length > 0" class="bg-white rounded-xl shadow-lg overflow-hidden">
+    @if(!loading && users.length > 0){
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full">
           <thead>
@@ -164,7 +158,8 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr *ngFor="let user of users" class="hover:bg-gray-50 transition-colors">
+            @for(user of users; track user){
+            <tr class="hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4 font-medium text-gray-900">{{ user.name }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ user.email }}</td>
               <td class="px-6 py-4">
@@ -179,16 +174,16 @@
               </td>
               <td class="px-6 py-4">
                 <div class="flex flex-wrap gap-1">
-                  <span 
-                    *ngFor="let module of (user.modules || []).slice(0, 2)"
-                    class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+                  @for(module of (user.modules || []).slice(0, 2); track module){
+                  <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
                     {{ module }}
                   </span>
-                  <span 
-                    *ngIf="(user.modules || []).length > 2"
-                    class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
+                  }
+                  @if((user.modules || []).length > 2){
+                  <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
                     +{{ (user.modules || []).length - 2 }}
                   </span>
+                  }
                 </div>
               </td>
               <td class="px-6 py-4 text-sm text-gray-600">
@@ -196,67 +191,63 @@
               </td>
               <td class="px-6 py-4">
                 <div class="flex gap-2">
-                  <button 
-                    *ngIf="isSuperAdmin"
-                    (click)="openEditForm(user)"
+                  @if(isSuperAdmin){
+                  <button (click)="openEditForm(user)"
                     class="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center gap-1">
                     <span>✏️</span> Edit
                   </button>
-                  <button 
-                    *ngIf="isSuperAdmin"
-                    (click)="openModuleAssignment(user)"
+                  }
+                  @if(isSuperAdmin){
+                  <button (click)="openModuleAssignment(user)"
                     class="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold flex items-center gap-1">
                     <span>📦</span> Modules
                   </button>
-                  <button 
-                    *ngIf="isSuperAdmin"
-                    (click)="confirmDelete(user)"
+                  }
+                  @if(isSuperAdmin){
+                  <button (click)="confirmDelete(user)"
                     class="px-3 py-1 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold flex items-center gap-1">
                     <span>🗑️</span> Delete
                   </button>
+                  }
                 </div>
               </td>
             </tr>
+            }
           </tbody>
         </table>
       </div>
     </div>
+    }
 
     <!-- Pagination -->
-    <div *ngIf="!loading && users.length > 0 && totalPages > 1" class="flex justify-center items-center gap-2 mt-8">
-      <button 
-        (click)="previousPage()"
-        [disabled]="currentPage === 1"
+    @if(!loading && users.length > 0 && totalPages > 1){
+    <div class="flex justify-center items-center gap-2 mt-8">
+      <button (click)="previousPage()" [disabled]="currentPage === 1"
         class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
         ← Previous
       </button>
 
       <div class="flex gap-1">
-        <button 
-          *ngFor="let page of getPageNumbers()"
-          (click)="goToPage(page)"
-          [class.bg-blue-600]="page === currentPage"
-          [class.text-white]="page === currentPage"
-          [class.bg-white]="page !== currentPage"
-          [class.text-gray-700]="page !== currentPage"
-          [class.border]="page !== currentPage"
-          [class.border-gray-300]="page !== currentPage"
+        <button *ngFor="let page of getPageNumbers()" (click)="goToPage(page)"
+          [class.bg-blue-600]="page === currentPage" [class.text-white]="page === currentPage"
+          [class.bg-white]="page !== currentPage" [class.text-gray-700]="page !== currentPage"
+          [class.border]="page !== currentPage" [class.border-gray-300]="page !== currentPage"
           class="px-3 py-2 rounded-lg hover:bg-blue-500 hover:text-white transition-colors font-semibold">
           {{ page }}
         </button>
       </div>
 
-      <button 
-        (click)="nextPage()"
-        [disabled]="currentPage === totalPages"
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages"
         class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
         Next →
       </button>
     </div>
+    }
   </div>
 
   <!-- User Form Modal -->
-  <div *ngIf="showUserForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  @if(showUserForm){
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
       <h3 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
         <span>{{ isEditingUser ? '✏️' : '➕' }}</span> {{ isEditingUser ? 'Edit User' : 'Create User' }}
@@ -266,36 +257,33 @@
         <!-- Name -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Name</label>
-          <input 
-            formControlName="name"
-            type="text" 
-            placeholder="Full name"
+          <input formControlName="name" type="text" placeholder="Full name"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             [class.border-red-500]="userForm.get('name')?.invalid && userForm.get('name')?.touched">
-          <p *ngIf="userForm.get('name')?.invalid && userForm.get('name')?.touched" class="text-red-500 text-sm mt-1">
+          @if(userForm.get('name')?.invalid && userForm.get('name')?.touched){
+          <p class="text-red-500 text-sm mt-1">
             Name is required (min 2 characters)
           </p>
+          }
         </div>
 
         <!-- Email -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-          <input 
-            formControlName="email"
-            type="email" 
-            placeholder="user@example.com"
+          <input formControlName="email" type="email" placeholder="user@example.com"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             [class.border-red-500]="userForm.get('email')?.invalid && userForm.get('email')?.touched">
-          <p *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched" class="text-red-500 text-sm mt-1">
+          @if(userForm.get('email')?.invalid && userForm.get('email')?.touched){
+          <p class="text-red-500 text-sm mt-1">
             Valid email is required
           </p>
+          }
         </div>
 
         <!-- Role -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-          <select 
-            formControlName="role"
+          <select formControlName="role"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="VIEWER">Viewer</option>
             <option value="ADMIN">Admin</option>
@@ -306,8 +294,7 @@
         <!-- Status -->
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-          <select 
-            formControlName="status"
+          <select formControlName="status"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="Active">Active</option>
             <option value="Inactive">Inactive</option>
@@ -317,15 +304,11 @@
 
         <!-- Buttons -->
         <div class="flex gap-3 pt-4">
-          <button 
-            type="button"
-            (click)="closeForm()"
+          <button type="button" (click)="closeForm()"
             class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
             Cancel
           </button>
-          <button 
-            type="submit"
-            [disabled]="userForm.invalid || (userToEdit?.isUpdating)"
+          <button type="submit" [disabled]="userForm.invalid || (userToEdit?.isUpdating)"
             class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50">
             {{ userToEdit?.isUpdating ? '⏳ Saving...' : 'Save' }}
           </button>
@@ -333,9 +316,11 @@
       </form>
     </div>
   </div>
+  }
 
   <!-- Module Assignment Modal -->
-  <div *ngIf="showModuleAssignment" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+  @if(showModuleAssignment){
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
       <h3 class="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
         <span>📦</span> Assign Modules
@@ -345,57 +330,48 @@
       </p>
 
       <div class="space-y-3 mb-6">
-        <div 
-          *ngFor="let module of availableModules"
-          class="flex items-center gap-3">
-          <input 
-            type="checkbox"
-            [checked]="userModules.includes(module)"
-            (change)="toggleModule(module)"
-            [id]="'module-' + module"
-            class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-          <label 
-            [for]="'module-' + module"
-            class="flex-1 font-semibold text-gray-700 cursor-pointer">
+        @for(module of availableModules; track module){
+        <div class="flex items-center gap-3">
+          <input type="checkbox" [checked]="userModules.includes(module)" (change)="toggleModule(module)"
+            [id]="'module-' + module" class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <label [for]="'module-' + module" class="flex-1 font-semibold text-gray-700 cursor-pointer">
             {{ module }}
           </label>
         </div>
+        }
       </div>
 
       <div class="flex gap-3">
-        <button 
-          (click)="closeModuleAssignment()"
+        <button (click)="closeModuleAssignment()"
           class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
           Cancel
         </button>
-        <button 
-          (click)="saveModuleAssignment()"
-          [disabled]="selectedUserForModules?.isUpdating"
+        <button (click)="saveModuleAssignment()" [disabled]="selectedUserForModules?.isUpdating"
           class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50">
           {{ selectedUserForModules?.isUpdating ? '⏳ Saving...' : 'Save' }}
         </button>
       </div>
     </div>
   </div>
+  }
 
   <!-- Delete Confirmation Modal -->
-  <div *ngIf="showDeleteConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+   @if(showDeleteConfirm){
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
       <div class="text-center">
         <p class="text-5xl mb-4">⚠️</p>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Delete User?</h3>
         <p class="text-gray-600 mb-6">
-          Are you sure you want to delete <span class="font-semibold">{{ userToDelete?.name }}</span>? This action cannot be undone.
+          Are you sure you want to delete <span class="font-semibold">{{ userToDelete?.name }}</span>? This action
+          cannot be undone.
         </p>
         <div class="flex gap-3">
-          <button 
-            (click)="cancelDelete()"
+          <button (click)="cancelDelete()"
             class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
             Cancel
           </button>
-          <button 
-            (click)="deleteUser()"
-            [disabled]="userToDelete?.isDeleting"
+          <button (click)="deleteUser()" [disabled]="userToDelete?.isDeleting"
             class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50">
             {{ userToDelete?.isDeleting ? '⏳ Deleting...' : '🗑️ Delete' }}
           </button>
@@ -403,4 +379,5 @@
       </div>
     </div>
   </div>
+   }
 </div>
