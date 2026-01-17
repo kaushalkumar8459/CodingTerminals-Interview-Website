@@ -27,9 +27,11 @@
     <!-- Tags -->
     @if(post.tags && post.tags.length > 0){
     <div class="mb-6 flex flex-wrap gap-2">
-      <span *ngFor="let tag of post.tags" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+      @for (tag of post.tags; track $index) {
+      <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
         #{{ tag }}
       </span>
+      }
     </div>
     }
 
