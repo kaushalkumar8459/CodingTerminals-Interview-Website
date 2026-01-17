@@ -1,0 +1,82 @@
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Personal Dashboard</h1>
+        <p class="text-gray-600">Manage your account and personal settings</p>
+    </div>
+
+    <!-- User Info Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center mb-4">
+            <div
+                class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-xl font-bold mr-4">
+                {{ userInitials }}
+            </div>
+            <div>
+                <h2 class="text-xl font-semibold">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</h2>
+                <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                    {{ getRoleDisplayText(currentUser?.role) }}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="font-medium text-gray-700 mb-2">Contact Information</h3>
+                <p class="text-gray-600">{{ currentUser?.email }}</p>
+                <p class="text-gray-600" *ngIf="currentUser?.phoneNumber">{{ currentUser?.phoneNumber }}</p>
+            </div>
+
+            <div class="border border-gray-200 rounded-lg p-4">
+                <h3 class="font-medium text-gray-700 mb-2">Account Status</h3>
+                <span class="inline-block px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                    Active
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <a [routerLink]="['/profile']"
+                class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <span class="text-blue-600">👤</span>
+                    </div>
+                    <div>
+                        <h3 class="font-medium">Edit Profile</h3>
+                        <p class="text-sm text-gray-600">Update personal information</p>
+                    </div>
+                </div>
+            </a>
+
+            <a [routerLink]="['/settings']"
+                class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                        <span class="text-gray-600">⚙️</span>
+                    </div>
+                    <div>
+                        <h3 class="font-medium">Account Settings</h3>
+                        <p class="text-sm text-gray-600">Change preferences and security</p>
+                    </div>
+                </div>
+            </a>
+
+            <a [routerLink]="['/dashboard']"
+                class="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                        <span class="text-purple-600">📊</span>
+                    </div>
+                    <div>
+                        <h3 class="font-medium">View Dashboard</h3>
+                        <p class="text-sm text-gray-600">See your activity overview</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>

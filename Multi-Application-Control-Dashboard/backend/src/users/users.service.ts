@@ -120,17 +120,22 @@ export class UsersService {
       };
     }
 
-    // Normal User has access only to Profile and Settings
+    // Normal User has access to Profile, Settings, and their personal dashboard
     if (user.role === RoleType.NORMAL_USER) {
       return {
         role: user.role,
         permissions: [
           { module: 'Profile', actions: [PermissionAction.VIEW, PermissionAction.EDIT] },
           { module: 'Settings', actions: [PermissionAction.VIEW, PermissionAction.EDIT] },
+          { module: 'Dashboard', actions: [PermissionAction.VIEW] },
+          // Allow access to their own personal dashboard features
+          { module: 'Personal Dashboard', actions: [PermissionAction.VIEW] },
         ],
         canManageUsers: false,
         canManageRoles: false,
         canManageModules: false,
+        // Add a flag indicating this is a normal user who should be redirected for admin tasks
+        requiresRedirectionForAdminTasks: true,
       };
     }
 

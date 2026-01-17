@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
-import { RoleGuard, ModuleGuard } from './core/guards/role.guard';
+import { RoleGuard, ModuleGuard, NormalUserRedirectGuard } from './core/guards/role.guard';
 import { LayoutComponent } from './shared/layouts/layout.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
@@ -33,7 +33,7 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [AuthGuard],
     children: [
-      // Dashboard
+      // Dashboard - accessible to all users including Normal Users
       {
         path: 'dashboard',
         component: DashboardComponent,
@@ -89,6 +89,13 @@ export const routes: Routes = [
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
+      },
+
+      // Personal Dashboard for Normal Users (protected by NormalUserRedirectGuard)
+      {
+        path: 'personal-dashboard',
+        loadComponent: () => import('./features/personal-dashboard/personal-dashboard.component').then(m => m.PersonalDashboardComponent),
+        canActivate: [NormalUserRedirectGuard]
       },
 
       // Access Denied
