@@ -1,55 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ToastService, Toast } from '../services/toast.service';
+import { Toast, ToastService } from '../../core/services/toast.service';
 
 @Component({
   selector: 'app-toast-container',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="fixed top-4 right-4 z-50 space-y-2 max-w-md">
-      <div 
-        *ngFor="let toast of toasts"
-        [ngClass]="getToastClass(toast.type)"
-        class="animate-slide-in rounded-lg shadow-lg p-4 flex items-start gap-3 backdrop-blur-sm">
-        
-        <!-- Icon -->
-        <span class="text-xl flex-shrink-0">
-          {{ getToastIcon(toast.type) }}
-        </span>
-
-        <!-- Message -->
-        <div class="flex-1">
-          <p class="font-semibold">{{ getToastTitle(toast.type) }}</p>
-          <p class="text-sm mt-1">{{ toast.message }}</p>
-        </div>
-
-        <!-- Close Button -->
-        <button
-          *ngIf="toast.dismissible"
-          (click)="removeToast(toast.id)"
-          class="text-xl flex-shrink-0 hover:opacity-70 transition-opacity">
-          ✕
-        </button>
-      </div>
-    </div>
-  `,
-  styles: [`
-    @keyframes slideIn {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    
-    :host ::ng-deep .animate-slide-in {
-      animation: slideIn 0.3s ease-out;
-    }
-  `]
+  templateUrl: './toast-container.component.html',
+  styleUrls: ['./toast-container.component.scss']
 })
 export class ToastContainerComponent implements OnInit {
   toasts: Toast[] = [];
@@ -57,7 +15,7 @@ export class ToastContainerComponent implements OnInit {
   constructor(private toastService: ToastService) { }
 
   ngOnInit(): void {
-    this.toastService.getToasts().subscribe(toasts => {
+    this.toastService.getToasts().subscribe((toasts: any) => {
       this.toasts = toasts;
     });
   }

@@ -6,7 +6,8 @@
   </div>
 
   <!-- Video Container -->
-  <div *ngIf="video" class="bg-white rounded-lg shadow-md p-8">
+  @if(video){
+  <div class="bg-white rounded-lg shadow-md p-8">
     <!-- Video Player -->
     <div class="mb-6">
       <div class="aspect-video bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center">
@@ -53,4 +54,5 @@
       </button>
     </div>
   </div>
+  }
 </div>

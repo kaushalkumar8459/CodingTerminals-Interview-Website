@@ -56,39 +56,39 @@ export class DashboardComponent implements OnInit {
   /**
    * Get stats from store
    */
-  get stats(): Stat[] {
-    // return this.dashboardStore.stats();
-    return [
-      {
-        title: 'Total Users',
-        value: 0,
-        description: 'Active users in system',
-        icon: '👥',
-        color: 'bg-blue-50'
-      },
-      {
-        title: 'Active Modules',
-        value: 0,
-        description: 'Modules in use',
-        icon: '🔧',
-        color: 'bg-green-50'
-      },
-      {
-        title: 'Content Items',
-        value: 0,
-        description: 'Total content pieces',
-        icon: '📄',
-        color: 'bg-purple-50'
-      },
-      {
-        title: 'Recent Activity',
-        value: 0,
-        description: 'Last 24 hours',
-        icon: '📊',
-        color: 'bg-orange-50'
-      }
-    ];
-  }
+  /**
+   * Get stats from store
+   */
+  readonly stats: Stat[] = [
+    {
+      title: 'Total Users',
+      value: 0,
+      description: 'Active users in system',
+      icon: '👥',
+      color: 'bg-blue-50'
+    },
+    {
+      title: 'Active Modules',
+      value: 0,
+      description: 'Modules in use',
+      icon: '🔧',
+      color: 'bg-green-50'
+    },
+    {
+      title: 'Content Items',
+      value: 0,
+      description: 'Total content pieces',
+      icon: '📄',
+      color: 'bg-purple-50'
+    },
+    {
+      title: 'Recent Activity',
+      value: 0,
+      description: 'Last 24 hours',
+      icon: '📊',
+      color: 'bg-orange-50'
+    }
+  ];
 
   /**
    * Get recent activities from store
