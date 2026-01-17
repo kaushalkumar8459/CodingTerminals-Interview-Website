@@ -165,28 +165,28 @@
           <tbody class="divide-y divide-gray-200">
             @for(user of users; track user){
             <tr class="hover:bg-gray-50 transition-colors">
-              <td class="px-6 py-4 font-medium text-gray-900">{{ user.name }}</td>
+              <td class="px-6 py-4 font-medium text-gray-900">{{ user.firstName }} {{ user.lastName }}</td>
               <td class="px-6 py-4 text-sm text-gray-600">{{ user.email }}</td>
               <td class="px-6 py-4">
                 <span [ngClass]="getRoleBadgeClass(user.role)">
-                  {{ user.role }}
+                  {{ roleDisplayNames[user.role] || user.role }}
                 </span>
               </td>
               <td class="px-6 py-4">
                 <span [ngClass]="getStatusBadgeClass(user.status)">
-                  {{ user.status }}
+                  {{ statusDisplayNames[user.status] || user.status }}
                 </span>
               </td>
               <td class="px-6 py-4">
                 <div class="flex flex-wrap gap-1">
-                  @for(module of (user.modules || []).slice(0, 2); track module){
+                  @for(module of (user.assignedModules || []).slice(0, 2); track module){
                   <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
                     {{ module }}
                   </span>
                   }
-                  @if((user.modules || []).length > 2){
+                  @if((user.assignedModules || []).length > 2){
                   <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full font-semibold">
-                    +{{ (user.modules || []).length - 2 }}
+                    +{{ (user.assignedModules || []).length - 2 }}
                   </span>
                   }
                 </div>
@@ -261,15 +261,28 @@
       </h3>
 
       <form [formGroup]="userForm" (ngSubmit)="saveUser()" class="space-y-4">
-        <!-- Name -->
+        <!-- First Name -->
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Name</label>
-          <input formControlName="name" type="text" placeholder="Full name"
+          <label class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
+          <input formControlName="firstName" type="text" placeholder="First name"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            [class.border-red-500]="userForm.get('name')?.invalid && userForm.get('name')?.touched">
-          @if(userForm.get('name')?.invalid && userForm.get('name')?.touched){
+            [class.border-red-500]="userForm.get('firstName')?.invalid && userForm.get('firstName')?.touched">
+          @if(userForm.get('firstName')?.invalid && userForm.get('firstName')?.touched){
           <p class="text-red-500 text-sm mt-1">
-            Name is required (min 2 characters)
+            First name is required (min 2 characters)
+          </p>
+          }
+        </div>
+
+        <!-- Last Name -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+          <input formControlName="lastName" type="text" placeholder="Last name"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            [class.border-red-500]="userForm.get('lastName')?.invalid && userForm.get('lastName')?.touched">
+          @if(userForm.get('lastName')?.invalid && userForm.get('lastName')?.touched){
+          <p class="text-red-500 text-sm mt-1">
+            Last name is required (min 2 characters)
           </p>
           }
         </div>
@@ -292,9 +305,9 @@
           <label class="block text-sm font-semibold text-gray-700 mb-2">Role</label>
           <select formControlName="role"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="VIEWER">Viewer</option>
-            <option value="ADMIN">Admin</option>
-            <option value="SUPER_ADMIN">Super Admin</option>
+            @for(role of roles; track role){
+            <option [value]="role">{{ roleDisplayNames[role] }}</option>
+            }
           </select>
         </div>
 
@@ -303,9 +316,9 @@
           <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
           <select formControlName="status"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Suspended">Suspended</option>
+            @for(status of statusOptions; track status){
+            <option [value]="status">{{ statusDisplayNames[status] }}</option>
+            }
           </select>
         </div>
 
@@ -333,7 +346,7 @@
         <span>📦</span> Assign Modules
       </h3>
       <p class="text-gray-600 mb-4">
-        Assigning modules for: <span class="font-semibold">{{ selectedUserForModules?.name }}</span>
+        Assigning modules for: <span class="font-semibold">{{ selectedUserForModules?.firstName }} {{ selectedUserForModules?.lastName }}</span>
       </p>
 
       <div class="space-y-3 mb-6">
@@ -370,7 +383,7 @@
         <p class="text-5xl mb-4">⚠️</p>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Delete User?</h3>
         <p class="text-gray-600 mb-6">
-          Are you sure you want to delete <span class="font-semibold">{{ userToDelete?.name }}</span>? This action
+          Are you sure you want to delete <span class="font-semibold">{{ userToDelete?.firstName }} {{ userToDelete?.lastName }}</span>? This action
           cannot be undone.
         </p>
         <div class="flex gap-3">

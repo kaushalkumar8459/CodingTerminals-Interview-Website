@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from './schemas/user.schema';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { RoleType, PermissionAction } from '../roles/schemas/role.schema';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -19,11 +20,11 @@ export class UsersService {
   }
 
   async findAll() {
-    return this.userModel.find().select('-password').exec();
+    return this.userModel.find().select('-password').populate('assignedModules').exec();
   }
 
   async findOne(id: string) {
-    return this.userModel.findById(id).select('-password').exec();
+    return this.userModel.findById(id).select('-password').populate('assignedModules').exec();
   }
 
   async findByEmail(email: string) {
@@ -41,6 +42,7 @@ export class UsersService {
   async assignModules(userId: string, moduleIds: string[]) {
     return this.userModel
       .findByIdAndUpdate(userId, { assignedModules: moduleIds }, { new: true })
+      .populate('assignedModules')
       .exec();
   }
 
@@ -73,5 +75,86 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     return this.userModel.findByIdAndUpdate(userId, { password: hashedPassword }, { new: true }).select('-password').exec();
+  }
+
+  /**
+   * Get user's effective permissions based on role and assigned modules
+   */
+  async getUserPermissions(userId: string) {
+    const user = await this.userModel.findById(userId).populate('assignedModules').exec();
+    
+    if (!user) {
+      throw new NotFoundException(`User with ID '${userId}' not found`);
+    }
+
+    const permissions: { module: string; actions: PermissionAction[] }[] = [];
+    const allActions = Object.values(PermissionAction);
+
+    // Super Admin has all permissions on all modules
+    if (user.role === RoleType.SUPER_ADMIN) {
+      const modules = ['Blog', 'YouTube', 'LinkedIn', 'Study Notes', 'Dashboard', 'Analytics', 'Audit Logs', 'User Management', 'Module Settings'];
+      return {
+        role: user.role,
+        permissions: modules.map(module => ({
+          module,
+          actions: allActions,
+        })),
+        canManageUsers: true,
+        canManageRoles: true,
+        canManageModules: true,
+      };
+    }
+
+    // Viewer has only VIEW permission
+    if (user.role === RoleType.VIEWER) {
+      const assignedModuleNames = user.assignedModules.map((m: any) => m.name || m.toString());
+      return {
+        role: user.role,
+        permissions: assignedModuleNames.map(module => ({
+          module,
+          actions: [PermissionAction.VIEW],
+        })),
+        canManageUsers: false,
+        canManageRoles: false,
+        canManageModules: false,
+      };
+    }
+
+    // Normal User has access only to Profile and Settings
+    if (user.role === RoleType.NORMAL_USER) {
+      return {
+        role: user.role,
+        permissions: [
+          { module: 'Profile', actions: [PermissionAction.VIEW, PermissionAction.EDIT] },
+          { module: 'Settings', actions: [PermissionAction.VIEW, PermissionAction.EDIT] },
+        ],
+        canManageUsers: false,
+        canManageRoles: false,
+        canManageModules: false,
+      };
+    }
+
+    // Admin has CRUD on assigned modules
+    if (user.role === RoleType.ADMIN) {
+      const assignedModuleNames = user.assignedModules.map((m: any) => m.name || m.toString());
+      return {
+        role: user.role,
+        permissions: assignedModuleNames.map(module => ({
+          module,
+          actions: allActions, // Admin gets full CRUD on assigned modules
+        })),
+        canManageUsers: false,
+        canManageRoles: false,
+        canManageModules: false,
+      };
+    }
+
+    return {
+      role: user.role,
+      permissions: [],
+      canManageUsers: false,
+      canManageRoles: false,
+      canManageModules: false,
+    };
   }
 }

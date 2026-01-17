@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthService, User } from '../services/auth.service';
 import { ModuleService } from '../services/module.service';
+import { RoleType } from '../models/role.model';
 
 @Injectable({
   providedIn: 'root'
@@ -22,9 +23,14 @@ export class RoleGuard implements CanActivate {
       return false;
     }
 
+    // Super admin bypasses all role checks
+    if (user.role === RoleType.SUPER_ADMIN) {
+      return true;
+    }
+
     // Check if route requires specific roles
-    const requiredRoles: string[] = route.data['roles'];
-    if (!requiredRoles) {
+    const requiredRoles: RoleType[] = route.data['roles'];
+    if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
@@ -40,7 +46,7 @@ export class RoleGuard implements CanActivate {
   /**
    * Check if user has one of the required roles
    */
-  private hasRequiredRole(user: User, requiredRoles: string[]): boolean {
+  private hasRequiredRole(user: User, requiredRoles: RoleType[]): boolean {
     return requiredRoles.includes(user.role);
   }
 }

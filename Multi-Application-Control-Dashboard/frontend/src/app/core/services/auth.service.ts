@@ -2,16 +2,21 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { RoleType, UserStatus } from '../models/role.model';
 
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'super_admin' | 'admin' | 'viewer';
+  role: RoleType;
+  customRoleId?: string;
   assignedModules: string[];
+  status: UserStatus;
   isActive: boolean;
   lastLogin?: Date;
+  phoneNumber?: string;
+  avatarUrl?: string;
 }
 
 export interface LoginRequest {

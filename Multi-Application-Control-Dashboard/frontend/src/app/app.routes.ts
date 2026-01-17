@@ -4,6 +4,7 @@ import { RoleGuard, ModuleGuard } from './core/guards/role.guard';
 import { LayoutComponent } from './shared/layouts/layout.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
+import { RoleType } from './core/models/role.model';
 
 export const routes: Routes = [
   // Auth Routes (No Layout)
@@ -75,16 +76,16 @@ export const routes: Routes = [
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
         canActivate: [RoleGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
+        data: { roles: [RoleType.SUPER_ADMIN, RoleType.ADMIN] }
       },
 
-      // User Profile
+      // User Profile (accessible to all authenticated users including Normal Users)
       {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
       },
 
-      // Settings
+      // Settings (accessible to all authenticated users)
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),

@@ -24,13 +24,19 @@ export class User extends Document {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ required: true, enum: RoleType, default: RoleType.VIEWER })
+  // Base role type for the user
+  @Prop({ required: true, enum: RoleType, default: RoleType.NORMAL_USER })
   role: RoleType;
+
+  // Reference to custom role document (for admin-defined permissions)
+  @Prop({ type: Types.ObjectId, ref: 'Role' })
+  customRoleId?: Types.ObjectId;
 
   @Prop({ enum: UserStatus, default: UserStatus.ACTIVE })
   status: UserStatus;
 
-  @Prop({ type: [Types.ObjectId], ref: 'Module', default: [] })
+  // Modules assigned to this user (overrides role-based module access)
+  @Prop({ type: [Types.ObjectId], ref: 'AppModule', default: [] })
   assignedModules: Types.ObjectId[];
 
   @Prop({ default: false })
@@ -42,9 +48,24 @@ export class User extends Document {
   @Prop()
   refreshToken?: string;
 
+  // Profile information for normal users
+  @Prop()
+  phoneNumber?: string;
+
+  @Prop()
+  avatarUrl?: string;
+
+  @Prop({ type: Object, default: {} })
+  preferences?: Record<string, any>;
+
   // Virtual property for isActive based on status
   get isActive(): boolean {
     return this.status === UserStatus.ACTIVE;
+  }
+
+  // Virtual for full name
+  get fullName(): string {
+    return `${this.firstName} ${this.lastName}`;
   }
 }
 
