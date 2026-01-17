@@ -17,9 +17,11 @@
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="Enter video title"
         >
-        <div *ngIf="submitted && form.get('title')?.errors" class="text-red-500 text-sm mt-1">
-          Title is required
-        </div>
+        @if(submitted && form.get('title')?.errors) {
+          <div class="text-red-500 text-sm mt-1">
+            Title is required
+          </div>
+        }
       </div>
 
       <!-- Video URL -->
@@ -31,9 +33,11 @@
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="https://youtube.com/watch?v=..."
         >
-        <div *ngIf="submitted && form.get('videoUrl')?.errors" class="text-red-500 text-sm mt-1">
-          Valid URL is required
-        </div>
+        @if(submitted && form.get('videoUrl')?.errors) {
+          <div class="text-red-500 text-sm mt-1">
+            Valid URL is required
+          </div>
+        }
       </div>
 
       <!-- Category -->
@@ -48,9 +52,11 @@
           <option value="Backend">Backend</option>
           <option value="Tutorials">Tutorials</option>
         </select>
-        <div *ngIf="submitted && form.get('category')?.errors" class="text-red-500 text-sm mt-1">
-          Category is required
-        </div>
+        @if(submitted && form.get('category')?.errors) {
+          <div class="text-red-500 text-sm mt-1">
+            Category is required
+          </div>
+        }
       </div>
 
       <!-- Description -->

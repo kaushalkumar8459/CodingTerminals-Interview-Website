@@ -6,7 +6,8 @@
   </div>
 
   <!-- Post Container -->
-  <div *ngIf="post()" class="bg-white rounded-lg shadow-md p-8">
+   @if(post()){
+  <div class="bg-white rounded-lg shadow-md p-8">
     <!-- Metadata -->
     <div class="mb-6 pb-6 border-b border-gray-200">
       <span [class]="post()?.status === 'published' ? 'badge-success' : 'badge-warning'">
@@ -47,4 +48,5 @@
       <button (click)="shareOnSocial('linkedin')" class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900">in LinkedIn</button>
     </div>
   </div>
+}
 </div>

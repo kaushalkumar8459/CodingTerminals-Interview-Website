@@ -10,39 +10,45 @@
           <p class="text-gray-600 mt-1">Enable or disable system modules globally</p>
         </div>
         <div class="flex gap-2">
-          <button 
-            *ngIf="hasChanges"
-            (click)="resetChanges()"
+          @if(hasChanges){
+          <button (click)="resetChanges()"
             class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold flex items-center gap-2 shadow-md">
             <span>↩️</span> Revert
           </button>
-          <button 
-            *ngIf="hasChanges"
-            (click)="saveModuleChanges()"
-            [disabled]="isSaving"
+          }
+          @if(hasChanges){
+          <button (click)="saveModuleChanges()" [disabled]="isSaving"
             class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2 shadow-md disabled:opacity-50">
             <span>{{ isSaving ? '⏳' : '💾' }}</span> {{ isSaving ? 'Saving...' : 'Save Changes' }}
           </button>
+          }
         </div>
       </div>
     </div>
 
     <!-- Alert Messages -->
-    <div *ngIf="error" class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3">
+    @if(error){
+    <div
+      class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3">
       <span class="text-xl">❌</span>
       <div>
         <p class="font-semibold">Error</p>
         <p class="text-sm">{{ error }}</p>
       </div>
     </div>
+    }
 
-    <div *ngIf="success" class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3">
+    @if(success){
+    <div
+      class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3">
       <span class="text-xl">✅</span>
       <div>
         <p class="font-semibold">Success</p>
         <p class="text-sm">{{ success }}</p>
       </div>
     </div>
+    }
+
 
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -81,21 +87,23 @@
     </div>
 
     <!-- Loading State -->
-    <div *ngIf="loading" class="bg-white rounded-xl shadow-lg p-12 text-center">
+    @if(loading){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
       <div class="inline-block animate-spin">
         <span class="text-4xl">⏳</span>
       </div>
       <p class="text-gray-600 mt-4 font-semibold">Loading modules...</p>
     </div>
+    }
+
 
     <!-- Modules Grid -->
-    <div *ngIf="!loading && modules.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div 
-        *ngFor="let module of modules"
-        [class.ring-2]="module.hasChanges"
-        [class.ring-orange-400]="module.hasChanges"
+    @if(!loading && modules.length > 0){
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      @for( module of modules; track module){
+      <div [class.ring-2]="module.hasChanges" [class.ring-orange-400]="module.hasChanges"
         class="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden border border-gray-100">
-        
+
         <!-- Module Header -->
         <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
           <div class="flex items-center justify-between">
@@ -128,33 +136,38 @@
           </div>
 
           <!-- Changed Indicator -->
-          <div *ngIf="module.hasChanges" class="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200 flex items-center gap-2">
+          @if(module.hasChanges){
+          <div class="mb-4 p-3 bg-orange-50 rounded-lg border border-orange-200 flex items-center gap-2">
             <span class="text-xl">⚡</span>
             <p class="text-sm font-semibold text-orange-800">Changes pending</p>
           </div>
+          }
+
 
           <!-- Toggle Switch -->
           <div class="flex items-center justify-between pt-4 border-t border-gray-100">
             <span class="text-sm font-semibold text-gray-700">Enable Module</span>
             <label class="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                [checked]="module.enabled"
-                (change)="toggleModule(module)"
-                class="sr-only peer">
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <input type="checkbox" [checked]="module.enabled" (change)="toggleModule(module)" class="sr-only peer">
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
         </div>
       </div>
+      }
     </div>
+    }
 
     <!-- Empty State -->
-    <div *ngIf="!loading && modules.length === 0" class="bg-white rounded-xl shadow-lg p-12 text-center">
+    @if(!loading && modules.length === 0){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
       <p class="text-5xl mb-4">📦</p>
       <h3 class="text-xl font-semibold text-gray-700 mb-2">No modules available</h3>
       <p class="text-gray-600">Modules will appear here once they are registered in the system</p>
     </div>
+    }
 
     <!-- Info Box -->
     <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">

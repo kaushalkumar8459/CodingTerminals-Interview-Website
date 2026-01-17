@@ -6,7 +6,8 @@
   </div>
 
   <!-- Article Container -->
-  <div *ngIf="post" class="bg-white rounded-lg shadow-md p-8 max-w-4xl">
+  @if(post){
+  <div class="bg-white rounded-lg shadow-md p-8 max-w-4xl">
     <!-- Metadata -->
     <div class="mb-6 pb-6 border-b border-gray-200">
       <span [class]="post.status === 'published' ? 'badge-success' : 'badge-warning'">
@@ -24,11 +25,15 @@
     </div>
 
     <!-- Tags -->
-    <div *ngIf="post.tags && post.tags.length > 0" class="mb-6 flex flex-wrap gap-2">
-      <span *ngFor="let tag of post.tags" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+    @if(post.tags && post.tags.length > 0){
+    <div class="mb-6 flex flex-wrap gap-2">
+      @for (tag of post.tags; track $index) {
+      <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
         #{{ tag }}
       </span>
+      }
     </div>
+    }
 
     <!-- Engagement Stats -->
     <div class="mb-6 grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
@@ -48,10 +53,15 @@
 
     <!-- Share Buttons -->
     <div class="flex flex-wrap gap-2">
-      <button (click)="shareOnSocial('twitter')" class="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500">𝕏 Twitter</button>
-      <button (click)="shareOnSocial('facebook')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">f Facebook</button>
-      <button (click)="shareOnSocial('linkedin')" class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900">in LinkedIn</button>
-      <button (click)="copyLink()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">🔗 Copy Link</button>
+      <button (click)="shareOnSocial('twitter')"
+        class="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500">𝕏 Twitter</button>
+      <button (click)="shareOnSocial('facebook')"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">f Facebook</button>
+      <button (click)="shareOnSocial('linkedin')"
+        class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900">in LinkedIn</button>
+      <button (click)="copyLink()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">🔗 Copy
+        Link</button>
     </div>
   </div>
+  }
 </div>
