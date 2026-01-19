@@ -22,6 +22,40 @@ export class PermissionService {
   }
 
   /**
+   * Check if user has specific permission for a module and action
+   */
+  hasPermission(module: string, action: string = 'view'): boolean {
+    const user = this.authService.getCurrentUser();
+    if (!user) return false;
+
+    // Super admin has all permissions
+    if (user.role === 'super_admin') return true;
+
+    // Viewer can only view
+    if (user.role === 'viewer' && action !== 'view') {
+      return false;
+    }
+
+    // Normal user has limited permissions
+    if (user.role === 'normal_user') {
+      // Normal users can only access profile and settings
+      const allowedModules = ['Profile', 'Settings', 'Dashboard'];
+      if (!allowedModules.includes(module)) {
+        return false;
+      }
+      // Within allowed modules, they can view and edit their own data
+      return ['view', 'edit'].includes(action);
+    }
+
+    // For Admin, check assigned modules
+    if (user.role === 'admin') {
+      return user.assignedModules.includes(module.toLowerCase());
+    }
+
+    return false;
+  }
+
+  /**
    * Check if user can perform action based on role
    */
   canEdit(): boolean {

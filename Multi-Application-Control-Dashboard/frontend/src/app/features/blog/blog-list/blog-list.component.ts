@@ -4,15 +4,21 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { BlogStore } from '../../../core/store/blog.store';
 import { PermissionService } from '../../../core/services/permission.service';
+import { HasRoleDirective, HasPermissionDirective, AuthDisabledDirective, HasPermissionPipe } from '../../../core/directives';
+import { RoleType } from '../../../core/models/role.model';
 
 @Component({
   selector: 'app-blog-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, HasRoleDirective,
+    HasPermissionDirective,
+    AuthDisabledDirective,
+    HasPermissionPipe],
   templateUrl: './blog-list.component.html',
   styleUrls: ['./blog-list.component.scss']
 })
 export class BlogListComponent implements OnInit {
+   RoleType = RoleType;
   // ===== INJECT STORE AND SERVICES =====
   readonly blogStore = inject(BlogStore);
   private permissionService = inject(PermissionService);

@@ -3,12 +3,15 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { AuthService, User } from '../../../core/services/auth.service';
 import { PermissionService } from '../../../core/services/permission.service';
+// Import the authorization directives
+import { HasRoleDirective, HasPermissionDirective, AuthDisabledDirective } from '../../../core/directives';
+import { RoleType } from '../../../core/models/role.model';
 
 interface MenuItem {
   label: string;
   icon: string;
   route: string;
-  requiredRole?: string[];
+  requiredRole?: RoleType[];
   moduleId?: string;
   children?: MenuItem[];
   badge?: string | null;
@@ -18,11 +21,21 @@ interface MenuItem {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule, 
+    RouterLink, 
+    RouterLinkActive,
+    // Add the authorization directives
+    HasRoleDirective,
+    HasPermissionDirective,
+    AuthDisabledDirective
+  ],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent implements OnInit {
+  RoleType = RoleType;
+  
   currentUser: User | null = null;
   isSidebarOpen = true;
   menuItems: MenuItem[] = [];
@@ -109,26 +122,26 @@ export class SidebarComponent implements OnInit {
         label: 'Administration',
         icon: '⚙️',
         route: '#',
-        requiredRole: ['super_admin', 'admin'],
+        requiredRole: [RoleType.SUPER_ADMIN, RoleType.ADMIN],
         children: [
           {
             label: 'Admin Dashboard',
             icon: '📈',
             route: '/admin',
-            requiredRole: ['super_admin', 'admin']
+            requiredRole: [RoleType.SUPER_ADMIN, RoleType.ADMIN]
           },
           {
             label: 'Users',
             icon: '👥',
             route: '/admin/users',
-            requiredRole: ['super_admin'],
+            requiredRole: [RoleType.SUPER_ADMIN],
             badge: '12'
           },
           {
             label: 'Modules',
             icon: '🔧',
             route: '/admin/modules',
-            requiredRole: ['super_admin']
+            requiredRole: [RoleType.SUPER_ADMIN]
           }
         ]
       });
@@ -160,7 +173,7 @@ export class SidebarComponent implements OnInit {
   isMenuItemVisible(item: MenuItem): boolean {
     // Check role requirement
     if (item.requiredRole) {
-      return item.requiredRole.includes(this.currentUser?.role || '');
+      return item.requiredRole.includes(this.currentUser?.role as RoleType);
     }
 
     // Check module access
