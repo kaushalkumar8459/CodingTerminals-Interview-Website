@@ -30,13 +30,11 @@ const questionSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        index: true
     },
     academicYear: {
         type: String,
         required: true,
         trim: true,
-        index: true
     },
     examType: {
         type: String,

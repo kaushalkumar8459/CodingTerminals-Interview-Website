@@ -13,7 +13,7 @@ let confirmModalCallback = null;
 const API_CONFIG = {
     BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
     ENDPOINTS: {
-        UPLOAD_QUESTION_PAPER: '/question-papers/upload',
+        UPLOAD_QUESTION_PAPER: '/questions/upload',
         GET_ALL_QUESTIONS: '/questions',
         CREATE_QUESTION: '/questions',
         UPDATE_QUESTION: '/questions/',
@@ -21,7 +21,7 @@ const API_CONFIG = {
         IMPORT_CSV: '/questions/import/csv',
         IMPORT_EXCEL: '/questions/import/excel',
         IMPORT_TEXT: '/questions/import/text',
-        SYNC_WITH_DB: '/questions/sync'
+        SYNC_WITH_DB: '/questions/sync',
     }
 };
 
@@ -41,7 +41,7 @@ const API_URLS = {
 // Initialize Dropzone
 function initDropzone() {
     Dropzone.autoDiscover = false;
-    
+
     const myDropzone = new Dropzone("#dropzone", {
         url: API_URLS.UPLOAD_QUESTION_PAPER,
         paramName: "file",
@@ -49,22 +49,22 @@ function initDropzone() {
         acceptedFiles: ".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt",
         addRemoveLinks: true,
         dictDefaultMessage: "Drop files here or click to browse",
-        init: function() {
-            this.on("addedfile", function(file) {
+        init: function () {
+            this.on("addedfile", function (file) {
                 uploadedFiles.push(file);
                 updateFilePreview();
             });
-            
-            this.on("removedfile", function(file) {
+
+            this.on("removedfile", function (file) {
                 uploadedFiles = uploadedFiles.filter(f => f.name !== file.name);
                 updateFilePreview();
             });
-            
-            this.on("uploadprogress", function(file, progress, bytesSent) {
+
+            this.on("uploadprogress", function (file, progress, bytesSent) {
                 updateProgress(progress, bytesSent);
             });
-            
-            this.on("success", function(file, response) {
+
+            this.on("success", function (file, response) {
                 // Handle successful upload
                 showToast('File uploaded successfully!', 'success');
                 if (response && response.questions) {
@@ -76,12 +76,12 @@ function initDropzone() {
                     updateDifficultyFilters();
                 }
             });
-            
-            this.on("error", function(file, errorMessage) {
+
+            this.on("error", function (file, errorMessage) {
                 showToast(`Upload failed: ${errorMessage}`, 'error');
             });
-            
-            this.on("complete", function(file) {
+
+            this.on("complete", function (file) {
                 hideProgress();
             });
         }
@@ -92,12 +92,12 @@ function initDropzone() {
 function updateFilePreview() {
     const filesList = document.getElementById('filesList');
     if (!filesList) return; // Safe check
-    
+
     if (uploadedFiles.length === 0) {
         filesList.innerHTML = '<p class="text-gray-500 text-sm">No files selected</p>';
         return;
     }
-    
+
     filesList.innerHTML = uploadedFiles.map((file, index) => `
         <div class="file-preview">
             <div class="flex justify-between items-center">
@@ -137,7 +137,7 @@ function updateProgress(progress, bytesSent) {
     const progressContainer = document.getElementById('progressContainer');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
-    
+
     if (progressContainer) {
         progressContainer.classList.remove('hidden');
         if (progressFill) progressFill.style.width = progress + '%';
@@ -159,54 +159,54 @@ async function processUpload() {
         showToast('Please select files to upload', 'warning');
         return;
     }
-    
+
     const subject = document.getElementById('subjectSelect').value;
     const academicYear = document.getElementById('academicYear').value;
     const examType = document.getElementById('examType').value;
     const difficulty = document.getElementById('difficultyLevel').value;
     const autoParse = document.getElementById('autoParse').checked;
-    
+
     if (!subject) {
         showToast('Please select a subject', 'error');
         return;
     }
-    
+
     if (!academicYear) {
         showToast('Please enter academic year', 'error');
         return;
     }
-    
+
     try {
         // Prepare form data for API request
         const formData = new FormData();
-        
+
         // Add files
         uploadedFiles.forEach((file, index) => {
             formData.append(`files[${index}]`, file);
         });
-        
+
         // Add metadata
         formData.append('subject', subject);
         formData.append('academicYear', academicYear);
         formData.append('examType', examType);
         formData.append('difficulty', difficulty);
         formData.append('autoParse', autoParse);
-        
+
         // Show processing message
         showToast('Processing files...', 'info');
-        
+
         // Make API call
         const response = await fetch(API_URLS.UPLOAD_QUESTION_PAPER, {
             method: 'POST',
             body: formData
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             if (result.questions && result.questions.length > 0) {
                 parsedQuestions = [...parsedQuestions, ...result.questions];
@@ -231,13 +231,13 @@ async function processUpload() {
 async function loadQuestionsFromAPI() {
     try {
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             parsedQuestions = result.data || [];
             updateQuestionsList();
@@ -258,22 +258,22 @@ function updateQuestionsList() {
     const container = document.getElementById('questionsContainer');
     const emptyState = document.getElementById('emptyState');
     const questionCount = document.getElementById('questionCount');
-    
+
     if (!container || !emptyState || !questionCount) return; // Safe checks
-    
+
     if (parsedQuestions.length === 0) {
         emptyState.style.display = 'block';
         container.innerHTML = '';
         questionCount.textContent = '0';
         return;
     }
-    
+
     emptyState.style.display = 'none';
     questionCount.textContent = parsedQuestions.length;
-    
+
     // Apply filters
     const filteredQuestions = applyFilters();
-    
+
     container.innerHTML = filteredQuestions.map((question, index) => `
         <div class="question-preview">
             <div class="flex justify-between items-start mb-3">
@@ -325,23 +325,23 @@ function applyFilters() {
     const yearFilter = document.getElementById('filterYear');
     const difficultyFilter = document.getElementById('filterDifficulty');
     const searchQuery = document.getElementById('searchQuestions');
-    
+
     if (!subjectFilter || !yearFilter || !difficultyFilter || !searchQuery) return parsedQuestions;
-    
+
     const subjectValue = subjectFilter.value;
     const yearValue = yearFilter.value;
     const difficultyValue = difficultyFilter.value;
     const searchValue = searchQuery.value.toLowerCase();
-    
+
     return parsedQuestions.filter(question => {
         const matchesSubject = subjectValue === 'all' || question.subject === subjectValue;
         const matchesYear = yearValue === 'all' || question.academicYear === yearValue;
         const matchesDifficulty = difficultyValue === 'all' || question.difficulty === difficultyValue;
-        const matchesSearch = !searchValue || 
-                             question.question.toLowerCase().includes(searchValue) ||
-                             question.explanation.toLowerCase().includes(searchValue) ||
-                             question.topic.toLowerCase().includes(searchValue);
-        
+        const matchesSearch = !searchValue ||
+            question.question.toLowerCase().includes(searchValue) ||
+            question.explanation.toLowerCase().includes(searchValue) ||
+            question.topic.toLowerCase().includes(searchValue);
+
         return matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
     });
 }
@@ -350,12 +350,12 @@ function applyFilters() {
 function updateSubjectFilters() {
     const filterSelect = document.getElementById('filterSubject');
     if (!filterSelect) return;
-    
+
     const uniqueSubjects = new Set(parsedQuestions.map(q => q.subject));
-    
+
     // Clear existing options except "All Subjects"
     filterSelect.innerHTML = '<option value="all">All Subjects</option>';
-    
+
     // Add unique subjects
     uniqueSubjects.forEach(subject => {
         const option = document.createElement('option');
@@ -369,12 +369,12 @@ function updateSubjectFilters() {
 function updateYearFilters() {
     const filterSelect = document.getElementById('filterYear');
     if (!filterSelect) return;
-    
+
     const uniqueYears = new Set(parsedQuestions.map(q => q.academicYear));
-    
+
     // Clear existing options except "All Years"
     filterSelect.innerHTML = '<option value="all">All Years</option>';
-    
+
     // Add unique years
     uniqueYears.forEach(year => {
         const option = document.createElement('option');
@@ -388,10 +388,10 @@ function updateYearFilters() {
 function updateDifficultyFilters() {
     const filterSelect = document.getElementById('filterDifficulty');
     if (!filterSelect) return;
-    
+
     // Clear existing options except "All Levels"
     filterSelect.innerHTML = '<option value="all">All Levels</option>';
-    
+
     // Add difficulty levels
     difficultyLevels.forEach(level => {
         const option = document.createElement('option');
@@ -405,7 +405,7 @@ function updateDifficultyFilters() {
 function editQuestion(index) {
     currentEditingQuestion = index;
     const question = parsedQuestions[index];
-    
+
     // Create edit modal or use inline editing
     showEditModal(question, index);
 }
@@ -505,14 +505,45 @@ function showEditModal(question, index) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
+
+// ... existing code ...
+
+// Add new question manually
+function addNewQuestionManually() {
+    // Create a temporary question object
+    const newQuestion = {
+        id: 'temp_' + Date.now(),
+        question: 'New question text...',
+        subject: document.getElementById('subjectSelect').value || '',
+        academicYear: document.getElementById('academicYear').value || new Date().getFullYear().toString(),
+        examType: document.getElementById('examType').value || 'Practice Paper',
+        difficulty: document.getElementById('difficultyLevel').value || 'Beginner',
+        topic: '',
+        explanation: '',
+        options: ['', '', '', ''],
+        correctAnswer: 0
+    };
+
+    // Add to local array
+    parsedQuestions.unshift(newQuestion);
+    updateQuestionsList();
+    updateSubjectFilters();
+    updateYearFilters();
+    updateDifficultyFilters();
+
+    // Immediately edit the new question
+    editQuestion(0);
+}
+
+// ... rest of existing code ...
 
 // Save edited question
 async function saveEditedQuestion(index) {
     const question = parsedQuestions[index];
-    
+
     // Get updated values
     const updatedQuestion = {
         id: question.id,
@@ -526,17 +557,17 @@ async function saveEditedQuestion(index) {
         options: [],
         correctAnswer: 0
     };
-    
+
     // Update options
     const optionElements = document.querySelectorAll('[id^="editOption"]');
     updatedQuestion.options = Array.from(optionElements).map(el => el.value);
-    
+
     // Update correct answer
     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
     if (correctAnswerRadio) {
         updatedQuestion.correctAnswer = parseInt(correctAnswerRadio.value);
     }
-    
+
     try {
         // Make API call to update question
         const response = await fetch(API_URLS.UPDATE_QUESTION(question.id), {
@@ -546,20 +577,20 @@ async function saveEditedQuestion(index) {
             },
             body: JSON.stringify(updatedQuestion)
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             // Update local question data
             Object.assign(question, updatedQuestion);
-            
+
             // Update subject list if new subject was added
             subjectList.add(question.subject);
-            
+
             // Close modal and refresh display
             closeEditModal();
             updateQuestionsList();
@@ -585,20 +616,20 @@ function closeEditModal() {
 // Delete question
 async function deleteQuestion(index) {
     const question = parsedQuestions[index];
-    
+
     showConfirmModal('Delete Question', 'Are you sure you want to delete this question? This action cannot be undone.', async () => {
         try {
             // Make API call to delete question
             const response = await fetch(API_URLS.DELETE_QUESTION(question.id), {
                 method: 'DELETE'
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 // Remove from local array
                 parsedQuestions.splice(index, 1);
@@ -617,7 +648,7 @@ async function deleteQuestion(index) {
 // Import from CSV
 async function importFromCSV() {
     document.getElementById('importFileInput').accept = '.csv';
-    document.getElementById('importFileInput').onchange = async function(e) {
+    document.getElementById('importFileInput').onchange = async function (e) {
         await handleFileImport(e, 'csv');
     };
     document.getElementById('importFileInput').click();
@@ -626,7 +657,7 @@ async function importFromCSV() {
 // Import from Excel
 async function importFromExcel() {
     document.getElementById('importFileInput').accept = '.xlsx,.xls';
-    document.getElementById('importFileInput').onchange = async function(e) {
+    document.getElementById('importFileInput').onchange = async function (e) {
         await handleFileImport(e, 'excel');
     };
     document.getElementById('importFileInput').click();
@@ -635,7 +666,7 @@ async function importFromExcel() {
 // Import from Text
 async function importFromText() {
     document.getElementById('importFileInput').accept = '.txt,.pdf,.doc,.docx';
-    document.getElementById('importFileInput').onchange = async function(e) {
+    document.getElementById('importFileInput').onchange = async function (e) {
         await handleFileImport(e, 'text');
     };
     document.getElementById('importFileInput').click();
@@ -645,10 +676,10 @@ async function importFromText() {
 async function handleFileImport(event, importType = 'auto') {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const fileName = file.name;
     const fileExtension = fileName.split('.').pop().toLowerCase();
-    
+
     // Determine import type based on file extension if not specified
     if (importType === 'auto') {
         if (['csv'].includes(fileExtension)) {
@@ -659,10 +690,10 @@ async function handleFileImport(event, importType = 'auto') {
             importType = 'text';
         }
     }
-    
+
     try {
         showToast(`Processing ${fileName}...`, 'info');
-        
+
         // Prepare form data
         const formData = new FormData();
         formData.append('file', file);
@@ -670,10 +701,10 @@ async function handleFileImport(event, importType = 'auto') {
         formData.append('academicYear', document.getElementById('academicYear').value || '');
         formData.append('examType', document.getElementById('examType').value || 'Practice Paper');
         formData.append('difficulty', document.getElementById('difficultyLevel').value || 'Intermediate');
-        
+
         // Choose appropriate endpoint
         let apiUrl;
-        switch(importType) {
+        switch (importType) {
             case 'csv':
                 apiUrl = API_URLS.IMPORT_CSV;
                 break;
@@ -685,19 +716,19 @@ async function handleFileImport(event, importType = 'auto') {
                 apiUrl = API_URLS.IMPORT_TEXT;
                 break;
         }
-        
+
         // Make API call
         const response = await fetch(apiUrl, {
             method: 'POST',
             body: formData
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success && result.questions && result.questions.length > 0) {
             parsedQuestions = [...parsedQuestions, ...result.questions];
             updateQuestionsList();
@@ -720,10 +751,10 @@ async function saveAllQuestions() {
         showToast('No questions to save', 'warning');
         return;
     }
-    
+
     try {
         showToast('Saving all questions...', 'info');
-        
+
         // Make API call to save all questions
         const response = await fetch(API_URLS.CREATE_QUESTION, {
             method: 'POST',
@@ -732,13 +763,13 @@ async function saveAllQuestions() {
             },
             body: JSON.stringify({ questions: parsedQuestions })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(`${result.count || parsedQuestions.length} questions saved successfully!`, 'success');
         } else {
@@ -756,10 +787,10 @@ async function syncWithMongoDB() {
         showToast('No questions to sync', 'warning');
         return;
     }
-    
+
     try {
         showToast('Syncing with database...', 'info');
-        
+
         // Make API call to sync with database
         const response = await fetch(API_URLS.SYNC_WITH_DB, {
             method: 'POST',
@@ -768,13 +799,13 @@ async function syncWithMongoDB() {
             },
             body: JSON.stringify({ questions: parsedQuestions })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showToast(`${result.synced || parsedQuestions.length} questions synced with database!`, 'success');
         } else {
@@ -809,23 +840,22 @@ function confirmModalAction() {
 // ==================== TOAST NOTIFICATIONS ====================
 function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toastContainer');
-    
+
     // Only show toast if container exists
     if (!toastContainer) {
         console.log(`${type.toUpperCase()}: ${message}`); // Fallback to console
         return;
     }
-    
+
     const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${
-        type === 'success' ? 'bg-green-500' :
+    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
         type === 'error' ? 'bg-red-500' :
-        type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-    }`;
+            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+        }`;
     toast.textContent = message;
-    
+
     toastContainer.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.classList.add('toast-exit');
         setTimeout(() => {
@@ -883,18 +913,18 @@ if (!document.querySelector('#toast-animation-styles')) {
 }
 
 // ==================== EVENT LISTENERS FOR FILTERS ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Add event listeners for filter changes
     const subjectFilter = document.getElementById('filterSubject');
     const yearFilter = document.getElementById('filterYear');
     const difficultyFilter = document.getElementById('filterDifficulty');
     const searchInput = document.getElementById('searchQuestions');
-    
+
     if (subjectFilter) subjectFilter.addEventListener('change', updateQuestionsList);
     if (yearFilter) yearFilter.addEventListener('change', updateQuestionsList);
     if (difficultyFilter) difficultyFilter.addEventListener('change', updateQuestionsList);
     if (searchInput) searchInput.addEventListener('input', updateQuestionsList);
-    
+
     // Load questions when page loads
     loadQuestionsFromAPI();
 });

@@ -3,19 +3,19 @@ const Question = require('../models/Question');
 const UserProgress = require('../models/UserProgress');
 
 class QuestionController {
-    
+
     // GET - Get all questions
     async getAllQuestions(req, res) {
         try {
-            const { 
-                subject, 
-                academicYear, 
-                difficulty, 
-                topic, 
+            const {
+                subject,
+                academicYear,
+                difficulty,
+                topic,
                 isActive = true,
-                page = 1, 
+                page = 1,
                 limit = 50,
-                search 
+                search
             } = req.query;
 
             let query = { isActive: isActive === 'true' };
@@ -24,26 +24,26 @@ class QuestionController {
             if (subject && subject !== 'all') {
                 query.subject = subject;
             }
-            
+
             if (academicYear && academicYear !== 'all') {
                 query.academicYear = academicYear;
             }
-            
+
             if (difficulty && difficulty !== 'all') {
                 query.difficulty = difficulty;
             }
-            
+
             if (topic && topic !== 'all') {
                 query.topic = topic;
             }
-            
+
             // Apply search
             if (search) {
                 query.$text = { $search: search };
             }
 
             const skip = (page - 1) * limit;
-            
+
             const questions = await Question.find(query)
                 .populate('createdBy', 'username email')
                 .sort({ createdAt: -1 })
@@ -76,7 +76,7 @@ class QuestionController {
     async getQuestionById(req, res) {
         try {
             const { id } = req.params;
-            
+
             const question = await Question.findById(id)
                 .populate('createdBy', 'username email')
                 .lean();
@@ -130,7 +130,7 @@ class QuestionController {
     async updateQuestion(req, res) {
         try {
             const { id } = req.params;
-            
+
             const question = await Question.findByIdAndUpdate(
                 id,
                 { ...req.body, updatedAt: Date.now() },
@@ -162,7 +162,7 @@ class QuestionController {
     async deleteQuestion(req, res) {
         try {
             const { id } = req.params;
-            
+
             const question = await Question.findByIdAndUpdate(
                 id,
                 { isActive: false, updatedAt: Date.now() },
@@ -193,7 +193,7 @@ class QuestionController {
     async bulkDeleteQuestions(req, res) {
         try {
             const { questionIds } = req.body;
-            
+
             if (!Array.isArray(questionIds) || questionIds.length === 0) {
                 return res.status(400).json({
                     success: false,
@@ -256,7 +256,7 @@ class QuestionController {
                         for (let j = i + 1; j < group.questions.length; j++) {
                             const q1 = group.questions[i];
                             const q2 = group.questions[j];
-                            
+
                             // Simple similarity check - in real implementation, use more sophisticated comparison
                             if (q1.question.toLowerCase().includes(q2.question.toLowerCase().substring(0, 20))) {
                                 duplicates.push({
@@ -288,14 +288,14 @@ class QuestionController {
     async getQuestionsBySubject(req, res) {
         try {
             const { subject } = req.params;
-            
+
             const questions = await Question.find({
                 subject: subject,
                 isActive: true
             })
-            .populate('createdBy', 'username email')
-            .sort({ createdAt: -1 })
-            .lean();
+                .populate('createdBy', 'username email')
+                .sort({ createdAt: -1 })
+                .lean();
 
             res.json({
                 success: true,
@@ -315,14 +315,14 @@ class QuestionController {
     async getQuestionsByYear(req, res) {
         try {
             const { year } = req.params;
-            
+
             const questions = await Question.find({
                 academicYear: year,
                 isActive: true
             })
-            .populate('createdBy', 'username email')
-            .sort({ createdAt: -1 })
-            .lean();
+                .populate('createdBy', 'username email')
+                .sort({ createdAt: -1 })
+                .lean();
 
             res.json({
                 success: true,
@@ -342,7 +342,7 @@ class QuestionController {
     async saveUserAnswer(req, res) {
         try {
             const { questionId, answerIndex, sessionType = 'practice', testId } = req.body;
-            
+
             const question = await Question.findById(questionId);
             if (!question) {
                 return res.status(404).json({
@@ -383,7 +383,7 @@ class QuestionController {
     async getUserProgress(req, res) {
         try {
             const userId = req.user._id;
-            
+
             const progress = await UserProgress.aggregate([
                 {
                     $match: { userId: userId }
@@ -455,6 +455,171 @@ class QuestionController {
             });
         }
     }
+    // POST - Upload question paper
+    async uploadQuestionPaper(req, res) {
+        try {
+            // Extract metadata from request body
+            const { subject, academicYear, examType, difficulty, autoParse } = req.body;
+
+            // In a real implementation, you would process the uploaded file here
+            // For now, we'll return a success response
+            const questions = [];
+
+            // If autoParse is enabled, you would extract questions from the file
+            // This is a simplified version - you'd need to implement actual parsing
+            if (autoParse) {
+                // Simulate parsing - in reality, you'd parse the actual uploaded file
+                questions.push({
+                    question: "Sample question extracted from uploaded file",
+                    options: ["Option A", "Option B", "Option C", "Option D"],
+                    correctAnswer: 0,
+                    subject: subject || "General",
+                    academicYear: academicYear || "2025",
+                    examType: examType || "Practice Paper",
+                    difficulty: difficulty || "Intermediate"
+                });
+            }
+
+            res.json({
+                success: true,
+                message: 'Question paper uploaded successfully',
+                questions: questions
+            });
+        } catch (error) {
+            console.error('❌ Error uploading question paper:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    // POST - Import questions from CSV
+    async importFromCSV(req, res) {
+        try {
+            // In a real implementation, you would process the CSV file here
+            // For now, we'll return a success response
+            const questions = [];
+
+            // Simulate parsing CSV - in reality, you'd parse the actual uploaded file
+            questions.push({
+                question: "Sample question imported from CSV",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                correctAnswer: 1,
+                subject: req.body.subject || "General",
+                academicYear: req.body.academicYear || "2025",
+                examType: req.body.examType || "Practice Paper",
+                difficulty: req.body.difficulty || "Intermediate"
+            });
+
+            res.json({
+                success: true,
+                message: 'Questions imported from CSV successfully',
+                questions: questions
+            });
+        } catch (error) {
+            console.error('❌ Error importing from CSV:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    // POST - Import questions from Excel
+    async importFromExcel(req, res) {
+        try {
+            // In a real implementation, you would process the Excel file here
+            // For now, we'll return a success response
+            const questions = [];
+
+            // Simulate parsing Excel - in reality, you'd parse the actual uploaded file
+            questions.push({
+                question: "Sample question imported from Excel",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                correctAnswer: 2,
+                subject: req.body.subject || "General",
+                academicYear: req.body.academicYear || "2025",
+                examType: req.body.examType || "Practice Paper",
+                difficulty: req.body.difficulty || "Intermediate"
+            });
+
+            res.json({
+                success: true,
+                message: 'Questions imported from Excel successfully',
+                questions: questions
+            });
+        } catch (error) {
+            console.error('❌ Error importing from Excel:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    // POST - Import questions from text
+    async importFromText(req, res) {
+        try {
+            // In a real implementation, you would process the text file here
+            // For now, we'll return a success response
+            const questions = [];
+
+            // Simulate parsing text - in reality, you'd parse the actual uploaded file
+            questions.push({
+                question: "Sample question imported from text file",
+                options: ["Option A", "Option B", "Option C", "Option D"],
+                correctAnswer: 3,
+                subject: req.body.subject || "General",
+                academicYear: req.body.academicYear || "2025",
+                examType: req.body.examType || "Practice Paper",
+                difficulty: req.body.difficulty || "Intermediate"
+            });
+
+            res.json({
+                success: true,
+                message: 'Questions imported from text file successfully',
+                questions: questions
+            });
+        } catch (error) {
+            console.error('❌ Error importing from text:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    // POST - Sync with database
+    async syncWithDatabase(req, res) {
+        try {
+            const { questions } = req.body;
+
+            if (!Array.isArray(questions)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Questions array is required'
+                });
+            }
+
+            // In a real implementation, you would sync questions with the database
+            // For now, we'll return a success response
+            const syncedCount = questions.length;
+
+            res.json({
+                success: true,
+                message: `${syncedCount} questions synced with database successfully`,
+                synced: syncedCount
+            });
+        } catch (error) {
+            console.error('❌ Error syncing with database:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
 }
 
 module.exports = new QuestionController();

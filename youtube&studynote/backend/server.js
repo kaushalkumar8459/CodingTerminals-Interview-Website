@@ -9,6 +9,9 @@ const swaggerSpec = require('./config/swagger.config');
 const connectDB = require('./config/database');
 const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
+const questionRoutes = require('./routes/question.routes');
+const questionUploadRoutes = require('./routes/questionUpload.routes');
+const questionGroupRoutes = require('./routes/questionGroup.routes');
 const APP_CONFIG = require('../config/app.config.js');
 
 const app = express();
@@ -36,8 +39,8 @@ const corsOptions = {
         ];
 
         // In production, also allow the current origin
-        if (process.env.NODE_ENV === 'production' && origin) {
-            return callback(null, true);
+        if (process.env.NODE_ENV === 'production') {
+            allowedOrigins.push(origin); // Allow the requesting origin in production
         }
 
         // Check if origin matches any allowed pattern
@@ -103,8 +106,17 @@ app.use('/testseries/admin', express.static(path.join(__dirname, '../CodingTermi
 // Serve TestSeries viewer
 app.use('/testseries/viewer', express.static(path.join(__dirname, '../CodingTerminals-TestSeries/viewer')));
 
+// Individual question documents API
+app.use('/api/questions', questionRoutes);
+
 // Authentication API
 app.use('/api/auth', authRoutes);
+
+// Question upload/import API
+app.use('/api/questions', questionUploadRoutes); // NEW: Add upload routes
+
+// Question group management API
+app.use('/api/question-groups', questionGroupRoutes); // NEW: Add question group routes
 
 // Backup API for Notes
 app.use('/api/notes/backup', backupRoutes);

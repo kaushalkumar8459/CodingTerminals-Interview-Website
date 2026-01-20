@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,6 +20,7 @@
     <!-- Load Auth Utilities -->
     <script src="../../auth/auth.js"></script>
 </head>
+
 <body>
     <!-- Authentication Check Script (Must be first) -->
     <script>
@@ -34,18 +36,22 @@
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <!-- Sync Buttons Group -->
                     <div class="btn-group" role="group">
-                        <button class="btn btn-success btn-sm" onclick="manualSyncWithMongoDB()" title="Pull data from MongoDB to IndexedDB (Download from Server)">
+                        <button class="btn btn-success btn-sm" onclick="manualSyncWithMongoDB()"
+                            title="Pull data from MongoDB to IndexedDB (Download from Server)">
                             ⬇️ Pull from Server
                         </button>
-                        <button class="btn btn-primary btn-sm" onclick="saveAllData()" title="Push data from IndexedDB to MongoDB (Upload to Server)">
+                        <button class="btn btn-primary btn-sm" onclick="saveAllData()"
+                            title="Push data from IndexedDB to MongoDB (Upload to Server)">
                             ⬆️ Push to Server
                         </button>
-                        <button class="btn btn-info btn-sm" onclick="manualSyncWithMongoDB()" title="Full sync between IndexedDB and MongoDB">
+                        <button class="btn btn-info btn-sm" onclick="manualSyncWithMongoDB()"
+                            title="Full sync between IndexedDB and MongoDB">
                             🔄 Full Sync
                         </button>
                     </div>
-                    
-                    <button class="btn btn-warning btn-sm" onclick="clearIndexedDBData()" title="Clear local cache and reload from MongoDB">
+
+                    <button class="btn btn-warning btn-sm" onclick="clearIndexedDBData()"
+                        title="Clear local cache and reload from MongoDB">
                         🗑️ Clear Cache
                     </button>
                     <div id="userInfo"></div>
@@ -54,16 +60,21 @@
                     </button>
                 </div>
             </div>
-            
+
             <!-- Navigation Menu -->
             <nav class="admin-nav">
                 <a href="YouTubeRoadmap-admin.html" class="nav-link active">
                     <span class="nav-icon">🎬</span>
                     <span class="nav-text">Video Playlist</span>
                 </a>
-                <a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html" target="_blank" class="nav-link">
+                <a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html" target="_blank"
+                    class="nav-link">
                     <span class="nav-icon">📝</span>
                     <span class="nav-text">Study Notes</span>
+                </a>
+                <a href="../../CodingTerminals-TestSeries/admin/question-upload.html" target="_blank" class="nav-link">
+                    <span class="nav-icon">📚</span>
+                    <span class="nav-text">Test Series</span>
                 </a>
                 <a href="../../backup-manager/backup-manager.html" target="_blank" class="nav-link">
                     <span class="nav-icon">💾</span>
@@ -78,7 +89,7 @@
                     <span class="nav-text">Settings</span>
                 </a>
             </nav>
-            
+
             <div class="header-actions">
                 <button class="btn btn-success" onclick="saveAllData()">
                     💾 Save All & Sync to Server
@@ -101,14 +112,14 @@
                     ➕ Add New Video
                 </button>
                 <div id="videoListContainer"></div>
-                
+
                 <!-- Upcoming Videos Section Divider -->
                 <div class="upcoming-divider">
                     <span class="divider-line"></span>
                     <span class="divider-text">🔔 Upcoming Video</span>
                     <span class="divider-line"></span>
                 </div>
-                
+
                 <!-- Upcoming Videos Container -->
                 <div id="upcomingVideoContainer">
                     <button class="btn-add-upcoming" onclick="addUpcomingTopic()">
@@ -151,7 +162,8 @@
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title" id="confirmModalLabel">⚠️ Confirm Delete</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="confirmModalBody">
                     Are you sure you want to proceed with this action?
@@ -174,17 +186,18 @@
 
     <!-- Admin Panel JavaScript -->
     <script src="YouTubeRoadmap-admin.js"></script>
-    
+
     <script>
         // Display user info in header
         AuthUtils.displayUserInfo('userInfo');
-        
+
         // Prevent back button after logout
-        window.addEventListener('pageshow', function(event) {
+        window.addEventListener('pageshow', function (event) {
             if (event.persisted) {
                 window.location.reload();
             }
         });
     </script>
 </body>
+
 </html>

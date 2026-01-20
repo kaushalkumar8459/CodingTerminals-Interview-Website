@@ -30,8 +30,8 @@ const API_CONFIG = {
         GET_QUESTIONS_BY_YEAR: '/questions/year/',
         GET_USER_PROGRESS: '/users/progress',
         SAVE_USER_ANSWER: '/users/answers',
-        GET_WEAK_AREAS: '/users/weak-areas',
-        SAVE_PROGRESS: '/users/progress'
+        GET_WEAK_AREAS: '/questions/progress/user',
+        SAVE_PROGRESS: '/questions/progress/user'
     }
 };
 
