@@ -23,7 +23,7 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        
+
         // List of allowed origins
         const allowedOrigins = [
             'http://localhost:3000',
@@ -34,12 +34,12 @@ const corsOptions = {
             /\.render\.com$/, // Allow Render URLs
             /\.ngrok\.io$/ // Allow ngrok URLs for local testing
         ];
-        
+
         // In production, also allow the current origin
         if (process.env.NODE_ENV === 'production' && origin) {
             return callback(null, true);
         }
-        
+
         // Check if origin matches any allowed pattern
         const isAllowed = allowedOrigins.some(allowed => {
             if (allowed instanceof RegExp) {
@@ -47,7 +47,7 @@ const corsOptions = {
             }
             return allowed === origin;
         });
-        
+
         if (isAllowed) {
             callback(null, true);
         } else {
@@ -97,6 +97,12 @@ app.use('/api/notes', noteRoutes);
 // Interview Questions API (linked to videos by videoId)
 app.use('/api/interview-questions', interviewQuestionRoutes);
 
+// Serve TestSeries admin panel
+app.use('/testseries/admin', express.static(path.join(__dirname, '../CodingTerminals-TestSeries/admin')));
+
+// Serve TestSeries viewer
+app.use('/testseries/viewer', express.static(path.join(__dirname, '../CodingTerminals-TestSeries/viewer')));
+
 // Authentication API
 app.use('/api/auth', authRoutes);
 
@@ -108,8 +114,8 @@ app.use('/api/videos/backup', backupRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'OK', 
+    res.status(200).json({
+        status: 'OK',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
@@ -131,6 +137,20 @@ app.get('/notes', (req, res) => {
     res.redirect('/CodingTerminals-StudyNotes/viewer/study-notes-viewer.html');
 });
 
+
+// Add redirect routes for easier access
+app.get('/testseries', (req, res) => {
+    res.redirect('/testseries/admin/question-upload.html');
+});
+
+app.get('/test-series', (req, res) => {
+    res.redirect('/testseries/admin/question-upload.html');
+});
+
+app.get('/tests', (req, res) => {
+    res.redirect('/testseries/viewer/practice-interface.html');
+});
+
 // Default route
 app.get('/', (req, res) => {
     res.redirect('/CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html');
@@ -138,16 +158,16 @@ app.get('/', (req, res) => {
 
 // 404 Handler
 app.use((req, res) => {
-    res.status(404).json({ 
+    res.status(404).json({
         error: 'Not Found',
-        message: `Route ${req.url} not found` 
+        message: `Route ${req.url} not found`
     });
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error('❌ Server Error:', err);
-    res.status(500).json({ 
+    res.status(500).json({
         error: 'Internal Server Error',
         message: err.message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack })

@@ -1,0 +1,480 @@
+<!-- File: CodingTerminals-TestSeries/viewer/practice-interface.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Practice - Coding Terminals</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .question-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background-color: #ffffff;
+            transition: all 0.2s ease;
+        }
+        
+        .question-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .option-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: #f9fafb;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .option-item:hover {
+            background-color: #f3f4f6;
+        }
+        
+        .option-selected {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+        
+        .option-correct {
+            background-color: #d1fae5;
+            border-color: #10b981;
+        }
+        
+        .option-incorrect {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .subject-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .weak-area-card {
+            border: 2px solid #dc3545;
+            background-color: #fff5f5;
+        }
+        
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid transparent;
+            border-bottom: 2px solid transparent;
+            border-radius: 0.5rem 0.5rem 0 0;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-button.active {
+            border-color: #3b82f6;
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .tab-button:not(.active):hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-lg top-0 z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                    📚 Question Practice Platform
+                </h1>
+                <div class="flex gap-3">
+                    <a href="../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html" class="px-4 py-2 bg-purple-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        🎬 Videos
+                    </a>
+                    <a href="../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        📝 Notes
+                    </a>
+                    <a href="../admin/question-bank-management.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        👨‍💼 Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div class="flex border-b border-gray-200">
+                <button class="tab-button active" onclick="switchPracticeTab('practice')">Practice</button>
+                <button class="tab-button" onclick="switchPracticeTab('mock')">Mock Test</button>
+                <button class="tab-button" onclick="switchPracticeTab('progress')">Progress</button>
+            </div>
+        </div>
+
+        <!-- Practice Tab -->
+        <div id="practice-tab" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left Sidebar - Practice Controls -->
+                <aside class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 sticky top-6">
+                        <h2 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+                            <span>🎯</span>
+                            <span>Practice Controls</span>
+                        </h2>
+                        
+                        <!-- Practice Mode Selector -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Practice Mode</label>
+                            <select id="practiceModeSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none mb-3">
+                                <option value="subject">Subject-wise Practice</option>
+                                <option value="year">Year-wise Revision</option>
+                                <option value="random">Random Questions</option>
+                                <option value="weak">Weak Area Focus</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Filters -->
+                        <div class="mb-6">
+                            <div class="grid grid-cols-1 gap-3">
+                                <select id="practiceSubjectFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                                    <option value="all">All Subjects</option>
+                                </select>
+                                
+                                <select id="practiceYearFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                                    <option value="all">All Years</option>
+                                </select>
+                                
+                                <select id="practiceDifficultyFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                                    <option value="all">All Difficulties</option>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                    <option value="expert">Expert</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Practice Actions -->
+                        <div class="space-y-2 mb-6">
+                            <button onclick="startPracticeSession()" class="w-full px-4 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                                🚀 Start Practice
+                            </button>
+                            <button onclick="shuffleQuestions()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                🔀 Shuffle Questions
+                            </button>
+                            <button onclick="resetProgress()" class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                                🔄 Reset Progress
+                            </button>
+                        </div>
+                        
+                        <!-- Weak Areas -->
+                        <div>
+                            <h3 class="font-semibold text-gray-700 mb-2">Weak Areas</h3>
+                            <div id="weakAreasList" class="space-y-1">
+                                <div class="text-sm text-gray-500">No weak areas identified yet</div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right Content - Question Display -->
+                <section class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+                                <span>📋</span>
+                                <span>Current Question</span>
+                            </h2>
+                            <div class="text-sm text-gray-500">
+                                Question <span id="currentQuestionNum">0</span> of <span id="totalQuestionsNum">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="progress-bar">
+                                <div id="practiceProgressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Question Display -->
+                        <div id="questionDisplayContainer" class="min-h-[400px]">
+                            <div class="flex flex-col items-center justify-center h-full text-center py-12">
+                                <div class="text-6xl mb-4">📚</div>
+                                <h3 class="text-2xl font-bold text-gray-700 mb-2">Ready to Practice</h3>
+                                <p class="text-gray-500">Select a practice mode and start your session</p>
+                                <button onclick="startPracticeSession()" class="mt-4 px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                                    🚀 Start Practice Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Navigation Controls -->
+                    <div class="bg-white rounded-2xl shadow-xl p-4 flex justify-between items-center">
+                        <button onclick="prevQuestion()" id="prevBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50" disabled>
+                            ⬅️ Previous
+                        </button>
+                        <button onclick="skipQuestion()" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
+                            ⏭️ Skip
+                        </button>
+                        <button onclick="nextQuestion()" id="nextBtn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            Next ➡️
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- Mock Test Tab -->
+        <div id="mock-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left Sidebar - Mock Test Controls -->
+                <aside class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 sticky top-6">
+                        <h2 class="text-xl font-bold text-purple-600 mb-4 flex items-center gap-2">
+                            <span>🏁</span>
+                            <span>Mock Test Controls</span>
+                        </h2>
+                        
+                        <!-- Test Configuration -->
+                        <div class="mb-6">
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Test Title</label>
+                                    <input type="text" id="mockTestTitle" placeholder="Enter test title" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Duration (minutes)</label>
+                                    <input type="number" id="mockTestDuration" value="60" min="1" max="300" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">Number of Questions</label>
+                                    <input type="number" id="mockTestQuestions" value="20" min="1" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Filters -->
+                        <div class="mb-6">
+                            <div class="grid grid-cols-1 gap-3">
+                                <select id="mockSubjectFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="all">All Subjects</option>
+                                </select>
+                                
+                                <select id="mockYearFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="all">All Years</option>
+                                </select>
+                                
+                                <select id="mockDifficultyFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none">
+                                    <option value="all">All Difficulties</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Mock Test Actions -->
+                        <div class="space-y-2">
+                            <button onclick="startMockTest()" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                                🏃‍♂️ Start Mock Test
+                            </button>
+                            <button onclick="endMockTest()" id="endTestBtn" class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors hidden">
+                                🚫 End Test Early
+                            </button>
+                            <button onclick="reviewMockTest()" class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                                📖 Review Test
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right Content - Mock Test Display -->
+                <section class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-purple-600 flex items-center gap-2">
+                                <span>🏁</span>
+                                <span id="mockTestTitleDisplay">Mock Test</span>
+                            </h2>
+                            <div class="flex items-center gap-4">
+                                <div class="text-sm text-gray-500">
+                                    Question <span id="mockCurrentQuestionNum">0</span> of <span id="mockTotalQuestionsNum">0</span>
+                                </div>
+                                <div id="mockTimer" class="timer-display bg-purple-100 text-purple-800 px-3 py-1 rounded-lg">00:00:00</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="progress-bar">
+                                <div id="mockProgressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mock Test Question Display -->
+                        <div id="mockQuestionDisplayContainer" class="min-h-[400px]">
+                            <div class="flex flex-col items-center justify-center h-full text-center py-12">
+                                <div class="text-6xl mb-4">🏁</div>
+                                <h3 class="text-2xl font-bold text-gray-700 mb-2">Mock Test Ready</h3>
+                                <p class="text-gray-500">Configure your test settings and start the mock test</p>
+                                <button onclick="startMockTest()" class="mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                                    🏃‍♂️ Start Mock Test
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mock Test Navigation -->
+                    <div class="bg-white rounded-2xl shadow-xl p-4 flex justify-between items-center">
+                        <button onclick="mockPrevQuestion()" id="mockPrevBtn" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50" disabled>
+                            ⬅️ Previous
+                        </button>
+                        <button onclick="markForReview()" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
+                            📝 Mark for Review
+                        </button>
+                        <button onclick="mockNextQuestion()" id="mockNextBtn" class="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors">
+                            Next ➡️
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+
+        <!-- Progress Tab -->
+        <div id="progress-tab" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Statistics Cards -->
+                <div class="space-y-4">
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-blue-600 mb-2">Overall Performance</h3>
+                        <div class="text-3xl font-bold text-gray-800" id="overallScore">0%</div>
+                        <div class="text-sm text-gray-500">Correct answers overall</div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-green-600 mb-2">Questions Attempted</h3>
+                        <div class="text-3xl font-bold text-gray-800" id="questionsAttempted">0</div>
+                        <div class="text-sm text-gray-500">Total questions answered</div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-red-600 mb-2">Weak Areas</h3>
+                        <div class="text-3xl font-bold text-gray-800" id="weakAreasCount">0</div>
+                        <div class="text-sm text-gray-500">Topics needing improvement</div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-purple-600 mb-2">Study Time</h3>
+                        <div class="text-3xl font-bold text-gray-800" id="studyTime">0h 0m</div>
+                        <div class="text-sm text-gray-500">Total time spent studying</div>
+                    </div>
+                </div>
+                
+                <!-- Charts -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Performance by Subject</h3>
+                        <canvas id="subjectPerformanceChart" width="400" height="200"></canvas>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">Progress Over Time</h3>
+                        <canvas id="progressChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Results Modal -->
+    <div id="resultsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 transform transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-2xl font-bold text-green-600">Practice Results</h3>
+                <button onclick="closeResultsModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none">
+                    ×
+                </button>
+            </div>
+            
+            <div id="resultsContent" class="text-center py-8">
+                <!-- Results will be shown here -->
+            </div>
+            
+            <div class="flex justify-center gap-4 mt-6">
+                <button onclick="reviewQuestions()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                    📖 Review Answers
+                </button>
+                <button onclick="restartPractice()" class="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                    🔄 Restart Practice
+                </button>
+                <button onclick="closeResultsModal()" class="px-6 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <script src="../../config/app.config.js"></script>
+    <script src="practice-interface.js"></script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!-- File: CodingTerminals-TestSeries/viewer/question-practice.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Practice - Coding Terminals</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .question-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .question-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .option-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .option-item:hover {
+            background-color: #f9fafb;
+        }
+        
+        .option-selected {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+        
+        .option-correct {
+            background-color: #d1fae5;
+            border-color: #10b981;
+        }
+        
+        .option-incorrect {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+        
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .subject-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-lg top-0 z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                    📚 Question Practice Platform
+                </h1>
+                <div class="flex gap-3">
+                    <a href="../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html" class="px-4 py-2 bg-purple-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        🎬 Videos
+                    </a>
+                    <a href="../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        📝 Notes
+                    </a>
+                    <a href="../admin/question-upload.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+                        👨‍💼 Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Search and Filter -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div class="flex gap-4 flex-wrap items-center">
+                <!-- Search Bar -->
+                <div class="flex-1 min-w-[300px]">
+                    <input type="text" 
+                           id="searchInput" 
+                           placeholder="🔍 Search questions by subject, year, or topic..." 
+                           class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"
+                           oninput="handleSearch()">
+                </div>
+                
+                <!-- Subject Filter -->
+                <select id="subjectFilter" 
+                        class="px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"
+                        onchange="handleSubjectFilter()">
+                    <option value="all">📚 All Subjects</option>
+                </select>
+                
+                <!-- Academic Year Filter -->
+                <select id="yearFilter" 
+                        class="px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"
+                        onchange="handleYearFilter()">
+                    <option value="all">📅 All Years</option>
+                </select>
+                
+                <!-- Difficulty Filter -->
+                <select id="difficultyFilter" 
+                        class="px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"
+                        onchange="handleDifficultyFilter()">
+                    <option value="all">⭐ All Difficulties</option>
+                </select>
+                
+                <!-- Practice Mode Selector -->
+                <select id="practiceMode" 
+                        class="px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all"
+                        onchange="changePracticeMode()">
+                    <option value="browse">📖 Browse Questions</option>
+                    <option value="practice">📝 Practice Mode</option>
+                    <option value="mock">🎯 Mock Test</option>
+                </select>
+            </div>
+            
+            <!-- Search Results Info -->
+            <div id="searchResultsInfo" class="mt-4 text-gray-600"></div>
+        </div>
+
+        <!-- Practice Controls -->
+        <div id="practiceControls" class="bg-white rounded-2xl shadow-xl p-6 mb-6 hidden">
+            <div class="flex justify-between items-center">
+                <div class="flex gap-4">
+                    <button onclick="startPracticeSession()" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                        🚀 Start Practice Session
+                    </button>
+                    <button onclick="startMockTest()" class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                        🎯 Start Mock Test
+                    </button>
+                </div>
+                
+                <div class="text-sm text-gray-500">
+                    <span id="questionCount">0</span> questions available
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div id="progressContainer" class="bg-white rounded-2xl shadow-xl p-6 mb-6 hidden">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-semibold text-gray-700">Progress</span>
+                <span class="text-sm font-semibold text-gray-700"><span id="currentQuestionNum">0</span> / <span id="totalQuestionsNum">0</span></span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Timer Display -->
+        <div id="timerContainer" class="bg-white rounded-2xl shadow-xl p-6 mb-6 hidden">
+            <div class="flex justify-between items-center">
+                <span class="text-lg font-semibold text-gray-700">Time Remaining:</span>
+                <span id="timerDisplay" class="timer-display bg-blue-100 text-blue-800 px-4 py-2 rounded-lg">00:00:00</span>
+                <button onclick="pauseResumeTimer()" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors">
+                    ⏸️ Pause
+                </button>
+            </div>
+        </div>
+
+        <!-- Questions Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <!-- Left Sidebar - Questions List -->
+            <aside class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-xl p-6 sticky max-h-[calc(100vh-120px)] overflow-y-auto">
+                    <h2 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>All Questions</span>
+                        <span id="sidebarQuestionCount" class="text-sm text-gray-500">(0)</span>
+                    </h2>
+                    
+                    <div id="questionsListContainer" class="space-y-2">
+                        <!-- Questions list will be rendered here -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Content - Question Display -->
+            <section class="lg:col-span-3">
+                <div id="questionDisplayContainer" class="bg-white rounded-2xl shadow-xl p-8 min-h-[calc(100vh-200px)]">
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center h-full text-center">
+                        <div class="text-6xl mb-4">📚</div>
+                        <h3 class="text-2xl font-bold text-gray-700 mb-2">Select a Question</h3>
+                        <p class="text-gray-500">Choose a question from the list to start practicing</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-2xl p-8 flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="mt-4 text-gray-700 font-semibold">Loading Questions...</p>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="resultsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 transform transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-2xl font-bold text-green-600">Practice Results</h3>
+                <button onclick="closeResultsModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none">
+                    ×
+                </button>
+            </div>
+            
+            <div id="resultsContent" class="text-center py-8">
+                <!-- Results will be shown here -->
+            </div>
+            
+            <div class="flex justify-center gap-4 mt-6">
+                <button onclick="reviewQuestions()" class="px-6 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                    📖 Review Answers
+                </button>
+                <button onclick="restartPractice()" class="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                    🔄 Restart Practice
+                </button>
+                <button onclick="closeResultsModal()" class="px-6 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <script src="../../config/app.config.js"></script>
+    <script src="question-practice.js"></script>
+</body>
+</html>
