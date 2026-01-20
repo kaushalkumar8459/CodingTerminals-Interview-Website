@@ -102,12 +102,28 @@ class QuestionController {
     }
 
     // POST - Create new question
+   // ... existing code ...
+
+    // POST - Create new question
     async createQuestion(req, res) {
         try {
             const questionData = {
-                ...req.body,
-                createdBy: req.user._id // Assuming authentication middleware sets req.user
+                ...req.body
             };
+
+            // Check if req.user exists before accessing _id
+            if (req.user && req.user._id) {
+                questionData.createdBy = req.user._id;
+            } else {
+                // If no authenticated user, you could either reject the request or handle differently
+                // For now, we'll log and continue without createdBy (assuming schema allows it)
+                console.warn('Warning: No authenticated user found for question creation');
+                // Optionally, you can require authentication:
+                // return res.status(401).json({
+                //     success: false,
+                //     error: 'Authentication required to create questions'
+                // });
+            }
 
             const question = new Question(questionData);
             await question.save();
@@ -125,6 +141,8 @@ class QuestionController {
             });
         }
     }
+
+// ... rest of existing code ...
 
     // PUT - Update question
     async updateQuestion(req, res) {

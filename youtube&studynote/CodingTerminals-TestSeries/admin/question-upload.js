@@ -511,6 +511,169 @@ function showEditModal(question, index) {
 
 // ... existing code ...
 
+// ... existing code ...
+
+// Download sample CSV file - Pure CSV format
+function downloadSampleCSV() {
+    const csvContent = `"question","options_a","options_b","options_c","options_d","correct_answer","subject","academic_year","difficulty","explanation"
+"What is the capital of France?","London","Berlin","Paris","Madrid","C","Geography","2024","Beginner","Paris is the capital and largest city of France."
+"What is 2+2?","3","4","5","6","B","Mathematics","2024","Beginner","Basic arithmetic: 2 + 2 = 4."
+"Which planet is known as the Red Planet?","Venus","Mars","Jupiter","Saturn","B","Science","2024","Beginner","Mars is often referred to as the Red Planet due to its reddish appearance."
+"What is the chemical symbol for water?","HO","H2O2","H2O","CO2","C","Chemistry","2024","Beginner","Water consists of two hydrogen atoms and one oxygen atom."
+"Who wrote 'Romeo and Juliet'?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Literature","2024","Intermediate","Shakespeare wrote this famous tragedy in the late 16th century."`;
+
+    // Create a Blob with pure CSV content - standard CSV MIME type
+    const blob = new Blob([csvContent], { 
+        type: 'text/csv;charset=utf-8;'
+    });
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    
+    // Create an object URL for the blob
+    const url = URL.createObjectURL(blob);
+    
+    // Generate unique filename with timestamp
+    const timestamp = new Date().getTime();
+    const filename = `sample_questions_csv_${timestamp}.csv`;
+    
+    // Set the download attributes
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none'; // Hide the link
+    
+    // Add to document, click, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the object URL
+    URL.revokeObjectURL(url);
+    
+    // Show confirmation
+    showToast(`Downloading ${filename}`, 'success');
+}
+
+// Download sample Excel-compatible file - Different format for Excel
+function downloadSampleExcel() {
+    const excelContent = `question	options_a	options_b	options_c	options_d	correct_answer	subject	academic_year	difficulty	explanation
+What is the capital of France?	London	Berlin	Paris	Madrid	C	Geography	2024	Beginner	Paris is the capital and largest city of France.
+What is 2+2?	3	4	5	6	B	Mathematics	2024	Beginner	Basic arithmetic: 2 + 2 = 4.
+Which planet is known as the Red Planet?	Venus	Mars	Jupiter	Saturn	B	Science	2024	Beginner	Mars is often referred to as the Red Planet due to its reddish appearance.
+What is the chemical symbol for water?	HO	H2O2	H2O	CO2	C	Chemistry	2024	Beginner	Water consists of two hydrogen atoms and one oxygen atom.
+Who wrote 'Romeo and Juliet'?	Charles Dickens	William Shakespeare	Jane Austen	Mark Twain	B	Literature	2024	Intermediate	Shakespeare wrote this famous tragedy in the late 16th century.`;
+
+    // Create a Blob with tab-separated content - Excel-friendly format
+    const blob = new Blob([excelContent], { 
+        type: 'application/vnd.ms-excel;charset=utf-8;'
+    });
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    
+    // Create an object URL for the blob
+    const url = URL.createObjectURL(blob);
+    
+    // Generate unique filename with timestamp
+    const timestamp = new Date().getTime();
+    const filename = `sample_questions_excel_${timestamp}.xls`;
+    
+    // Set the download attributes
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none'; // Hide the link
+    
+    // Add to document, click, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the object URL
+    URL.revokeObjectURL(url);
+    
+    // Show confirmation
+    showToast(`Downloading ${filename}`, 'success');
+}
+
+// ... rest of existing code ...
+
+// Download sample TXT file with unique timestamp
+function downloadSampleTXT() {
+    const txtContent = `Q: What is the capital of France?
+A: London
+B: Berlin
+C: Paris
+D: Madrid
+Correct: C
+Explanation: Paris is the capital and the largest city of France.
+
+Q: What is 2+2?
+A: 3
+B: 4
+C: 5
+D: 6
+Correct: B
+Explanation: Basic arithmetic: 2 + 2 = 4.
+
+Q: Which planet is known as the Red Planet?
+A: Venus
+B: Mars
+C: Jupiter
+D: Saturn
+Correct: B
+Explanation: Mars is often referred to as the Red Planet due to its reddish appearance.
+
+Q: What is the chemical symbol for water?
+A: HO
+B: H2O2
+C: H2O
+D: CO2
+Correct: C
+Explanation: Water consists of two hydrogen atoms and one oxygen atom.
+
+Q: Who wrote 'Romeo and Juliet'?
+A: Charles Dickens
+B: William Shakespeare
+C: Jane Austen
+D: Mark Twain
+Correct: B
+Explanation: Shakespeare wrote this famous tragedy in the late 16th century.`;
+
+    // Create a Blob with the TXT content
+    const blob = new Blob([txtContent], { 
+        type: 'text/plain;charset=utf-8;'
+    });
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    
+    // Create an object URL for the blob
+    const url = URL.createObjectURL(blob);
+    
+    // Generate unique filename with timestamp
+    const timestamp = new Date().getTime();
+    const filename = `sample_questions_${timestamp}.txt`;
+    
+    // Set the download attributes
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none'; // Hide the link
+    
+    // Add to document, click, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the object URL
+    URL.revokeObjectURL(url);
+    
+    // Show confirmation
+    showToast(`Downloading ${filename}`, 'success');
+}
+
+
+// ... rest of existing code ...
+
 // Add new question manually
 function addNewQuestionManually() {
     // Create a temporary question object
