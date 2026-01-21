@@ -531,16 +531,24 @@ function submitTest() {
 
     // Calculate results
     const totalQuestions = filteredQuestions.length;
-    const answeredQuestions = Object.keys(userAnswers).filter(id => 
+    const answeredQuestions = Object.keys(userAnswers).filter(id =>
         filteredQuestions.some(q => (q._id || q.id) === id)
     ).length;
-    const markedQuestions = Array.from(markedForReview).filter(id => 
+    const markedQuestions = Array.from(markedForReview).filter(id =>
         filteredQuestions.some(q => (q._id || q.id) === id)
     ).length;
     const unansweredQuestions = totalQuestions - answeredQuestions;
-    
+
     // Calculate score (assuming 1 mark per correct answer)
-    const score = answeredQuestions;
+    let score = 0;
+    filteredQuestions.forEach(question => {
+        const questionId = question._id || question.id;
+        const userAnswer = userAnswers[questionId];
+        if (userAnswer != null && question.correctAnswer != null && userAnswer === question.correctAnswer) {
+            score++;
+        }
+    });
+
     const maxScore = totalQuestions;
     const accuracy = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
@@ -549,27 +557,21 @@ function submitTest() {
     const resultAnswered = document.getElementById('resultAnswered');
     const resultMarked = document.getElementById('resultMarked');
     const resultUnanswered = document.getElementById('resultUnanswered');
-    const resultScore = document.getElementById('resultScore');
-    const resultMaxScore = document.getElementById('resultMaxScore');
-    const accuracyRate = document.getElementById('accuracyRate');
-    const timeTakenEl = document.getElementById('timeTaken');
-    const percentageResult = document.getElementById('percentageResult');
 
     if (resultTotal) resultTotal.textContent = totalQuestions;
     if (resultAnswered) resultAnswered.textContent = answeredQuestions;
     if (resultMarked) resultMarked.textContent = markedQuestions;
     if (resultUnanswered) resultUnanswered.textContent = unansweredQuestions;
-    if (resultScore) resultScore.textContent = score;
-    if (resultMaxScore) resultMaxScore.textContent = maxScore;
-    if (accuracyRate) accuracyRate.textContent = `${accuracy}%`;
-    
-    const hours = Math.floor(timeTaken / 3600);
-    const minutes = Math.floor((timeTaken % 3600) / 60);
-    const seconds = timeTaken % 60;
-    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-    if (timeTakenEl) timeTakenEl.textContent = timeString;
-    if (percentageResult) percentageResult.textContent = `${accuracy}%`;
+
+    // Only update elements that exist in the current modal
+    const timeTakenEl = document.getElementById('timeTaken');
+    if (timeTakenEl) {
+        const hours = Math.floor(timeTaken / 3600);
+        const minutes = Math.floor((timeTaken % 3600) / 60);
+        const seconds = timeTaken % 60;
+        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timeTakenEl.textContent = timeString;
+    }
 
     // Show results modal
     const resultsModal = document.getElementById('resultsModal');
@@ -580,9 +582,141 @@ function submitTest() {
 
 // Review answers
 function reviewAnswers() {
-    // This would show detailed review of all questions and answers
-    alert('Review functionality would be implemented here');
-    closeResults();
+    // Close the results modal
+    document.getElementById('resultsModal').classList.add('hidden');
+
+    // Hide the question section
+    document.getElementById('questionSection').classList.add('hidden');
+
+    // Generate review content
+    const reviewContent = generateReviewContent();
+
+    // Create the review interface
+    const reviewHTML = `
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800">Answer Review - All Questions</h2>
+                <div class="flex gap-3">
+                    <button onclick="restartTest()" class="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                        🔄 Restart Test
+                    </button>
+                    <button onclick="closeReview()" class="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                        Close Review
+                    </button>
+                </div>
+            </div>
+            
+            <div id="reviewContent" class="space-y-6">
+                ${reviewContent}
+            </div>
+        </div>
+    `;
+
+    // Replace the question section with the review interface
+    document.getElementById('questionSection').innerHTML = reviewHTML;
+    document.getElementById('questionSection').classList.remove('hidden');
+}
+// Generate review content for all questions
+function generateReviewContent() {
+    let content = '';
+
+    filteredQuestions.forEach((question, index) => {
+        const questionId = question._id || question.id;
+        const userAnswerIndex = userAnswers[questionId];
+        const isCorrect = userAnswerIndex != null && question.correctAnswer != null &&
+            userAnswerIndex === question.correctAnswer;
+        const isAnswered = userAnswerIndex != null;
+
+        const userAnswerText = isAnswered ?
+            `${String.fromCharCode(65 + userAnswerIndex)}. ${question.options[userAnswerIndex]}` :
+            'Not answered';
+
+        const correctAnswerText = question.correctAnswer != null ?
+            `${String.fromCharCode(65 + question.correctAnswer)}. ${question.options[question.correctAnswer]}` :
+            'No correct answer provided';
+
+        content += `
+        <div class="border border-gray-200 rounded-xl p-6 mb-6">
+            <div class="flex justify-between items-start mb-4">
+                <h4 class="text-lg font-bold text-gray-800">Question ${index + 1}: ${question.subject} (${question.difficulty})</h4>
+                <span class="px-3 py-1 rounded-full text-sm font-semibold ${isAnswered ?
+                (isCorrect ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800') :
+                'bg-yellow-100 text-yellow-800'
+            }">
+                    ${isAnswered ? (isCorrect ? 'Correct ✓' : 'Incorrect ✗') : 'Not Answered'}
+                </span>
+            </div>
+            
+            <p class="text-gray-700 mb-4">${question.question}</p>
+            
+            <div class="space-y-3 mb-4">
+                ${question.options.map((option, optIndex) => {
+                let optionClass = 'p-3 rounded-lg bg-gray-100';
+
+                // Highlight user's selection
+                if (userAnswerIndex === optIndex) {
+                    if (isCorrect) {
+                        optionClass = 'p-3 rounded-lg bg-green-100 border border-green-300';
+                    } else {
+                        optionClass = 'p-3 rounded-lg bg-red-100 border border-red-300';
+                    }
+                }
+                // Highlight correct answer
+                else if (question.correctAnswer === optIndex) {
+                    optionClass = 'p-3 rounded-lg bg-green-100 border border-green-300';
+                }
+
+                return `
+                    <div class="${optionClass}">
+                        <label class="flex items-center">
+                            <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} class="mr-3">
+                            <span class="font-medium">${String.fromCharCode(65 + optIndex)}. ${option}</span>
+                        </label>
+                    </div>
+                    `;
+            }).join('')}
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div>
+                    <p class="text-sm font-semibold text-blue-800">Your Answer: <span class="${isAnswered ? (isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-600'}">${userAnswerText}</span></p>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-blue-800">Correct Answer: <span class="text-green-600 font-bold">${correctAnswerText}</span></p>
+                </div>
+            </div>
+            
+            ${question.explanation ? `
+            <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p class="text-sm font-semibold text-green-800">Explanation:</p>
+                <p class="text-gray-700">${question.explanation}</p>
+            </div>
+            ` : ''}
+        </div>
+        `;
+    });
+
+    return content;
+}
+
+// Close review and return to question navigator
+function closeReview() {
+    // Hide the question section (which now contains review)
+    document.getElementById('questionSection').classList.add('hidden');
+
+    // Show the test config section
+    document.getElementById('testConfigSection').classList.remove('hidden');
+
+    // Reset test state
+    testStarted = false;
+    clearInterval(timerInterval);
+
+    // Reset UI
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerDisplay').className = 'timer-display';
+    document.getElementById('answeredCount').textContent = '0';
+    document.getElementById('totalCount').textContent = allQuestions.length;
+    document.getElementById('testHeaderInfo').classList.add('hidden');
 }
 
 // Restart test
