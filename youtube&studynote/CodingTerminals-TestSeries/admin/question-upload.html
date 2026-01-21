@@ -116,7 +116,7 @@
                     <div id="userInfo"></div>
                     <button onclick="logout()"
                         class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg">
-                        🚪 <Logout>
+                        🚪 Logout
                     </button>
                 </div>
             </div>
@@ -179,120 +179,11 @@
             </button>
         </div>
 
-        <!-- Main Grid Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Grid Layout - Now only one column for the right section -->
+        <div class="grid grid-cols-1 gap-6">
 
-            <!-- Left Sidebar - Upload Interface -->
-            <aside class="lg:col-span-1">
-                <div class="bg-white rounded-2xl shadow-xl p-6 sticky top-6">
-                    <h2 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
-                        <span>📤</span>
-                        <span>Upload Question Papers</span>
-                    </h2>
-
-                    <!-- File Upload Area -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Upload Question Paper</label>
-                        <div id="dropzone" class="dropzone">
-                            <div class="dz-message text-center p-8">
-                                <div class="text-4xl mb-4">📁</div>
-                                <h3 class="text-lg font-semibold text-gray-700 mb-2">Drop files here</h3>
-                                <p class="text-gray-500">or click to browse</p>
-                                <p class="text-xs text-gray-400 mt-2">Supported formats: PDF, DOC, XLS, CSV, TXT</p>
-                            </div>
-                        </div>
-
-                        <div id="uploadStatus" class="mt-4 text-sm text-gray-600"></div>
-                        <div id="progressContainer" class="mt-4 hidden">
-                            <div class="progress-bar">
-                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
-                            </div>
-                            <div id="progressText" class="text-xs text-gray-500 mt-1"></div>
-                        </div>
-                    </div>
-
-                    <!-- File Preview -->
-                    <div id="filePreview" class="mb-6">
-                        <h3 class="font-semibold text-gray-700 mb-2">Selected Files</h3>
-                        <div id="filesList"></div>
-                    </div>
-
-                    <!-- Upload Options -->
-                    <div class="mb-6">
-                        <h3 class="font-semibold text-gray-700 mb-2">Upload Options</h3>
-
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-sm text-gray-600 mb-1">Subject</label>
-                                <select id="subjectSelect"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                    <option value="">Select Subject</option>
-                                    <option value="Mathematics">Mathematics</option>
-                                    <option value="Physics">Physics</option>
-                                    <option value="Chemistry">Chemistry</option>
-                                    <option value="Biology">Biology</option>
-                                    <option value="Computer Science">Computer Science</option>
-                                    <option value="English">English</option>
-                                    <option value="History">History</option>
-                                    <option value="Geography">Geography</option>
-                                    <option value="Economics">Economics</option>
-                                    <option value="Accountancy">Accountancy</option>
-                                    <option value="Business Studies">Business Studies</option>
-                                    <option value="Political Science">Political Science</option>
-                                    <option value="Psychology">Psychology</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm text-gray-600 mb-1">Academic Year</label>
-                                <input type="text" id="academicYear" placeholder="e.g., 2023-2024"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                            </div>
-
-                            <div>
-                                <label class="block text-sm text-gray-600 mb-1">Exam Type</label>
-                                <select id="examType"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                    <option value="Board Exam">Board Exam</option>
-                                    <option value="University Exam">University Exam</option>
-                                    <option value="Competitive Exam">Competitive Exam</option>
-                                    <option value="Mid-Term">Mid-Term</option>
-                                    <option value="Final Exam">Final Exam</option>
-                                    <option value="Mock Test">Mock Test</option>
-                                    <option value="Practice Paper">Practice Paper</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm text-gray-600 mb-1">Difficulty Level</label>
-                                <select id="difficultyLevel"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                    <option value="Beginner">Beginner</option>
-                                    <option value="Intermediate">Intermediate</option>
-                                    <option value="Advanced">Advanced</option>
-                                    <option value="Expert">Expert</option>
-                                </select>
-                            </div>
-
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" id="autoParse" class="rounded text-blue-600 focus:ring-blue-500">
-                                <label for="autoParse" class="text-sm text-gray-600">Auto-parse questions from
-                                    file</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Upload Button -->
-                    <button onclick="processUpload()"
-                        class="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-300 mb-4 transform hover:scale-105">
-                        🚀 Process Upload
-                    </button>
-                </div>
-            </aside>
-
-            <!-- Right Content - Question Management -->
-            <section class="lg:col-span-2">
+            <!-- Full Width Section - Question Management -->
+            <section class="col-span-1">
                 <div class="bg-white rounded-2xl shadow-xl p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-bold text-blue-600 flex items-center gap-2">
@@ -303,7 +194,6 @@
                             <span id="questionCount">0</span> questions loaded
                         </div>
                     </div>
-
 
 
                     <!-- ... existing code ... -->
