@@ -1,93 +1,52 @@
 // File: CodingTerminals-TestSeries/viewer/practice-interface.js
 
-// Global Variables
+// Global variables
 let allQuestions = [];
-let practiceQuestions = [];
-let mockTestQuestions = [];
-let currentPracticeQuestionIndex = -1;
-let currentMockQuestionIndex = -1;
-let userAnswers = {};
-let mockUserAnswers = {};
-let practiceMode = 'subject';
-let mockTestActive = false;
-let mockTestStartTime = null;
-let mockTestDuration = 0;
-let mockTestInterval = null;
-let userProgress = {
-    questionsAttempted: 0,
-    questionsCorrect: 0,
-    weakAreas: [],
-    totalTimeSpent: 0
-};
-let currentTab = 'practice';
+let filteredQuestions = [];
+let currentQuestions = [];
+let currentPage = 0;
+let questionsPerPage = 10;
+let userAnswers = {}; // {questionId: selectedOptionIndex}
+let markedForReview = new Set();
+let questionStatus = {}; // {questionId: status}
+let timerInterval;
+let totalTimeInSeconds = 3600; // 60 minutes default
+let timeRemaining = 3600;
+let testStarted = false;
+let startTime;
 
-// API Endpoints Configuration
+// API Configuration
 const API_CONFIG = {
     BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
     ENDPOINTS: {
-        GET_ALL_QUESTIONS: '/questions',
-        GET_QUESTIONS_BY_SUBJECT: '/questions/subject/',
-        GET_QUESTIONS_BY_YEAR: '/questions/year/',
-        GET_USER_PROGRESS: '/users/progress',
-        SAVE_USER_ANSWER: '/users/answers',
-        GET_WEAK_AREAS: '/questions/progress/user',
-        SAVE_PROGRESS: '/questions/progress/user'
+        GET_ALL_QUESTIONS: '/questions'
     }
 };
 
-// Construct full API URLs
 const API_URLS = {
-    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS,
-    GET_QUESTIONS_BY_SUBJECT: (subject) => API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_QUESTIONS_BY_SUBJECT + subject,
-    GET_QUESTIONS_BY_YEAR: (year) => API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_QUESTIONS_BY_YEAR + year,
-    GET_USER_PROGRESS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_USER_PROGRESS,
-    SAVE_USER_ANSWER: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.SAVE_USER_ANSWER,
-    GET_WEAK_AREAS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_WEAK_AREAS,
-    SAVE_PROGRESS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.SAVE_PROGRESS
+    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS
 };
 
-// Switch between practice tabs
-function switchPracticeTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-    });
-    
-    // Remove active class from all buttons
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-    
-    // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
-    
-    // Add active class to clicked button
-    event.target.classList.add('active');
-    
-    currentTab = tabName;
-    
-    // Load data based on tab
-    if (tabName === 'progress') {
-        loadProgressData();
-    }
-}
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function () {
+    loadQuestions();
+});
 
 // Load questions from API
 async function loadQuestions() {
     try {
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             allQuestions = result.data || [];
-            
-            // Populate filters
-            populateFilters();
+            document.getElementById('totalCount').textContent = allQuestions.length;
+            initializeQuestionStatus();
         } else {
             console.error('Failed to load questions:', result.message);
         }
@@ -96,968 +55,136 @@ async function loadQuestions() {
     }
 }
 
-// Populate filters with unique values
-function populateFilters() {
-    const practiceSubjectFilter = document.getElementById('practiceSubjectFilter');
-    const practiceYearFilter = document.getElementById('practiceYearFilter');
-    const mockSubjectFilter = document.getElementById('mockSubjectFilter');
-    const mockYearFilter = document.getElementById('mockYearFilter');
-    const mockDifficultyFilter = document.getElementById('mockDifficultyFilter');
-    
-    if (!practiceSubjectFilter || !practiceYearFilter || !mockSubjectFilter || !mockYearFilter || !mockDifficultyFilter) return;
-    
-    // Get unique values
-    const uniqueSubjects = new Set();
-    const uniqueYears = new Set();
-    const uniqueDifficulties = new Set();
-    
-    allQuestions.forEach(question => {
-        if (question.subject) uniqueSubjects.add(question.subject);
-        if (question.academicYear) uniqueYears.add(question.academicYear);
-        if (question.difficulty) uniqueDifficulties.add(question.difficulty);
-    });
-    
-    // Populate practice filters
-    uniqueSubjects.forEach(subject => {
-        const option = document.createElement('option');
-        option.value = subject;
-        option.textContent = subject;
-        practiceSubjectFilter.appendChild(option);
-        mockSubjectFilter.appendChild(option.cloneNode(true));
-    });
-    
-    uniqueYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        practiceYearFilter.appendChild(option);
-        mockYearFilter.appendChild(option.cloneNode(true));
-    });
-    
-    uniqueDifficulties.forEach(difficulty => {
-        const option = document.createElement('option');
-        option.value = difficulty.toLowerCase();
-        option.textContent = difficulty;
-        mockDifficultyFilter.appendChild(option);
+// Initialize question status tracking
+function initializeQuestionStatus() {
+    allQuestions.forEach((question, index) => {
+        const questionId = question._id || question.id;
+        questionStatus[questionId] = 'not-visited'; // not-visited, not-answered, answered, marked-review, answered-marked
     });
 }
 
-// Start practice session
-function startPracticeSession() {
-    const mode = document.getElementById('practiceModeSelect').value;
-    const subjectFilter = document.getElementById('practiceSubjectFilter').value;
-    const yearFilter = document.getElementById('practiceYearFilter').value;
-    const difficultyFilter = document.getElementById('practiceDifficultyFilter').value;
-    
-    // Filter questions based on mode and filters
-    let filteredQuestions = allQuestions.filter(question => {
-        let matches = true;
-        
-        if (subjectFilter !== 'all' && question.subject !== subjectFilter) {
-            matches = false;
-        }
-        
-        if (yearFilter !== 'all' && question.academicYear !== yearFilter) {
-            matches = false;
-        }
-        
-        if (difficultyFilter !== 'all' && question.difficulty.toLowerCase() !== difficultyFilter) {
-            matches = false;
-        }
-        
-        return matches;
+// Start the test
+function startTest() {
+    const subject = document.getElementById('subjectSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    const duration = parseInt(document.getElementById('durationSelect').value);
+    const questionCount = parseInt(document.getElementById('questionCountSelect').value);
+    const randomOrder = document.getElementById('randomOrderCheckbox').checked;
+    const randomSelection = document.getElementById('randomSelectionCheckbox').checked;
+    const difficultyMix = document.getElementById('difficultyMixSelect').value;
+
+    // Filter questions based on selection
+    let availableQuestions = allQuestions.filter(question => {
+        const matchesSubject = subject === 'all' || question.subject === subject;
+        const matchesYear = year === 'all' || question.academicYear == year;
+        return matchesSubject && matchesYear;
     });
-    
-    // Apply mode-specific filtering
-    if (mode === 'random') {
-        // Shuffle questions
-        filteredQuestions = [...filteredQuestions].sort(() => 0.5 - Math.random());
-    } else if (mode === 'weak') {
-        // Filter by weak areas if any exist
-        if (userProgress.weakAreas && userProgress.weakAreas.length > 0) {
-            filteredQuestions = filteredQuestions.filter(q => 
-                userProgress.weakAreas.includes(q.subject) || 
-                userProgress.weakAreas.includes(q.topic)
-            );
-        }
-    }
-    
-    practiceQuestions = filteredQuestions;
-    currentPracticeQuestionIndex = 0;
-    userAnswers = {};
-    
-    if (practiceQuestions.length === 0) {
-        showToast('No questions available with current filters', 'warning');
+
+    if (availableQuestions.length === 0) {
+        alert('No questions found for the selected criteria!');
         return;
     }
-    
-    updatePracticeProgress();
-    showCurrentPracticeQuestion();
-    showToast(`Starting practice session with ${practiceQuestions.length} questions`, 'success');
-}
 
-// Show current practice question
-function showCurrentPracticeQuestion() {
-    if (currentPracticeQuestionIndex < 0 || currentPracticeQuestionIndex >= practiceQuestions.length) {
-        endPracticeSession();
-        return;
-    }
-    
-    const question = practiceQuestions[currentPracticeQuestionIndex];
-    const container = document.getElementById('questionDisplayContainer');
-    
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="mb-6">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-blue-600 mb-2">${question.subject}</h2>
-                    <div class="flex flex-wrap gap-2 text-sm text-gray-600">
-                        <span class="flex items-center gap-1">
-                            <span>📅</span>
-                            <strong>Year:</strong> ${question.academicYear}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span>⭐</span>
-                            <strong>Difficulty:</strong> ${question.difficulty}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span>🎯</span>
-                            <strong>Topic:</strong> ${question.topic}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="question-content text-gray-700 mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3">${question.question}</h3>
-                
-                <div class="space-y-2">
-                    ${question.options.map((option, optIndex) => {
-                        const userAnswer = userAnswers[question.id];
-                        const isSelected = userAnswer !== undefined && userAnswer === optIndex;
-                        const isCorrect = question.correctAnswer === optIndex;
-                        const showResult = userAnswer !== undefined;
-                        
-                        return `
-                            <div class="option-item ${isSelected ? 'option-selected' : ''} ${showResult && isCorrect ? 'option-correct' : ''} ${showResult && !isCorrect ? 'option-incorrect' : ''}" 
-                                 onclick="selectPracticeOption(${currentPracticeQuestionIndex}, ${optIndex})">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" 
-                                           name="practice_question_${question.id}" 
-                                           value="${optIndex}" 
-                                           class="mr-3"
-                                           ${isSelected ? 'checked' : ''}
-                                           onchange="selectPracticeOption(${currentPracticeQuestionIndex}, ${optIndex})">
-                                    <span>${String.fromCharCode(65 + optIndex)}. ${option}</span>
-                                    ${showResult && isCorrect ? '<span class="ml-2 text-green-600 text-sm">✓ Correct</span>' : ''}
-                                    ${showResult && !isCorrect && isSelected ? '<span class="ml-2 text-red-600 text-sm">✗ Incorrect</span>' : ''}
-                                </label>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-            
-            ${question.explanation ? `
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <div class="font-semibold text-blue-800 mb-2">Explanation:</div>
-                    <div class="text-blue-700">${question.explanation}</div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    // Enable/disable navigation buttons
-    document.getElementById('prevBtn').disabled = currentPracticeQuestionIndex === 0;
-    document.getElementById('nextBtn').disabled = currentPracticeQuestionIndex === practiceQuestions.length - 1;
-    
-    updatePracticeProgress();
-}
-
-// Select practice option
-function selectPracticeOption(questionIndex, optionIndex) {
-    if (mockTestActive) return; // Don't allow changes during mock test
-    
-    const questionId = practiceQuestions[questionIndex].id;
-    userAnswers[questionId] = optionIndex;
-    
-    // Show result immediately
-    showCurrentPracticeQuestion();
-    
-    // Save answer to backend
-    saveUserAnswer(questionId, optionIndex);
-}
-
-// Update practice progress
-function updatePracticeProgress() {
-    const currentNum = document.getElementById('currentQuestionNum');
-    const totalNum = document.getElementById('totalQuestionsNum');
-    const progressFill = document.getElementById('practiceProgressFill');
-    
-    if (currentNum) currentNum.textContent = currentPracticeQuestionIndex + 1;
-    if (totalNum) totalNum.textContent = practiceQuestions.length;
-    
-    if (progressFill && practiceQuestions.length > 0) {
-        const percentage = ((currentPracticeQuestionIndex + 1) / practiceQuestions.length) * 100;
-        progressFill.style.width = `${percentage}%`;
-    }
-}
-
-// Navigation functions
-function prevQuestion() {
-    if (currentPracticeQuestionIndex > 0) {
-        currentPracticeQuestionIndex--;
-        showCurrentPracticeQuestion();
-    }
-}
-
-function nextQuestion() {
-    if (currentPracticeQuestionIndex < practiceQuestions.length - 1) {
-        currentPracticeQuestionIndex++;
-        showCurrentPracticeQuestion();
-    }
-}
-
-function skipQuestion() {
-    if (currentPracticeQuestionIndex < practiceQuestions.length - 1) {
-        currentPracticeQuestionIndex++;
-        showCurrentPracticeQuestion();
+    // Apply random selection if enabled
+    if (randomSelection) {
+        availableQuestions = getRandomQuestions(availableQuestions, questionCount, difficultyMix);
     } else {
-        endPracticeSession();
+        // Take first N questions (or all if less than requested)
+        availableQuestions = availableQuestions.slice(0, Math.min(questionCount, availableQuestions.length));
     }
-}
 
-// End practice session
-function endPracticeSession() {
-    calculateResults();
-}
-
-// Calculate results
-function calculateResults() {
-    let correctAnswers = 0;
-    const results = practiceQuestions.map((question, index) => {
-        const questionId = question.id;
-        const userAnswer = userAnswers[questionId];
-        const isCorrect = userAnswer !== undefined && userAnswer == question.correctAnswer;
-        
-        if (isCorrect) correctAnswers++;
-        
-        return {
-            questionId: questionId,
-            questionText: question.question,
-            userAnswer: userAnswer,
-            correctAnswer: question.correctAnswer,
-            isCorrect: isCorrect,
-            explanation: question.explanation
-        };
-    });
-    
-    const score = Math.round((correctAnswers / practiceQuestions.length) * 100);
-    
-    // Update user progress
-    userProgress.questionsAttempted += practiceQuestions.length;
-    userProgress.questionsCorrect += correctAnswers;
-    
-    // Identify weak areas
-    identifyWeakAreas(results);
-    
-    // Show results
-    showResults(score, correctAnswers, practiceQuestions.length, results);
-}
-
-// Show results
-function showResults(score, correct, total, results) {
-    const container = document.getElementById('resultsModal');
-    const content = document.getElementById('resultsContent');
-    
-    if (!container || !content) return;
-    
-    content.innerHTML = `
-        <div class="text-center">
-            <div class="text-6xl mb-4">${score >= 60 ? '🎉' : '👍'}</div>
-            <h3 class="text-3xl font-bold ${score >= 60 ? 'text-green-600' : 'text-blue-600'} mb-2">
-                ${score >= 60 ? 'Great Job!' : 'Keep Practicing!'}
-            </h3>
-            <div class="text-2xl font-bold text-gray-800 mb-2">${score}%</div>
-            <div class="text-lg text-gray-600 mb-6">
-                ${correct} out of ${total} questions correct
-            </div>
-            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto mb-6">
-                <div class="bg-green-100 text-green-800 p-3 rounded-lg">
-                    <div class="text-2xl font-bold">${correct}</div>
-                    <div>Correct</div>
-                </div>
-                <div class="bg-red-100 text-red-800 p-3 rounded-lg">
-                    <div class="text-2xl font-bold">${total - correct}</div>
-                    <div>Incorrect</div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    container.classList.remove('hidden');
-}
-
-// Close results modal
-function closeResultsModal() {
-    const container = document.getElementById('resultsModal');
-    if (container) {
-        container.classList.add('hidden');
+    // Apply random order if enabled
+    if (randomOrder) {
+        availableQuestions = shuffleArray([...availableQuestions]);
     }
+
+    // Set up pagination
+    filteredQuestions = availableQuestions;
+    currentQuestions = filteredQuestions.slice(0, questionsPerPage);
+    totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
+
+    // Set timer
+    totalTimeInSeconds = duration * 60;
+    timeRemaining = totalTimeInSeconds;
+    startTime = new Date();
+
+    // Hide config section and show question section
+    document.getElementById('testConfigSection').classList.add('hidden');
+    document.getElementById('questionSection').classList.remove('hidden');
+
+    // Initialize UI
+    updateQuestionNavigator();
+    displayCurrentQuestion();
+    startTimer();
+
+    testStarted = true;
+
+    // Update total count display
+    document.getElementById('totalCount').textContent = filteredQuestions.length;
+    updateAnsweredCount();
+
+    // Show confirmation
+    showToast(`Test started with ${filteredQuestions.length} questions!`, 'success');
 }
 
-// Restart practice
-function restartPractice() {
-    closeResultsModal();
-    startPracticeSession();
-}
+// Get random questions with difficulty distribution
+function getRandomQuestions(questions, count, difficultyMix) {
+    // Define difficulty distributions
+    const distributions = {
+        balanced: { easy: 0.3, medium: 0.5, hard: 0.2 },
+        easy: { easy: 0.5, medium: 0.3, hard: 0.2 },
+        medium: { easy: 0.2, medium: 0.6, hard: 0.2 },
+        hard: { easy: 0.2, medium: 0.3, hard: 0.5 },
+        random: null // Will use equal distribution
+    };
 
-// Review questions
-function reviewQuestions() {
-    closeResultsModal();
-    
-    // Open review in new window
-    const reviewWindow = window.open('', '_blank');
-    
-    reviewWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Question Review - Coding Terminals</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-                body { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
-                .question-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1rem; }
-                .option-item { padding: 0.75rem; margin: 0.5rem 0; border: 1px solid #e5e7eb; border-radius: 0.375rem; }
-            </style>
-        </head>
-        <body class="min-h-screen p-8">
-            <div class="max-w-4xl mx-auto">
-                <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">Question Review</h1>
-                
-                <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${practiceQuestions.map((question, index) => {
-                        const questionId = question.id;
-                        const userAnswer = userAnswers[questionId];
-                        const isCorrect = userAnswer !== undefined && userAnswer == question.correctAnswer;
-                        
-                        return `
-                            <div class="question-card">
-                                <div class="flex items-start gap-3 mb-4">
-                                    <span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                                        ${index + 1}
-                                    </span>
-                                    <div class="flex-1">
-                                        <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
-                                        
-                                        <div class="space-y-2 mb-4">
-                                            ${question.options.map((option, optIndex) => `
-                                                <div class="option-item ${
-                                                    optIndex == question.correctAnswer 
-                                                        ? 'bg-green-100 border-green-500 text-green-800' 
-                                                        : (userAnswer === optIndex && !isCorrect)
-                                                            ? 'bg-red-100 border-red-500 text-red-800'
-                                                            : 'bg-gray-50 border-gray-300'
-                                                }">
-                                                    <label class="flex items-center">
-                                                        <input type="radio" 
-                                                               disabled 
-                                                               ${optIndex == question.correctAnswer ? 'checked' : ''}
-                                                               ${(userAnswer === optIndex && !isCorrect) ? 'checked' : ''}>
-                                                        <span class="ml-2">${String.fromCharCode(65 + optIndex)}. ${option}</span>
-                                                        ${optIndex == question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
-                                                        ${(userAnswer === optIndex && !isCorrect) ? '<span class="ml-2 text-red-600 text-xs">✗ Your Answer</span>' : ''}
-                                                    </label>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                        
-                                        <div class="bg-blue-50 p-3 rounded-lg">
-                                            <div class="font-semibold text-blue-800 mb-1">Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}</div>
-                                            <div class="text-sm text-blue-700">${question.explanation || 'No explanation provided.'}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-sm text-gray-500">
-                                    Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-    
-    reviewWindow.document.close();
-}
+    const dist = distributions[difficultyMix];
+    let selectedQuestions = [];
 
-// Start mock test
-function startMockTest() {
-    const testTitle = document.getElementById('mockTestTitle').value || 'Mock Test';
-    const duration = parseInt(document.getElementById('mockTestDuration').value) || 60;
-    const numQuestions = parseInt(document.getElementById('mockTestQuestions').value) || 20;
-    const subjectFilter = document.getElementById('mockSubjectFilter').value;
-    const yearFilter = document.getElementById('mockYearFilter').value;
-    const difficultyFilter = document.getElementById('mockDifficultyFilter').value;
-    
-    // Filter questions
-    let filteredQuestions = allQuestions.filter(question => {
-        let matches = true;
-        
-        if (subjectFilter !== 'all' && question.subject !== subjectFilter) {
-            matches = false;
-        }
-        
-        if (yearFilter !== 'all' && question.academicYear !== yearFilter) {
-            matches = false;
-        }
-        
-        if (difficultyFilter !== 'all' && question.difficulty.toLowerCase() !== difficultyFilter) {
-            matches = false;
-        }
-        
-        return matches;
-    });
-    
-    // Limit to specified number of questions
-    if (filteredQuestions.length > numQuestions) {
-        filteredQuestions = [...filteredQuestions].sort(() => 0.5 - Math.random()).slice(0, numQuestions);
-    }
-    
-    if (filteredQuestions.length === 0) {
-        showToast('No questions available with current filters', 'warning');
-        return;
-    }
-    
-    mockTestQuestions = filteredQuestions;
-    currentMockQuestionIndex = 0;
-    mockUserAnswers = {};
-    mockTestActive = true;
-    mockTestDuration = duration * 60; // Convert to seconds
-    mockTestStartTime = new Date();
-    
-    // Update UI
-    document.getElementById('mockTestTitleDisplay').textContent = testTitle;
-    document.getElementById('mockCurrentQuestionNum').textContent = '1';
-    document.getElementById('mockTotalQuestionsNum').textContent = mockTestQuestions.length;
-    document.getElementById('endTestBtn').classList.remove('hidden');
-    
-    // Start timer
-    startMockTimer();
-    
-    // Show first question
-    showCurrentMockQuestion();
-    
-    showToast(`Starting mock test: ${testTitle} (${duration} minutes)`, 'success');
-}
+    if (dist) {
+        // Apply specific difficulty distribution
+        const easyQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'beginner' || q.difficulty?.toLowerCase() === 'easy');
+        const mediumQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'intermediate' || q.difficulty?.toLowerCase() === 'medium');
+        const hardQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'advanced' || q.difficulty?.toLowerCase() === 'hard' || q.difficulty?.toLowerCase() === 'expert');
 
-// Show current mock question
-function showCurrentMockQuestion() {
-    if (currentMockQuestionIndex < 0 || currentMockQuestionIndex >= mockTestQuestions.length) {
-        endMockTest();
-        return;
-    }
-    
-    const question = mockTestQuestions[currentMockQuestionIndex];
-    const container = document.getElementById('mockQuestionDisplayContainer');
-    
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="mb-6">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-purple-600 mb-2">${question.subject}</h2>
-                    <div class="flex flex-wrap gap-2 text-sm text-gray-600">
-                        <span class="flex items-center gap-1">
-                            <span>📅</span>
-                            <strong>Year:</strong> ${question.academicYear}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span>⭐</span>
-                            <strong>Difficulty:</strong> ${question.difficulty}
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <span>🎯</span>
-                            <strong>Topic:</strong> ${question.topic}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="question-content text-gray-700 mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 class="text-lg font-semibold mb-3">${question.question}</h3>
-                
-                <div class="space-y-2">
-                    ${question.options.map((option, optIndex) => {
-                        const userAnswer = mockUserAnswers[question.id];
-                        const isSelected = userAnswer !== undefined && userAnswer === optIndex;
-                        
-                        return `
-                            <div class="option-item ${isSelected ? 'option-selected' : ''}" 
-                                 onclick="selectMockOption(${currentMockQuestionIndex}, ${optIndex})">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" 
-                                           name="mock_question_${question.id}" 
-                                           value="${optIndex}" 
-                                           class="mr-3"
-                                           ${isSelected ? 'checked' : ''}
-                                           onchange="selectMockOption(${currentMockQuestionIndex}, ${optIndex})">
-                                    <span>${String.fromCharCode(65 + optIndex)}. ${option}</span>
-                                </label>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-            
-            ${question.explanation ? `
-                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                    <div class="font-semibold text-purple-800 mb-2">Explanation:</div>
-                    <div class="text-purple-700">${question.explanation}</div>
-                </div>
-            ` : ''}
-        </div>
-    `;
-    
-    // Update navigation
-    document.getElementById('mockCurrentQuestionNum').textContent = currentMockQuestionIndex + 1;
-    document.getElementById('mockPrevBtn').disabled = currentMockQuestionIndex === 0;
-    document.getElementById('mockNextBtn').disabled = currentMockQuestionIndex === mockTestQuestions.length - 1;
-    
-    // Update progress
-    const progressFill = document.getElementById('mockProgressFill');
-    if (progressFill && mockTestQuestions.length > 0) {
-        const percentage = ((currentMockQuestionIndex + 1) / mockTestQuestions.length) * 100;
-        progressFill.style.width = `${percentage}%`;
-    }
-}
+        // Calculate counts for each difficulty
+        const easyCount = Math.floor(count * dist.easy);
+        const mediumCount = Math.floor(count * dist.medium);
+        const hardCount = count - easyCount - mediumCount; // Remaining goes to hard
 
-// Select mock option
-function selectMockOption(questionIndex, optionIndex) {
-    if (!mockTestActive) return;
-    
-    const questionId = mockTestQuestions[questionIndex].id;
-    mockUserAnswers[questionId] = optionIndex;
-    
-    // Show selected state
-    showCurrentMockQuestion();
-    
-    // Save answer to backend
-    saveUserAnswer(questionId, optionIndex);
-}
-
-// Start mock timer
-function startMockTimer() {
-    const timerDisplay = document.getElementById('mockTimer');
-    if (!timerDisplay) return;
-    
-    clearInterval(mockTestInterval);
-    
-    mockTestInterval = setInterval(() => {
-        if (!mockTestActive) return;
-        
-        const now = new Date();
-        const elapsed = Math.floor((now - mockTestStartTime) / 1000);
-        const remaining = Math.max(0, mockTestDuration - elapsed);
-        
-        if (remaining <= 0) {
-            clearInterval(mockTestInterval);
-            endMockTest();
-            return;
-        }
-        
-        const hours = Math.floor(remaining / 3600);
-        const minutes = Math.floor((remaining % 3600) / 60);
-        const seconds = remaining % 60;
-        
-        timerDisplay.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, 1000);
-}
-
-// Navigation functions for mock test
-function mockPrevQuestion() {
-    if (currentMockQuestionIndex > 0) {
-        currentMockQuestionIndex--;
-        showCurrentMockQuestion();
-    }
-}
-
-function mockNextQuestion() {
-    if (currentMockQuestionIndex < mockTestQuestions.length - 1) {
-        currentMockQuestionIndex++;
-        showCurrentMockQuestion();
-    }
-}
-
-function markForReview() {
-    showToast('Question marked for review', 'info');
-}
-
-// End mock test
-function endMockTest() {
-    mockTestActive = false;
-    clearInterval(mockTestInterval);
-    document.getElementById('endTestBtn').classList.add('hidden');
-    
-    // Calculate results
-    let correctAnswers = 0;
-    const results = mockTestQuestions.map((question, index) => {
-        const questionId = question.id;
-        const userAnswer = mockUserAnswers[questionId];
-        const isCorrect = userAnswer !== undefined && userAnswer == question.correctAnswer;
-        
-        if (isCorrect) correctAnswers++;
-        
-        return {
-            questionId: questionId,
-            questionText: question.question,
-            userAnswer: userAnswer,
-            correctAnswer: question.correctAnswer,
-            isCorrect: isCorrect,
-            explanation: question.explanation
-        };
-    });
-    
-    const score = Math.round((correctAnswers / mockTestQuestions.length) * 100);
-    
-    // Update user progress
-    userProgress.questionsAttempted += mockTestQuestions.length;
-    userProgress.questionsCorrect += correctAnswers;
-    
-    // Identify weak areas
-    identifyWeakAreas(results);
-    
-    // Show results
-    showResults(score, correctAnswers, mockTestQuestions.length, results);
-}
-
-// Review mock test
-function reviewMockTest() {
-    if (mockTestQuestions.length === 0) {
-        showToast('No mock test questions to review', 'warning');
-        return;
-    }
-    
-    // Open review in new window
-    const reviewWindow = window.open('', '_blank');
-    
-    reviewWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Mock Test Review - Coding Terminals</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-                body { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
-                .question-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1rem; }
-                .option-item { padding: 0.75rem; margin: 0.5rem 0; border: 1px solid #e5e7eb; border-radius: 0.375rem; }
-            </style>
-        </head>
-        <body class="min-h-screen p-8">
-            <div class="max-w-4xl mx-auto">
-                <h1 class="text-3xl font-bold text-purple-600 mb-6 text-center">Mock Test Review</h1>
-                
-                <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${mockTestQuestions.map((question, index) => {
-                        const questionId = question.id;
-                        const userAnswer = mockUserAnswers[questionId];
-                        const isCorrect = userAnswer !== undefined && userAnswer == question.correctAnswer;
-                        
-                        return `
-                            <div class="question-card">
-                                <div class="flex items-start gap-3 mb-4">
-                                    <span class="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                                        ${index + 1}
-                                    </span>
-                                    <div class="flex-1">
-                                        <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
-                                        
-                                        <div class="space-y-2 mb-4">
-                                            ${question.options.map((option, optIndex) => `
-                                                <div class="option-item ${
-                                                    optIndex == question.correctAnswer 
-                                                        ? 'bg-green-100 border-green-500 text-green-800' 
-                                                        : (userAnswer === optIndex && !isCorrect)
-                                                            ? 'bg-red-100 border-red-500 text-red-800'
-                                                            : 'bg-gray-50 border-gray-300'
-                                                }">
-                                                    <label class="flex items-center">
-                                                        <input type="radio" 
-                                                               disabled 
-                                                               ${optIndex == question.correctAnswer ? 'checked' : ''}
-                                                               ${(userAnswer === optIndex && !isCorrect) ? 'checked' : ''}>
-                                                        <span class="ml-2">${String.fromCharCode(65 + optIndex)}. ${option}</span>
-                                                        ${optIndex == question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
-                                                        ${(userAnswer === optIndex && !isCorrect) ? '<span class="ml-2 text-red-600 text-xs">✗ Your Answer</span>' : ''}
-                                                    </label>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                        
-                                        <div class="bg-purple-50 p-3 rounded-lg">
-                                            <div class="font-semibold text-purple-800 mb-1">Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}</div>
-                                            <div class="text-sm text-purple-700">${question.explanation || 'No explanation provided.'}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-sm text-gray-500">
-                                    Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-    
-    reviewWindow.document.close();
-}
-
-// Shuffle questions for random practice
-function shuffleQuestions() {
-    if (practiceQuestions.length > 0) {
-        practiceQuestions = [...practiceQuestions].sort(() => 0.5 - Math.random());
-        currentPracticeQuestionIndex = 0;
-        showCurrentPracticeQuestion();
-        showToast('Questions shuffled successfully', 'success');
-    }
-}
-
-// Reset progress
-function resetProgress() {
-    if (confirm('Are you sure you want to reset your progress?')) {
-        userProgress = {
-            questionsAttempted: 0,
-            questionsCorrect: 0,
-            weakAreas: [],
-            totalTimeSpent: 0
-        };
-        
-        // Update UI
-        updateWeakAreasList();
-        showToast('Progress reset successfully', 'success');
-    }
-}
-
-// Identify weak areas
-function identifyWeakAreas(results) {
-    const incorrectBySubject = {};
-    const incorrectByTopic = {};
-    
-    results.forEach(result => {
-        const question = allQuestions.find(q => q.id === result.questionId);
-        if (question && !result.isCorrect) {
-            // Count by subject
-            if (incorrectBySubject[question.subject]) {
-                incorrectBySubject[question.subject]++;
-            } else {
-                incorrectBySubject[question.subject] = 1;
-            }
-            
-            // Count by topic
-            if (question.topic) {
-                if (incorrectByTopic[question.topic]) {
-                    incorrectByTopic[question.topic]++;
-                } else {
-                    incorrectByTopic[question.topic] = 1;
-                }
-            }
-        }
-    });
-    
-    // Identify weak areas (subjects/topics with high error rates)
-    const weakAreas = [];
-    
-    // Add subjects with more than 3 incorrect answers
-    for (const [subject, count] of Object.entries(incorrectBySubject)) {
-        if (count > 3) {
-            weakAreas.push(subject);
-        }
-    }
-    
-    // Add topics with more than 2 incorrect answers
-    for (const [topic, count] of Object.entries(incorrectByTopic)) {
-        if (count > 2 && !weakAreas.includes(topic)) {
-            weakAreas.push(topic);
-        }
-    }
-    
-    userProgress.weakAreas = weakAreas;
-    updateWeakAreasList();
-}
-
-// Update weak areas list
-function updateWeakAreasList() {
-    const list = document.getElementById('weakAreasList');
-    if (!list) return;
-    
-    if (userProgress.weakAreas.length > 0) {
-        list.innerHTML = userProgress.weakAreas.map(area => `
-            <div class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm mb-1">
-                ${area}
-            </div>
-        `).join('');
+        // Select random questions from each category
+        selectedQuestions = [
+            ...getRandomSubset(easyQuestions, easyCount),
+            ...getRandomSubset(mediumQuestions, mediumCount),
+            ...getRandomSubset(hardQuestions, hardCount)
+        ];
     } else {
-        list.innerHTML = '<div class="text-sm text-gray-500">No weak areas identified yet</div>';
+        // Random distribution - just pick random questions
+        selectedQuestions = getRandomSubset(questions, count);
     }
+
+    return selectedQuestions;
 }
 
-// Load progress data
-async function loadProgressData() {
-    try {
-        const response = await fetch(API_URLS.GET_USER_PROGRESS);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            userProgress = result.data || userProgress;
-            
-            // Update UI elements
-            document.getElementById('overallScore').textContent = 
-                userProgress.questionsAttempted > 0 
-                    ? Math.round((userProgress.questionsCorrect / userProgress.questionsAttempted) * 100) + '%' 
-                    : '0%';
-            document.getElementById('questionsAttempted').textContent = userProgress.questionsAttempted;
-            document.getElementById('weakAreasCount').textContent = userProgress.weakAreas.length;
-            
-            // Convert seconds to hours and minutes
-            const hours = Math.floor(userProgress.totalTimeSpent / 3600);
-            const minutes = Math.floor((userProgress.totalTimeSpent % 3600) / 60);
-            document.getElementById('studyTime').textContent = `${hours}h ${minutes}m`;
-            
-            // Update weak areas list
-            updateWeakAreasList();
-            
-            // Draw charts
-            drawSubjectPerformanceChart();
-            drawProgressChart();
-        }
-    } catch (error) {
-        console.error('Error loading progress data:', error);
-    }
+// Get random subset of array
+function getRandomSubset(array, count) {
+    if (count >= array.length) return [...array];
+
+    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
 }
 
-// Draw subject performance chart
-function drawSubjectPerformanceChart() {
-    const ctx = document.getElementById('subjectPerformanceChart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.subjectPerformanceChart) {
-        window.subjectPerformanceChart.destroy();
+// Shuffle array using Fisher-Yates algorithm
+function shuffleArray(array) {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
     }
-    
-    // Sample data - in real implementation, this would come from API
-    const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology'];
-    const scores = [85, 72, 90, 68]; // Sample scores
-    
-    window.subjectPerformanceChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: subjects,
-            datasets: [{
-                label: 'Performance (%)',
-                data: scores,
-                backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
+    return newArray;
 }
 
-// Draw progress chart
-function drawProgressChart() {
-    const ctx = document.getElementById('progressChart').getContext('2d');
-    
-    // Destroy existing chart if it exists
-    if (window.progressChart) {
-        window.progressChart.destroy();
-    }
-    
-    // Sample data - in real implementation, this would come from API
-    const dates = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const scores = [65, 70, 75, 80, 85, 90]; // Sample scores over time
-    
-    window.progressChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Performance (%)',
-                data: scores,
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
-    });
-}
-
-// Save user answer to backend
-async function saveUserAnswer(questionId, answerIndex) {
-    try {
-        const response = await fetch(API_URLS.SAVE_USER_ANSWER, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                questionId: questionId,
-                answerIndex: answerIndex,
-                timestamp: new Date().toISOString()
-            })
-        });
-        
-        if (!response.ok) {
-            console.warn('Failed to save user answer:', response.status);
-        }
-    } catch (error) {
-        console.warn('Error saving user answer:', error);
-    }
-}
-
-// ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', () => {
-    loadQuestions();
-    updateWeakAreasList();
-});
-
-// ==================== TOAST NOTIFICATIONS ====================
+// Enhanced toast notification function
 function showToast(message, type = 'info') {
     // Create toast container if it doesn't exist
     let toastContainer = document.getElementById('toastContainer');
@@ -1067,19 +194,24 @@ function showToast(message, type = 'info') {
         toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
         document.body.appendChild(toastContainer);
     }
-    
+
     const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${
-        type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-        type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-    }`;
+    toast.className = `p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500' :
+            type === 'error' ? 'bg-red-500' :
+                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+        }`;
+
     toast.textContent = message;
-    
     toastContainer.appendChild(toast);
-    
+
+    // Animate in
     setTimeout(() => {
-        toast.classList.add('toast-exit');
+        toast.classList.remove('translate-x-full');
+    }, 10);
+
+    // Remove after delay
+    setTimeout(() => {
+        toast.classList.add('translate-x-full');
         setTimeout(() => {
             if (toast.parentNode) {
                 toast.remove();
@@ -1087,41 +219,304 @@ function showToast(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+// Display current question
+function displayCurrentQuestion() {
+    if (currentQuestions.length === 0) return;
 
-// ==================== ANIMATION STYLES ====================
-// Add CSS animations dynamically if they don't exist
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
+    const question = currentQuestions[0]; // We show one question at a time
+    const questionId = question._id || question.id;
 
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
+    // Update question header
+    document.getElementById('currentQuestionDisplay').textContent = getCurrentQuestionNumber();
+    document.getElementById('questionSubject').textContent = question.subject;
+    document.getElementById('questionYear').textContent = question.academicYear;
+    document.getElementById('questionDifficulty').textContent = question.difficulty;
 
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
+    // Update question content
+    const questionContent = `
+        <div class="mb-6">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">${question.question}</h3>
+            
+            <div class="space-y-3">
+                ${question.options.map((option, index) => `
+                    <div class="option-item ${userAnswers[questionId] === index ? 'option-selected' : ''}" 
+                         onclick="selectOption('${questionId}', ${index})">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="question_${questionId}" value="${index}" 
+                                   ${userAnswers[questionId] === index ? 'checked' : ''}
+                                   class="mr-3">
+                            <span class="font-medium">${String.fromCharCode(65 + index)}. ${option}</span>
+                        </label>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
     `;
-    document.head.appendChild(style);
+
+    document.getElementById('questionContent').innerHTML = questionContent;
+
+    // Update navigation buttons
+    updateNavigationButtons();
+
+    // Update pagination dots
+    updatePaginationDots();
+
+    // Update question status to visited
+    if (questionStatus[questionId] === 'not-visited') {
+        questionStatus[questionId] = userAnswers[questionId] !== undefined ? 'answered' : 'not-answered';
+        updateQuestionNavigator();
+    }
 }
+
+// Get current question number in overall sequence
+function getCurrentQuestionNumber() {
+    return currentPage * questionsPerPage + 1;
+}
+
+// Select an option
+function selectOption(questionId, optionIndex) {
+    userAnswers[questionId] = optionIndex;
+
+    // Update question status
+    const isMarked = markedForReview.has(questionId);
+    questionStatus[questionId] = isMarked ? 'answered-marked' : 'answered';
+
+    // Re-render the question to show selection
+    displayCurrentQuestion();
+    updateQuestionNavigator();
+    updateAnsweredCount();
+}
+
+// Toggle mark for review
+function toggleMarkForReview() {
+    const question = currentQuestions[0];
+    if (!question) return;
+
+    const questionId = question._id || question.id;
+
+    if (markedForReview.has(questionId)) {
+        markedForReview.delete(questionId);
+        // Update button text
+        document.getElementById('markReviewBtn').innerHTML = '📝 Mark for Review';
+        document.getElementById('markReviewBtn').className = 'px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors';
+    } else {
+        markedForReview.add(questionId);
+        // Update button text
+        document.getElementById('markReviewBtn').innerHTML = '⭐ Marked for Review';
+        document.getElementById('markReviewBtn').className = 'px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors';
+    }
+
+    // Update question status
+    const isAnswered = userAnswers[questionId] !== undefined;
+    questionStatus[questionId] = isAnswered ? 'answered-marked' : 'marked-review';
+
+    updateQuestionNavigator();
+}
+
+// Navigate to next question
+function nextQuestion() {
+    if (currentPage < Math.ceil(filteredQuestions.length / questionsPerPage) - 1) {
+        currentPage++;
+        currentQuestions = filteredQuestions.slice(
+            currentPage * questionsPerPage,
+            (currentPage + 1) * questionsPerPage
+        );
+        displayCurrentQuestion();
+    }
+}
+
+// Navigate to previous question
+function prevQuestion() {
+    if (currentPage > 0) {
+        currentPage--;
+        currentQuestions = filteredQuestions.slice(
+            currentPage * questionsPerPage,
+            (currentPage + 1) * questionsPerPage
+        );
+        displayCurrentQuestion();
+    }
+}
+
+// Update navigation buttons state
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById('prevQuestionBtn');
+    const nextBtn = document.getElementById('nextQuestionBtn');
+
+    prevBtn.disabled = currentPage === 0;
+    nextBtn.disabled = currentPage >= Math.ceil(filteredQuestions.length / questionsPerPage) - 1;
+
+    // Update page numbers
+    document.getElementById('currentPage').textContent = currentPage + 1;
+    document.getElementById('totalPages').textContent = Math.ceil(filteredQuestions.length / questionsPerPage);
+}
+
+// Update pagination dots
+function updatePaginationDots() {
+    const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
+    const dotsContainer = document.getElementById('paginationDots');
+
+    dotsContainer.innerHTML = '';
+
+    for (let i = 0; i < totalPages; i++) {
+        const dot = document.createElement('div');
+        dot.className = `dot ${i === currentPage ? 'active' : ''}`;
+        dotsContainer.appendChild(dot);
+    }
+}
+
+// Update question navigator sidebar
+function updateQuestionNavigator() {
+    const navigatorContainer = document.getElementById('questionNavigator');
+    navigatorContainer.innerHTML = '';
+
+    filteredQuestions.forEach((question, index) => {
+        const questionId = question._id || question.id;
+        const status = questionStatus[questionId] || 'not-visited';
+
+        const questionBox = document.createElement('div');
+        questionBox.className = `question-number-box question-${status}`;
+        questionBox.textContent = index + 1;
+        questionBox.onclick = () => goToQuestion(index);
+
+        navigatorContainer.appendChild(questionBox);
+    });
+}
+
+// Go to specific question
+function goToQuestion(questionIndex) {
+    currentPage = Math.floor(questionIndex / questionsPerPage);
+    currentQuestions = filteredQuestions.slice(
+        currentPage * questionsPerPage,
+        (currentPage + 1) * questionsPerPage
+    );
+
+    // Set the specific question as current
+    const localIndex = questionIndex % questionsPerPage;
+    if (localIndex < currentQuestions.length) {
+        const temp = currentQuestions[0];
+        currentQuestions[0] = currentQuestions[localIndex];
+        currentQuestions[localIndex] = temp;
+    }
+
+    displayCurrentQuestion();
+}
+
+// Update answered count
+function updateAnsweredCount() {
+    const answeredCount = Object.keys(userAnswers).filter(id =>
+        filteredQuestions.some(q => (q._id || q.id) === id)
+    ).length;
+
+    document.getElementById('answeredCount').textContent = answeredCount;
+}
+
+// Start timer
+function startTimer() {
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            submitTest();
+            return;
+        }
+
+        updateTimerDisplay();
+    }, 1000);
+}
+
+// Update timer display
+function updateTimerDisplay() {
+    const hours = Math.floor(timeRemaining / 3600);
+    const minutes = Math.floor((timeRemaining % 3600) / 60);
+    const seconds = timeRemaining % 60;
+
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    document.getElementById('timerDisplay').textContent = timeString;
+
+    // Change color when time is running low
+    if (timeRemaining < 300) { // Less than 5 minutes
+        document.getElementById('timerDisplay').className = 'timer-display text-red-500 font-bold';
+    } else if (timeRemaining < 600) { // Less than 10 minutes
+        document.getElementById('timerDisplay').className = 'timer-display text-orange-500 font-bold';
+    }
+}
+
+// Submit test
+function submitTest() {
+    if (!testStarted) return;
+
+    clearInterval(timerInterval);
+
+    const endTime = new Date();
+    const timeTaken = Math.floor((endTime - startTime) / 1000);
+
+    // Calculate results
+    const totalQuestions = filteredQuestions.length;
+    const answeredQuestions = Object.keys(userAnswers).filter(id =>
+        filteredQuestions.some(q => (q._id || q.id) === id)
+    ).length;
+    const markedQuestions = Array.from(markedForReview).filter(id =>
+        filteredQuestions.some(q => (q._id || q.id) === id)
+    ).length;
+    const unansweredQuestions = totalQuestions - answeredQuestions;
+
+    // Display results
+    document.getElementById('resultTotal').textContent = totalQuestions;
+    document.getElementById('resultAnswered').textContent = answeredQuestions;
+    document.getElementById('resultMarked').textContent = markedQuestions;
+    document.getElementById('resultUnanswered').textContent = unansweredQuestions;
+
+    const hours = Math.floor(timeTaken / 3600);
+    const minutes = Math.floor((timeTaken % 3600) / 60);
+    const seconds = timeTaken % 60;
+    document.getElementById('timeTaken').textContent =
+        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    // Show results modal
+    document.getElementById('resultsModal').classList.remove('hidden');
+}
+
+// Review answers
+function reviewAnswers() {
+    // This would show detailed review of all questions and answers
+    alert('Review functionality would be implemented here');
+    closeResults();
+}
+
+// Restart test
+function restartTest() {
+    // Reset all variables
+    currentPage = 0;
+    userAnswers = {};
+    markedForReview = new Set();
+    questionStatus = {};
+    timeRemaining = totalTimeInSeconds;
+    testStarted = false;
+
+    clearInterval(timerInterval);
+
+    // Reset UI
+    document.getElementById('testConfigSection').classList.remove('hidden');
+    document.getElementById('questionSection').classList.add('hidden');
+    document.getElementById('resultsModal').classList.add('hidden');
+
+    // Reload questions
+    loadQuestions();
+}
+
+// Close results modal
+function closeResults() {
+    document.getElementById('resultsModal').classList.add('hidden');
+}
+
+// Handle window before unload
+window.addEventListener('beforeunload', function (e) {
+    if (testStarted) {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
+    }
+});
