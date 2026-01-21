@@ -6,7 +6,10 @@ const questionController = require('../controllers/questionController');
 // GET - Get all questions
 router.get('/', questionController.getAllQuestions);
 
-// GET - Get question by ID
+// GET - Get analytics data (this should come before the ID-based route)
+router.get('/analytics', questionController.getAnalytics);
+
+// GET - Get question by ID (this should come after specific routes)
 router.get('/:id', questionController.getQuestionById);
 
 // POST - Create new question

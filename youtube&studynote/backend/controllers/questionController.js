@@ -587,6 +587,132 @@ class QuestionController {
         }
     }
 
+    // ... existing code ...
+    // GET - Get analytics data
+    async getAnalytics(req, res) {
+        try {
+            // Get total questions count
+            const totalQuestions = await Question.countDocuments({});
+            
+            // Get subject distribution
+            const subjectDistribution = await Question.aggregate([
+                {
+                    $group: {
+                        _id: "$subject",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+            
+            // Convert aggregation result to simple object
+            const subjectDist = {};
+            subjectDistribution.forEach(item => {
+                if (item._id) {
+                    subjectDist[item._id] = item.count;
+                }
+            });
+            
+            // Get difficulty distribution
+            const difficultyDistribution = await Question.aggregate([
+                {
+                    $group: {
+                        _id: "$difficulty",
+                        count: { $sum: 1 }
+                    }
+                }
+            ]);
+            
+            // Convert aggregation result to simple object
+            const difficultyDist = {};
+            difficultyDistribution.forEach(item => {
+                if (item._id) {
+                    difficultyDist[item._id] = item.count;
+                }
+            });
+            
+            // Get total active tests (for now, this could be based on test entities if they exist)
+            // Since we don't have a separate test entity, we'll return 0 for now
+            const activeTests = 0;
+            
+            // Get duplicates count - call the method properly
+            const controllerInstance = new QuestionController();
+            const duplicates = await controllerInstance.getDuplicateCount();
+            
+            // Get groups count (assuming question groups are managed separately)
+            // Since we don't have a separate groups entity, we'll return 0 for now
+            const groups = 0;
+            
+            res.json({
+                success: true,
+                totalQuestions,
+                activeTests,
+                duplicates,
+                groups,
+                subjectDistribution: subjectDist,
+                difficultyDistribution: difficultyDist
+            });
+        } catch (error) {
+            console.error('❌ Error fetching analytics:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+    
+    // Helper method to get duplicate count
+    async getDuplicateCount() {
+        try {
+            // Find questions with similar content using text search
+            const questions = await Question.aggregate([
+                {
+                    $match: {
+                        isActive: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            subject: "$subject",
+                            academicYear: "$academicYear",
+                            difficulty: "$difficulty"
+                        },
+                        questions: { $push: "$$ROOT" },
+                        count: { $sum: 1 }
+                    }
+                },
+                {
+                    $match: {
+                        count: { $gt: 1 }
+                    }
+                }
+            ]);
+            
+            let duplicateCount = 0;
+            for (const group of questions) {
+                // Compare questions within each group
+                for (let i = 0; i < group.questions.length; i++) {
+                    for (let j = i + 1; j < group.questions.length; j++) {
+                        const q1 = group.questions[i];
+                        const q2 = group.questions[j];
+                        
+                        // Simple similarity check based on question text
+                        const similarity = this.calculateSimilarity(q1.question, q2.question);
+                        if (similarity > 0.8) { // 80% similarity threshold
+                            duplicateCount++;
+                        }
+                    }
+                }
+            }
+            
+            return duplicateCount;
+        } catch (error) {
+            console.error('Error calculating duplicate count:', error);
+            return 0;
+        }
+    }
+// ... existing code ...
+
     // POST - Upload question paper
     async uploadQuestionPaper(req, res) {
         try {

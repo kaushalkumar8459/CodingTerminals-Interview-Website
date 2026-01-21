@@ -29,7 +29,7 @@ const API_CONFIG = {
         GET_GROUPS: '/groups',
         CREATE_TEST: '/tests',
         GET_TESTS: '/tests',
-        GET_ANALYTICS: '/analytics'
+        GET_ANALYTICS: '/questions/analytics'  // Updated to correct endpoint
     }
 };
 
@@ -1548,12 +1548,22 @@ function saveTestTemplate() {
 }
 
 // Load analytics
+// ... existing code ...
+// Load analytics
 async function loadAnalytics() {
     try {
         const response = await fetch(API_URLS.GET_ANALYTICS);
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Check for specific status codes and provide more meaningful error messages
+            if (response.status === 404) {
+                showToast('Analytics endpoint not found. Please check if the analytics feature is properly configured.', 'error');
+            } else if (response.status === 500) {
+                showToast('Server error occurred while loading analytics. Please check server logs.', 'error');
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return;
         }
 
         const result = await response.json();
@@ -1577,12 +1587,13 @@ async function loadAnalytics() {
     }
 }
 
+// ... existing code ...
 // Draw subject chart
 function drawSubjectChart(data) {
     const ctx = document.getElementById('subjectChart').getContext('2d');
 
     // Destroy existing chart if it exists
-    if (window.subjectChart) {
+    if (window.subjectChart && typeof window.subjectChart.destroy === 'function') {
         window.subjectChart.destroy();
     }
 
@@ -1614,7 +1625,7 @@ function drawDifficultyChart(data) {
     const ctx = document.getElementById('difficultyChart').getContext('2d');
 
     // Destroy existing chart if it exists
-    if (window.difficultyChart) {
+    if (window.difficultyChart && typeof window.difficultyChart.destroy === 'function') {
         window.difficultyChart.destroy();
     }
 
@@ -1644,8 +1655,7 @@ function drawDifficultyChart(data) {
         }
     });
 }
-
-// ==================== EVENT LISTENERS ====================
+// ... existing code ...
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function () {
     // Load questions when page loads
@@ -1739,3 +1749,42 @@ if (!document.querySelector('#toast-animation-styles')) {
     `;
     document.head.appendChild(style);
 }
+// ... existing code ...
+// Switch between tabs
+function switchTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+    });
+
+    // Remove active class from all buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+
+    // Show selected tab content
+    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+
+    // Add active class to clicked button
+    // Find the button that was clicked by looking for the one with the correct onclick attribute
+    const buttons = document.querySelectorAll('.tab-button');
+    for (let button of buttons) {
+        const onclickValue = button.getAttribute('onclick');
+        if (onclickValue && onclickValue.includes(tabName)) {
+            button.classList.add('active');
+            break;
+        }
+    }
+
+    currentTab = tabName;
+
+    // Load data based on tab
+    if (tabName === 'question-bank') {
+        loadQuestions();
+    } else if (tabName === 'test-creator') {
+        loadTestCreatorData();
+    } else if (tabName === 'analytics') {
+        loadAnalytics();
+    }
+}
+// ... existing code ...
