@@ -400,29 +400,36 @@
                     <!-- Question Display Section (Initially Hidden) -->
                     <div id="questionSection" class="hidden">
                         <!-- Question Header -->
-                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+                        <div
+                            class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200 gap-4">
                             <div>
-                                <h2 class="text-2xl font-bold text-gray-800">Question <span
+                                <h2 class="text-2xl font-bold text-gray-800 mb-3">Question <span
                                         id="currentQuestionDisplay">1</span></h2>
-                                <div class="flex items-center gap-3 mt-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <span
-                                        class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                                        class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold whitespace-nowrap">
                                         Subject: <span id="questionSubject">Mathematics</span>
                                     </span>
                                     <span
-                                        class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                                        class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold whitespace-nowrap">
                                         Year: <span id="questionYear">2024</span>
                                     </span>
                                     <span
-                                        class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold">
+                                        class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold whitespace-nowrap">
                                         Difficulty: <span id="questionDifficulty">Medium</span>
                                     </span>
                                 </div>
                             </div>
-                            <button onclick="toggleMarkForReview()" id="markReviewBtn"
-                                class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors">
-                                📝 Mark for Review
-                            </button>
+                            <div class="flex flex-col items-end gap-3">
+                                <button onclick="toggleMarkForReview()" id="markReviewBtn"
+                                    class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors whitespace-nowrap">
+                                    📝 Mark for Review
+                                </button>
+                                <div class="text-right">
+                                    <span class="text-sm font-semibold text-gray-600">Marks: </span>
+                                    <span class="text-lg font-bold text-green-600">1</span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Question Content -->
@@ -430,6 +437,14 @@
                             <!-- Question will be loaded here -->
                         </div>
 
+                        <!-- Clear Selection Button Below Options -->
+                        <div class="mb-8 text-center">
+                            <button onclick="clearSelection()" id="clearSelectionBtn"
+                                class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors whitespace-nowrap inline-flex items-center gap-2">
+                                <span>❌</span>
+                                <span>Clear Selection</span>
+                            </button>
+                        </div>
                         <!-- Navigation Controls -->
                         <div class="flex justify-between items-center pt-6 border-t border-gray-200">
                             <button onclick="prevQuestion()" id="prevQuestionBtn"
@@ -458,54 +473,66 @@
     </main>
 
     <!-- Results Modal -->
-    <div id="resultsModal"
-        class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 transform transition-all">
-            <div class="text-center">
-                <div class="text-6xl mb-4">🎉</div>
-                <h3 class="text-3xl font-bold text-green-600 mb-6">Test Completed!</h3>
+    <!-- Results Modal -->
+<div id="resultsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 transform transition-all">
+        <div class="text-center">
+            <div class="text-6xl mb-4">🎉</div>
+            <h3 class="text-3xl font-bold text-green-600 mb-6">Test Completed!</h3>
 
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-blue-50 p-4 rounded-xl">
-                        <div class="text-2xl font-bold text-blue-600" id="resultTotal">0</div>
-                        <div class="text-sm text-gray-600">Total Questions</div>
-                    </div>
-                    <div class="bg-green-50 p-4 rounded-xl">
-                        <div class="text-2xl font-bold text-green-600" id="resultAnswered">0</div>
-                        <div class="text-sm text-gray-600">Answered</div>
-                    </div>
-                    <div class="bg-yellow-50 p-4 rounded-xl">
-                        <div class="text-2xl font-bold text-yellow-600" id="resultMarked">0</div>
-                        <div class="text-sm text-gray-600">Marked for Review</div>
-                    </div>
-                    <div class="bg-red-50 p-4 rounded-xl">
-                        <div class="text-2xl font-bold text-red-600" id="resultUnanswered">0</div>
-                        <div class="text-sm text-gray-600">Not Answered</div>
-                    </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-blue-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-blue-600" id="resultTotal">0</div>
+                    <div class="text-sm text-gray-600">Total Questions</div>
                 </div>
+                <div class="bg-green-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-green-600" id="resultAnswered">0</div>
+                    <div class="text-sm text-gray-600">Answered</div>
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-yellow-600" id="resultMarked">0</div>
+                    <div class="text-sm text-gray-600">Marked for Review</div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-red-600" id="resultUnanswered">0</div>
+                    <div class="text-sm text-gray-600">Not Answered</div>
+                </div>
+            </div>
 
-                <div class="text-center mb-6">
-                    <div class="text-lg font-semibold text-gray-700">Time Taken: <span id="timeTaken"
-                            class="text-blue-600">00:00:00</span></div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-indigo-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-indigo-600" id="resultScore">0</div>
+                    <div class="text-sm text-gray-600">Score</div>
                 </div>
+                <div class="bg-purple-50 p-4 rounded-xl">
+                    <div class="text-2xl font-bold text-purple-600" id="resultMaxScore">0</div>
+                    <div class="text-sm text-gray-600">Max Score</div>
+                </div>
+            </div>
 
-                <div class="flex justify-center gap-4">
-                    <button onclick="reviewAnswers()"
-                        class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
-                        📖 Review Answers
-                    </button>
-                    <button onclick="restartTest()"
-                        class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
-                        🔄 Restart Test
-                    </button>
-                    <button onclick="closeResults()"
-                        class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
-                        Close
-                    </button>
-                </div>
+            <div class="text-center mb-6">
+                <div class="text-lg font-semibold text-gray-700">Time Taken: <span id="timeTaken" class="text-blue-600">00:00:00</span></div>
+            </div>
+
+            <div class="mb-6">
+                <div class="text-xl font-bold text-gray-800">Accuracy: <span id="accuracyRate" class="text-green-600">0%</span></div>
+                <div class="text-lg text-gray-600 mt-2">Final Score: <span id="percentageResult" class="text-blue-600 font-bold">0%</span></div>
+            </div>
+
+            <div class="flex justify-center gap-4">
+                <button onclick="reviewAnswers()" class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                    📖 Review Answers
+                </button>
+                <button onclick="restartTest()" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                    🔄 Restart Test
+                </button>
+                <button onclick="closeResults()" class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                    Close
+                </button>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Configuration -->
     <script src="../../config/app.config.js"></script>

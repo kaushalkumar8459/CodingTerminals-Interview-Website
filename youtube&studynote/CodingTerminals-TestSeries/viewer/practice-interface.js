@@ -207,6 +207,7 @@ function showToast(message, type = 'info') {
 }
 
 // Display current question
+// Display current question
 function displayCurrentQuestion() {
     if (filteredQuestions.length === 0) return;
 
@@ -242,6 +243,9 @@ function displayCurrentQuestion() {
 
     document.getElementById('questionContent').innerHTML = questionContent;
 
+    // Update mark for review button based on current question state
+    updateMarkForReviewButton(questionId);
+
     // Update navigation buttons
     updateNavigationButtons();
 
@@ -251,9 +255,36 @@ function displayCurrentQuestion() {
     // Update question navigator highlight
     updateQuestionNavigator();
 
-    // Update question status to visited
+    // Update question status to visited if not already
     if (questionStatus[questionId] === 'not-visited') {
-        questionStatus[questionId] = userAnswers[questionId] !== undefined ? 'answered' : 'not-answered';
+        const isAnswered = userAnswers[questionId] !== undefined;
+        const isMarked = markedForReview.has(questionId);
+
+        if (isAnswered && isMarked) {
+            questionStatus[questionId] = 'answered-marked';
+        } else if (isAnswered && !isMarked) {
+            questionStatus[questionId] = 'answered';
+        } else if (!isAnswered && isMarked) {
+            questionStatus[questionId] = 'marked-review';
+        } else {
+            questionStatus[questionId] = 'not-answered';
+        }
+    }
+}
+
+
+// Update mark for review button based on current question state
+function updateMarkForReviewButton(questionId) {
+    const markBtn = document.getElementById('markReviewBtn');
+
+    if (markedForReview.has(questionId)) {
+        // Question is marked for review
+        markBtn.innerHTML = '⭐ Marked for Review';
+        markBtn.className = 'px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors';
+    } else {
+        // Question is not marked for review
+        markBtn.innerHTML = '📝 Mark for Review';
+        markBtn.className = 'px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors';
     }
 }
 
@@ -278,13 +309,49 @@ function getCurrentQuestionNumber() {
     return currentPage * questionsPerPage + 1;
 }
 
+// Clear the current question's selection
+function clearSelection() {
+    if (!testStarted) return; // Only allow clearing during test
+
+    const question = filteredQuestions[currentQuestionIndex];
+    if (!question) return;
+
+    const questionId = question._id || question.id;
+
+    // Remove the user's answer for this question
+    if (userAnswers[questionId] !== undefined) {
+        delete userAnswers[questionId];
+
+        // Update question status based on remaining states
+        const isMarked = markedForReview.has(questionId);
+        if (isMarked) {
+            questionStatus[questionId] = 'marked-review';
+        } else {
+            questionStatus[questionId] = 'not-answered';
+        }
+
+        // Update the UI
+        displayCurrentQuestion();
+        updateQuestionNavigator();
+        updateAnsweredCount();
+
+        showToast('Question selection cleared!', 'info');
+    } else {
+        showToast('No selection to clear for this question', 'warning');
+    }
+}
+
 // Select an option
 function selectOption(questionId, optionIndex) {
     userAnswers[questionId] = optionIndex;
 
-    // Update question status
+    // Update question status based on both marking and answering state
     const isMarked = markedForReview.has(questionId);
-    questionStatus[questionId] = isMarked ? 'answered-marked' : 'answered';
+    if (isMarked) {
+        questionStatus[questionId] = 'answered-marked';
+    } else {
+        questionStatus[questionId] = 'answered';
+    }
 
     // Re-render the question to show selection
     displayCurrentQuestion();
@@ -292,6 +359,7 @@ function selectOption(questionId, optionIndex) {
     updateAnsweredCount();
 }
 
+// Toggle mark for review
 // Toggle mark for review
 function toggleMarkForReview() {
     if (!testStarted) return; // Only allow marking during test
@@ -302,24 +370,33 @@ function toggleMarkForReview() {
     const questionId = question._id || question.id;
 
     if (markedForReview.has(questionId)) {
+        // Unmark the question
         markedForReview.delete(questionId);
         // Update button text
         document.getElementById('markReviewBtn').innerHTML = '📝 Mark for Review';
         document.getElementById('markReviewBtn').className = 'px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors';
     } else {
+        // Mark the question
         markedForReview.add(questionId);
         // Update button text
         document.getElementById('markReviewBtn').innerHTML = '⭐ Marked for Review';
         document.getElementById('markReviewBtn').className = 'px-4 py-2 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors';
     }
 
-    // Update question status
+    // Update question status based on both marking and answering state
     const isAnswered = userAnswers[questionId] !== undefined;
-    questionStatus[questionId] = isAnswered ? 'answered-marked' : 'marked-review';
+    if (isAnswered && markedForReview.has(questionId)) {
+        questionStatus[questionId] = 'answered-marked';
+    } else if (isAnswered && !markedForReview.has(questionId)) {
+        questionStatus[questionId] = 'answered';
+    } else if (!isAnswered && markedForReview.has(questionId)) {
+        questionStatus[questionId] = 'marked-review';
+    } else {
+        questionStatus[questionId] = 'not-answered';
+    }
 
     updateQuestionNavigator();
 }
-
 // Navigate to next question
 function nextQuestion() {
     if (currentQuestionIndex < filteredQuestions.length - 1) {
@@ -454,40 +531,52 @@ function submitTest() {
 
     // Calculate results
     const totalQuestions = filteredQuestions.length;
-    const answeredQuestions = Object.keys(userAnswers).filter(id =>
+    const answeredQuestions = Object.keys(userAnswers).filter(id => 
         filteredQuestions.some(q => (q._id || q.id) === id)
     ).length;
-    const markedQuestions = Array.from(markedForReview).filter(id =>
+    const markedQuestions = Array.from(markedForReview).filter(id => 
         filteredQuestions.some(q => (q._id || q.id) === id)
     ).length;
     const unansweredQuestions = totalQuestions - answeredQuestions;
-
+    
     // Calculate score (assuming 1 mark per correct answer)
     const score = answeredQuestions;
     const maxScore = totalQuestions;
     const accuracy = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
-    // Display results
-    document.getElementById('resultTotal').textContent = totalQuestions;
-    document.getElementById('resultAnswered').textContent = answeredQuestions;
-    document.getElementById('resultMarked').textContent = markedQuestions;
-    document.getElementById('resultUnanswered').textContent = unansweredQuestions;
-    document.getElementById('resultScore').textContent = score;
-    document.getElementById('resultMaxScore').textContent = maxScore;
-    document.getElementById('accuracyRate').textContent = `${accuracy}%`;
+    // Display results - with safety checks
+    const resultTotal = document.getElementById('resultTotal');
+    const resultAnswered = document.getElementById('resultAnswered');
+    const resultMarked = document.getElementById('resultMarked');
+    const resultUnanswered = document.getElementById('resultUnanswered');
+    const resultScore = document.getElementById('resultScore');
+    const resultMaxScore = document.getElementById('resultMaxScore');
+    const accuracyRate = document.getElementById('accuracyRate');
+    const timeTakenEl = document.getElementById('timeTaken');
+    const percentageResult = document.getElementById('percentageResult');
 
+    if (resultTotal) resultTotal.textContent = totalQuestions;
+    if (resultAnswered) resultAnswered.textContent = answeredQuestions;
+    if (resultMarked) resultMarked.textContent = markedQuestions;
+    if (resultUnanswered) resultUnanswered.textContent = unansweredQuestions;
+    if (resultScore) resultScore.textContent = score;
+    if (resultMaxScore) resultMaxScore.textContent = maxScore;
+    if (accuracyRate) accuracyRate.textContent = `${accuracy}%`;
+    
     const hours = Math.floor(timeTaken / 3600);
     const minutes = Math.floor((timeTaken % 3600) / 60);
     const seconds = timeTaken % 60;
-    document.getElementById('timeTaken').textContent =
-        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-    document.getElementById('percentageResult').textContent = `${accuracy}%`;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeTakenEl) timeTakenEl.textContent = timeString;
+    if (percentageResult) percentageResult.textContent = `${accuracy}%`;
 
     // Show results modal
-    document.getElementById('resultsModal').classList.remove('hidden');
+    const resultsModal = document.getElementById('resultsModal');
+    if (resultsModal) {
+        resultsModal.classList.remove('hidden');
+    }
 }
-
 
 // Review answers
 function reviewAnswers() {
