@@ -10,10 +10,11 @@ let userAnswers = {}; // {questionId: selectedOptionIndex}
 let markedForReview = new Set();
 let questionStatus = {}; // {questionId: status}
 let timerInterval;
-let totalTimeInSeconds = 3600; // 60 minutes default
-let timeRemaining = 3600;
+let totalTimeInSeconds = 0; // Will be calculated based on number of questions
+let timeRemaining = 0;
 let testStarted = false;
 let startTime;
+let currentQuestionIndex = 0;
 
 // API Configuration
 const API_CONFIG = {
@@ -30,7 +31,31 @@ const API_URLS = {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
     loadQuestions();
+
+    // Add event listeners for configuration changes to update calculated values
+    document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
+    document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
+    document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
+    document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
+    document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
+
+    // Initialize calculated values
+    updateCalculatedValues();
 });
+
+// Update calculated values based on configuration
+function updateCalculatedValues() {
+    const questionCount = parseInt(document.getElementById('questionCountSelect').value);
+
+    // Calculate time (1 minute per question)
+    const totalMinutes = questionCount;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+    document.getElementById('calculatedTime').textContent = timeString;
+    document.getElementById('totalMarks').textContent = questionCount;
+}
 
 // Load questions from API
 async function loadQuestions() {
@@ -63,15 +88,14 @@ function initializeQuestionStatus() {
     });
 }
 
-// Start the test
+
+// Start the test - updated to initialize currentQuestionIndex
 function startTest() {
     const subject = document.getElementById('subjectSelect').value;
     const year = document.getElementById('yearSelect').value;
-    const duration = parseInt(document.getElementById('durationSelect').value);
     const questionCount = parseInt(document.getElementById('questionCountSelect').value);
     const randomOrder = document.getElementById('randomOrderCheckbox').checked;
     const randomSelection = document.getElementById('randomSelectionCheckbox').checked;
-    const difficultyMix = document.getElementById('difficultyMixSelect').value;
 
     // Filter questions based on selection
     let availableQuestions = allQuestions.filter(question => {
@@ -87,9 +111,8 @@ function startTest() {
 
     // Apply random selection if enabled
     if (randomSelection) {
-        availableQuestions = getRandomQuestions(availableQuestions, questionCount, difficultyMix);
+        availableQuestions = getRandomQuestions(availableQuestions, questionCount);
     } else {
-        // Take first N questions (or all if less than requested)
         availableQuestions = availableQuestions.slice(0, Math.min(questionCount, availableQuestions.length));
     }
 
@@ -98,13 +121,11 @@ function startTest() {
         availableQuestions = shuffleArray([...availableQuestions]);
     }
 
-    // Set up pagination
+    // Set up test
     filteredQuestions = availableQuestions;
-    currentQuestions = filteredQuestions.slice(0, questionsPerPage);
-    totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
 
-    // Set timer
-    totalTimeInSeconds = duration * 60;
+    // Calculate time (1 minute per question)
+    totalTimeInSeconds = filteredQuestions.length * 60;
     timeRemaining = totalTimeInSeconds;
     startTime = new Date();
 
@@ -113,7 +134,6 @@ function startTest() {
     document.getElementById('questionSection').classList.remove('hidden');
 
     // Initialize UI
-    updateQuestionNavigator();
     displayCurrentQuestion();
     startTimer();
 
@@ -127,50 +147,11 @@ function startTest() {
     showToast(`Test started with ${filteredQuestions.length} questions!`, 'success');
 }
 
-// Get random questions with difficulty distribution
-function getRandomQuestions(questions, count, difficultyMix) {
-    // Define difficulty distributions
-    const distributions = {
-        balanced: { easy: 0.3, medium: 0.5, hard: 0.2 },
-        easy: { easy: 0.5, medium: 0.3, hard: 0.2 },
-        medium: { easy: 0.2, medium: 0.6, hard: 0.2 },
-        hard: { easy: 0.2, medium: 0.3, hard: 0.5 },
-        random: null // Will use equal distribution
-    };
+// Get random questions (simplified)
+function getRandomQuestions(questions, count) {
+    if (count >= questions.length) return [...questions];
 
-    const dist = distributions[difficultyMix];
-    let selectedQuestions = [];
-
-    if (dist) {
-        // Apply specific difficulty distribution
-        const easyQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'beginner' || q.difficulty?.toLowerCase() === 'easy');
-        const mediumQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'intermediate' || q.difficulty?.toLowerCase() === 'medium');
-        const hardQuestions = questions.filter(q => q.difficulty?.toLowerCase() === 'advanced' || q.difficulty?.toLowerCase() === 'hard' || q.difficulty?.toLowerCase() === 'expert');
-
-        // Calculate counts for each difficulty
-        const easyCount = Math.floor(count * dist.easy);
-        const mediumCount = Math.floor(count * dist.medium);
-        const hardCount = count - easyCount - mediumCount; // Remaining goes to hard
-
-        // Select random questions from each category
-        selectedQuestions = [
-            ...getRandomSubset(easyQuestions, easyCount),
-            ...getRandomSubset(mediumQuestions, mediumCount),
-            ...getRandomSubset(hardQuestions, hardCount)
-        ];
-    } else {
-        // Random distribution - just pick random questions
-        selectedQuestions = getRandomSubset(questions, count);
-    }
-
-    return selectedQuestions;
-}
-
-// Get random subset of array
-function getRandomSubset(array, count) {
-    if (count >= array.length) return [...array];
-
-    const shuffled = [...array].sort(() => 0.5 - Math.random());
+    const shuffled = [...questions].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, count);
 }
 
@@ -197,8 +178,8 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500' :
-            type === 'error' ? 'bg-red-500' :
-                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+        type === 'error' ? 'bg-red-500' :
+            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
         }`;
 
     toast.textContent = message;
@@ -219,15 +200,16 @@ function showToast(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
 // Display current question
 function displayCurrentQuestion() {
-    if (currentQuestions.length === 0) return;
+    if (filteredQuestions.length === 0) return;
 
-    const question = currentQuestions[0]; // We show one question at a time
+    const question = filteredQuestions[currentQuestionIndex];
     const questionId = question._id || question.id;
 
-    // Update question header
-    document.getElementById('currentQuestionDisplay').textContent = getCurrentQuestionNumber();
+    // Update question header with correct question number
+    document.getElementById('currentQuestionDisplay').textContent = currentQuestionIndex + 1;
     document.getElementById('questionSubject').textContent = question.subject;
     document.getElementById('questionYear').textContent = question.academicYear;
     document.getElementById('questionDifficulty').textContent = question.difficulty;
@@ -261,15 +243,33 @@ function displayCurrentQuestion() {
     // Update pagination dots
     updatePaginationDots();
 
+    // Update question navigator highlight
+    updateQuestionNavigator();
+
     // Update question status to visited
     if (questionStatus[questionId] === 'not-visited') {
         questionStatus[questionId] = userAnswers[questionId] !== undefined ? 'answered' : 'not-answered';
-        updateQuestionNavigator();
     }
 }
 
 // Get current question number in overall sequence
+// Get current question number in overall sequence
 function getCurrentQuestionNumber() {
+    // Find the actual position of the current displayed question
+    const currentQuestion = currentQuestions[0];
+    if (!currentQuestion) return 1;
+
+    const questionId = currentQuestion._id || currentQuestion.id;
+
+    // Find this question's position in the filtered questions array
+    for (let i = 0; i < filteredQuestions.length; i++) {
+        const qId = filteredQuestions[i]._id || filteredQuestions[i].id;
+        if (qId === questionId) {
+            return i + 1;
+        }
+    }
+
+    // Fallback to page-based calculation
     return currentPage * questionsPerPage + 1;
 }
 
@@ -315,51 +315,47 @@ function toggleMarkForReview() {
 
 // Navigate to next question
 function nextQuestion() {
-    if (currentPage < Math.ceil(filteredQuestions.length / questionsPerPage) - 1) {
-        currentPage++;
-        currentQuestions = filteredQuestions.slice(
-            currentPage * questionsPerPage,
-            (currentPage + 1) * questionsPerPage
-        );
+    if (currentQuestionIndex < filteredQuestions.length - 1) {
+        currentQuestionIndex++;
         displayCurrentQuestion();
+        updateAnsweredCount();
     }
 }
 
 // Navigate to previous question
 function prevQuestion() {
-    if (currentPage > 0) {
-        currentPage--;
-        currentQuestions = filteredQuestions.slice(
-            currentPage * questionsPerPage,
-            (currentPage + 1) * questionsPerPage
-        );
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
         displayCurrentQuestion();
+        updateAnsweredCount();
     }
 }
+
 
 // Update navigation buttons state
 function updateNavigationButtons() {
     const prevBtn = document.getElementById('prevQuestionBtn');
     const nextBtn = document.getElementById('nextQuestionBtn');
 
-    prevBtn.disabled = currentPage === 0;
-    nextBtn.disabled = currentPage >= Math.ceil(filteredQuestions.length / questionsPerPage) - 1;
+    prevBtn.disabled = currentQuestionIndex === 0;
+    nextBtn.disabled = currentQuestionIndex >= filteredQuestions.length - 1;
 
-    // Update page numbers
-    document.getElementById('currentPage').textContent = currentPage + 1;
-    document.getElementById('totalPages').textContent = Math.ceil(filteredQuestions.length / questionsPerPage);
+    // Update page numbers (show current question / total questions)
+    document.getElementById('currentPage').textContent = currentQuestionIndex + 1;
+    document.getElementById('totalPages').textContent = filteredQuestions.length;
 }
+
 
 // Update pagination dots
 function updatePaginationDots() {
-    const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage);
     const dotsContainer = document.getElementById('paginationDots');
-
     dotsContainer.innerHTML = '';
 
-    for (let i = 0; i < totalPages; i++) {
+    // Show dots for each question
+    for (let i = 0; i < filteredQuestions.length; i++) {
         const dot = document.createElement('div');
-        dot.className = `dot ${i === currentPage ? 'active' : ''}`;
+        dot.className = `dot ${i === currentQuestionIndex ? 'active' : ''}`;
+        dot.onclick = () => goToQuestion(i);
         dotsContainer.appendChild(dot);
     }
 }
@@ -374,7 +370,7 @@ function updateQuestionNavigator() {
         const status = questionStatus[questionId] || 'not-visited';
 
         const questionBox = document.createElement('div');
-        questionBox.className = `question-number-box question-${status}`;
+        questionBox.className = `question-number-box question-${status} ${index === currentQuestionIndex ? 'ring-2 ring-blue-500' : ''}`;
         questionBox.textContent = index + 1;
         questionBox.onclick = () => goToQuestion(index);
 
@@ -383,22 +379,13 @@ function updateQuestionNavigator() {
 }
 
 // Go to specific question
+// Go to specific question
 function goToQuestion(questionIndex) {
-    currentPage = Math.floor(questionIndex / questionsPerPage);
-    currentQuestions = filteredQuestions.slice(
-        currentPage * questionsPerPage,
-        (currentPage + 1) * questionsPerPage
-    );
-
-    // Set the specific question as current
-    const localIndex = questionIndex % questionsPerPage;
-    if (localIndex < currentQuestions.length) {
-        const temp = currentQuestions[0];
-        currentQuestions[0] = currentQuestions[localIndex];
-        currentQuestions[localIndex] = temp;
+    if (questionIndex >= 0 && questionIndex < filteredQuestions.length) {
+        currentQuestionIndex = questionIndex;
+        displayCurrentQuestion();
+        updateAnsweredCount();
     }
-
-    displayCurrentQuestion();
 }
 
 // Update answered count
@@ -464,17 +451,27 @@ function submitTest() {
     ).length;
     const unansweredQuestions = totalQuestions - answeredQuestions;
 
+    // Calculate score (assuming 1 mark per correct answer)
+    const score = answeredQuestions;
+    const maxScore = totalQuestions;
+    const accuracy = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+
     // Display results
     document.getElementById('resultTotal').textContent = totalQuestions;
     document.getElementById('resultAnswered').textContent = answeredQuestions;
     document.getElementById('resultMarked').textContent = markedQuestions;
     document.getElementById('resultUnanswered').textContent = unansweredQuestions;
+    document.getElementById('resultScore').textContent = score;
+    document.getElementById('resultMaxScore').textContent = maxScore;
+    document.getElementById('accuracyRate').textContent = `${accuracy}%`;
 
     const hours = Math.floor(timeTaken / 3600);
     const minutes = Math.floor((timeTaken % 3600) / 60);
     const seconds = timeTaken % 60;
     document.getElementById('timeTaken').textContent =
         `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    document.getElementById('percentageResult').textContent = `${accuracy}%`;
 
     // Show results modal
     document.getElementById('resultsModal').classList.remove('hidden');
@@ -506,6 +503,9 @@ function restartTest() {
 
     // Reload questions
     loadQuestions();
+
+    // Recalculate values
+    updateCalculatedValues();
 }
 
 // Close results modal
