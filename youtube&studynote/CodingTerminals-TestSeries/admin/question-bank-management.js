@@ -249,6 +249,7 @@ function updateStats() {
 }
 
 // Render questions list
+// Update renderQuestionsList function to handle both _id and id in HTML
 function renderQuestionsList() {
     const container = document.getElementById('questionsContainer');
     const emptyState = document.getElementById('emptyState');
@@ -264,9 +265,12 @@ function renderQuestionsList() {
     emptyState.style.display = 'none';
 
     container.innerHTML = filteredQuestions.map((question, index) => {
-        const isSelected = selectedQuestions.has(question.id);
+        // Use _id if available, otherwise id
+        const questionId = question._id || question.id;
+        const isSelected = selectedQuestions.has(questionId);
+
         return `
-            <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${question.id}')">
+            <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
                         <h4 class="font-semibold text-gray-800 mb-2">${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}</h4>
@@ -279,10 +283,10 @@ function renderQuestionsList() {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="event.stopPropagation(); editQuestion('${question.id}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                        <button onclick="event.stopPropagation(); editQuestion('${questionId}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             ✏️ Edit
                         </button>
-                        <button onclick="event.stopPropagation(); deleteQuestion('${question.id}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        <button onclick="event.stopPropagation(); deleteQuestion('${questionId}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
                             🗑️ Delete
                         </button>
                     </div>
@@ -317,6 +321,19 @@ function renderQuestionsList() {
     }).join('');
 }
 
+// Update toggleQuestionSelection function to handle both _id and id
+function toggleQuestionSelection(questionId) {
+    if (selectedQuestions.has(questionId)) {
+        selectedQuestions.delete(questionId);
+    } else {
+        selectedQuestions.add(questionId);
+    }
+
+    // Re-render the list to update selection indicators
+    renderQuestionsList();
+    updateStats();
+}
+
 // Toggle question selection
 function toggleQuestionSelection(questionId) {
     if (selectedQuestions.has(questionId)) {
@@ -332,7 +349,8 @@ function toggleQuestionSelection(questionId) {
 
 // Edit question
 function editQuestion(questionId) {
-    const question = allQuestions.find(q => q.id === questionId);
+    // Try to find question by _id first, then by id
+    const question = allQuestions.find(q => q._id === questionId || q.id === questionId);
     if (!question) {
         showToast('Question not found', 'error');
         return;
@@ -486,6 +504,75 @@ function addOptionField() {
 }
 
 // Save edited question
+// async function saveEditedQuestion(event) {
+//     event.preventDefault();
+
+//     if (!currentEditingQuestion) {
+//         showToast('No question selected for editing', 'error');
+//         return;
+//     }
+
+//     const question = allQuestions.find(q => q.id === currentEditingQuestion);
+//     if (!question) {
+//         showToast('Question not found', 'error');
+//         return;
+//     }
+
+//     // Get updated values
+//     const updatedQuestion = {
+//         id: question.id,
+//         question: document.getElementById('editQuestionText').value,
+//         subject: document.getElementById('editSubject').value,
+//         academicYear: document.getElementById('editYear').value,
+//         examType: document.getElementById('editExamType').value,
+//         difficulty: document.getElementById('editDifficulty').value,
+//         topic: document.getElementById('editTopic').value,
+//         explanation: document.getElementById('editExplanation').value,
+//         options: [],
+//         correctAnswer: 0
+//     };
+
+//     // Get options
+//     const optionElements = document.querySelectorAll('[id^="editOption"]');
+//     updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val.trim() !== '');
+
+//     // Get correct answer
+//     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
+//     if (correctAnswerRadio) {
+//         updatedQuestion.correctAnswer = parseInt(correctAnswerRadio.value);
+//     }
+
+//     try {
+//         const response = await fetch(API_URLS.UPDATE_QUESTION(question.id), {
+//             method: 'PUT',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify(updatedQuestion)
+//         });
+
+//         if (!response.ok) {
+//             throw new Error(`HTTP error! status: ${response.status}`);
+//         }
+
+//         const result = await response.json();
+
+//         if (result.success) {
+//             // Update local data
+//             Object.assign(question, updatedQuestion);
+
+//             closeEditModal();
+//             renderQuestionsList();
+//             showToast('Question updated successfully!', 'success');
+//         } else {
+//             showToast(result.message || 'Failed to update question', 'error');
+//         }
+//     } catch (error) {
+//         console.error('Error updating question:', error);
+//         showToast('Error updating question: ' + error.message, 'error');
+//     }
+// }
+
 async function saveEditedQuestion(event) {
     event.preventDefault();
 
@@ -494,7 +581,8 @@ async function saveEditedQuestion(event) {
         return;
     }
 
-    const question = allQuestions.find(q => q.id === currentEditingQuestion);
+    // Try to find question by _id first, then by id
+    const question = allQuestions.find(q => q._id === currentEditingQuestion || q.id === currentEditingQuestion);
     if (!question) {
         showToast('Question not found', 'error');
         return;
@@ -502,7 +590,8 @@ async function saveEditedQuestion(event) {
 
     // Get updated values
     const updatedQuestion = {
-        id: question.id,
+        id: question.id || question._id,
+        _id: question._id || question.id,
         question: document.getElementById('editQuestionText').value,
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
@@ -516,7 +605,7 @@ async function saveEditedQuestion(event) {
 
     // Get options
     const optionElements = document.querySelectorAll('[id^="editOption"]');
-    updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val.trim() !== '');
+    updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
 
     // Get correct answer
     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
@@ -525,7 +614,7 @@ async function saveEditedQuestion(event) {
     }
 
     try {
-        const response = await fetch(API_URLS.UPDATE_QUESTION(question.id), {
+        const response = await fetch(API_URLS.UPDATE_QUESTION(currentEditingQuestion), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -582,9 +671,9 @@ async function deleteQuestion(questionId) {
         const result = await response.json();
 
         if (result.success) {
-            // Remove from local array
-            allQuestions = allQuestions.filter(q => q.id !== questionId);
-            filteredQuestions = filteredQuestions.filter(q => q.id !== questionId);
+            // Remove from local array - check both _id and id
+            allQuestions = allQuestions.filter(q => !(q._id === questionId || q.id === questionId));
+            filteredQuestions = filteredQuestions.filter(q => !(q._id === questionId || q.id === questionId));
 
             renderQuestionsList();
             updateStats();
@@ -610,6 +699,51 @@ function bulkEdit() {
 }
 
 // Bulk delete selected questions
+// async function bulkDelete() {
+//     if (selectedQuestions.size === 0) {
+//         showToast('Please select questions to delete', 'warning');
+//         return;
+//     }
+
+//     if (!confirm(`Are you sure you want to delete ${selectedQuestions.size} questions? This action cannot be undone.`)) {
+//         return;
+//     }
+
+//     try {
+//         const response = await fetch(API_URLS.BULK_DELETE, {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json'
+//             },
+//             body: JSON.stringify({ questionIds: Array.from(selectedQuestions) })
+//         });
+
+//         if (!response.ok) {
+//             throw new Error(`HTTP error! status: ${response.status}`);
+//         }
+
+//         const result = await response.json();
+
+//         if (result.success) {
+//             // Remove from local arrays
+//             allQuestions = allQuestions.filter(q => !selectedQuestions.has(q.id));
+//             filteredQuestions = filteredQuestions.filter(q => !selectedQuestions.has(q.id));
+
+//             selectedQuestions.clear();
+
+//             renderQuestionsList();
+//             updateStats();
+//             showToast(`${result.deleted || selectedQuestions.size} questions deleted successfully!`, 'success');
+//         } else {
+//             showToast(result.message || 'Failed to delete questions', 'error');
+//         }
+//     } catch (error) {
+//         console.error('Error bulk deleting questions:', error);
+//         showToast('Error deleting questions: ' + error.message, 'error');
+//     }
+// }
+
+// Update bulkDelete function to handle both _id and id
 async function bulkDelete() {
     if (selectedQuestions.size === 0) {
         showToast('Please select questions to delete', 'warning');
@@ -636,9 +770,14 @@ async function bulkDelete() {
         const result = await response.json();
 
         if (result.success) {
-            // Remove from local arrays
-            allQuestions = allQuestions.filter(q => !selectedQuestions.has(q.id));
-            filteredQuestions = filteredQuestions.filter(q => !selectedQuestions.has(q.id));
+            // Remove from local arrays - check both _id and id
+            allQuestions = allQuestions.filter(q => {
+                return !selectedQuestions.has(q._id) && !selectedQuestions.has(q.id);
+            });
+
+            filteredQuestions = filteredQuestions.filter(q => {
+                return !selectedQuestions.has(q._id) && !selectedQuestions.has(q.id);
+            });
 
             selectedQuestions.clear();
 
@@ -1069,7 +1208,7 @@ async function saveNewQuestion(event) {
 
     // Get options
     const optionElements = document.querySelectorAll('[id^="addOption"]');
-    questionData.options = Array.from(optionElements).map(el => el.value).filter(val => val.trim() !== '');
+    questionData.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
 
     // Get correct answer
     const correctAnswerRadio = document.querySelector('input[name="addCorrectAnswer"]:checked');
@@ -1507,7 +1646,11 @@ function drawDifficultyChart(data) {
 }
 
 // ==================== EVENT LISTENERS ====================
+// ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function () {
+    // Load questions when page loads
+    loadQuestions();
+
     // Add event listeners for filter changes
     const searchInput = document.getElementById('searchQuestions');
     const subjectFilter = document.getElementById('filterSubject');

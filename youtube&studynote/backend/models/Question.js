@@ -4,22 +4,16 @@ const mongoose = require('mongoose');
 const questionSchema = new mongoose.Schema({
     question: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
     options: {
         type: [String],
-        required: true,
-        validate: {
-            validator: function(options) {
-                return options && options.length >= 2;
-            },
-            message: 'Question must have at least 2 options'
-        }
+        required: false,
     },
     correctAnswer: {
         type: Number,
-        required: true,
+        required: false,
         min: 0
     },
     explanation: {
@@ -28,23 +22,23 @@ const questionSchema = new mongoose.Schema({
     },
     subject: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
     },
     academicYear: {
         type: String,
-        required: true,
+        required: false,
         trim: true,
     },
     examType: {
         type: String,
-        required: true,
+        required: false,
         enum: ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'],
         default: 'Practice Paper'
     },
     difficulty: {
         type: String,
-        required: true,
+        required: false,
         enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
         default: 'Intermediate'
     },
@@ -75,7 +69,7 @@ const questionSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
     },
     metadata: {
         sourceFile: String,

@@ -10,7 +10,7 @@ const connectDB = require('./config/database');
 const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const questionRoutes = require('./routes/question.routes');
-const questionUploadRoutes = require('./routes/questionUpload.routes');
+// const questionUploadRoutes = require('./routes/questionUpload.routes'); // REMOVED
 const questionGroupRoutes = require('./routes/questionGroup.routes');
 const APP_CONFIG = require('../config/app.config.js');
 
@@ -109,11 +109,18 @@ app.use('/testseries/viewer', express.static(path.join(__dirname, '../CodingTerm
 // Individual question documents API
 app.use('/api/questions', questionRoutes);
 
+
+// Question upload/import API
+const questionUploadRoutes = require('./routes/questionUpload.routes');
+app.use('/api/questions', questionUploadRoutes);
+
+// Question group management API
+app.use('/api/question-groups', questionGroupRoutes); // NEW: Add question group routes
+
 // Authentication API
 app.use('/api/auth', authRoutes);
 
-// Question upload/import API
-app.use('/api/questions', questionUploadRoutes); // NEW: Add upload routes
+// Question upload/import API (routes removed temporarily)
 
 // Question group management API
 app.use('/api/question-groups', questionGroupRoutes); // NEW: Add question group routes

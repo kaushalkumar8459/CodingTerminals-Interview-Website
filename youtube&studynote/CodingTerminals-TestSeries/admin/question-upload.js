@@ -515,82 +515,76 @@ function showEditModal(question, index) {
 
 // Download sample CSV file - Pure CSV format
 function downloadSampleCSV() {
-    const csvContent = `"question","options_a","options_b","options_c","options_d","correct_answer","subject","academic_year","difficulty","explanation"
-"What is the capital of France?","London","Berlin","Paris","Madrid","C","Geography","2024","Beginner","Paris is the capital and largest city of France."
-"What is 2+2?","3","4","5","6","B","Mathematics","2024","Beginner","Basic arithmetic: 2 + 2 = 4."
-"Which planet is known as the Red Planet?","Venus","Mars","Jupiter","Saturn","B","Science","2024","Beginner","Mars is often referred to as the Red Planet due to its reddish appearance."
-"What is the chemical symbol for water?","HO","H2O2","H2O","CO2","C","Chemistry","2024","Beginner","Water consists of two hydrogen atoms and one oxygen atom."
-"Who wrote 'Romeo and Juliet'?","Charles Dickens","William Shakespeare","Jane Austen","Mark Twain","B","Literature","2024","Intermediate","Shakespeare wrote this famous tragedy in the late 16th century."`;
+    const csvContent = `"question","options_a","options_b","options_c","options_d","correctAnswer","explanation","subject","academicYear","examType","difficulty","topic","marks","group","duplicateOf","isActive","metadata_validationStatus"
+"What is your name?","ALL","ALL 2","ALL 4","ALL 7",0,"","Physics","2024-2026","Competitive Exam","Advanced","","1","","null",true,"pending"
+"What is the capital of France?","London","Berlin","Paris","Madrid",2,"Paris is the capital and largest city of France.","Geography","2024-2025","Board Exam","Beginner","World Geography",1,"","null",true,"pending"`;
 
     // Create a Blob with pure CSV content - standard CSV MIME type
-    const blob = new Blob([csvContent], { 
+    const blob = new Blob([csvContent], {
         type: 'text/csv;charset=utf-8;'
     });
-    
+
     // Create a temporary link element
     const link = document.createElement('a');
-    
+
     // Create an object URL for the blob
     const url = URL.createObjectURL(blob);
-    
+
     // Generate unique filename with timestamp
     const timestamp = new Date().getTime();
     const filename = `sample_questions_csv_${timestamp}.csv`;
-    
+
     // Set the download attributes
     link.href = url;
     link.download = filename;
     link.style.display = 'none'; // Hide the link
-    
+
     // Add to document, click, then remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Clean up the object URL
     URL.revokeObjectURL(url);
-    
+
     // Show confirmation
     showToast(`Downloading ${filename}`, 'success');
 }
 
 // Download sample Excel-compatible file - Different format for Excel
 function downloadSampleExcel() {
-    const excelContent = `question	options_a	options_b	options_c	options_d	correct_answer	subject	academic_year	difficulty	explanation
-What is the capital of France?	London	Berlin	Paris	Madrid	C	Geography	2024	Beginner	Paris is the capital and largest city of France.
-What is 2+2?	3	4	5	6	B	Mathematics	2024	Beginner	Basic arithmetic: 2 + 2 = 4.
-Which planet is known as the Red Planet?	Venus	Mars	Jupiter	Saturn	B	Science	2024	Beginner	Mars is often referred to as the Red Planet due to its reddish appearance.
-What is the chemical symbol for water?	HO	H2O2	H2O	CO2	C	Chemistry	2024	Beginner	Water consists of two hydrogen atoms and one oxygen atom.
-Who wrote 'Romeo and Juliet'?	Charles Dickens	William Shakespeare	Jane Austen	Mark Twain	B	Literature	2024	Intermediate	Shakespeare wrote this famous tragedy in the late 16th century.`;
+    const excelContent = `question	options_a	options_b	options_c	options_d	correctAnswer	explanation	subject	academicYear	examType	difficulty	topic	marks	group	duplicateOf	isActive	metadata_validationStatus
+What is your name?	ALL	ALL 2	ALL 4	ALL 7	0		Physics	2024-2026	Competitive Exam	Advanced		1			true	pending
+What is the capital of France?	London	Berlin	Paris	Madrid	2	Paris is the capital and largest city of France.	Geography	2024-2025	Board Exam	Beginner	World Geography	1	    	true	pending`;
 
     // Create a Blob with tab-separated content - Excel-friendly format
-    const blob = new Blob([excelContent], { 
+    const blob = new Blob([excelContent], {
         type: 'application/vnd.ms-excel;charset=utf-8;'
     });
-    
+
     // Create a temporary link element
     const link = document.createElement('a');
-    
+
     // Create an object URL for the blob
     const url = URL.createObjectURL(blob);
-    
+
     // Generate unique filename with timestamp
     const timestamp = new Date().getTime();
     const filename = `sample_questions_excel_${timestamp}.xls`;
-    
+
     // Set the download attributes
     link.href = url;
     link.download = filename;
     link.style.display = 'none'; // Hide the link
-    
+
     // Add to document, click, then remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Clean up the object URL
     URL.revokeObjectURL(url);
-    
+
     // Show confirmation
     showToast(`Downloading ${filename}`, 'success');
 }
@@ -599,74 +593,76 @@ Who wrote 'Romeo and Juliet'?	Charles Dickens	William Shakespeare	Jane Austen	Ma
 
 // Download sample TXT file with unique timestamp
 function downloadSampleTXT() {
-    const txtContent = `Q: What is the capital of France?
-A: London
-B: Berlin
-C: Paris
-D: Madrid
-Correct: C
-Explanation: Paris is the capital and the largest city of France.
-
-Q: What is 2+2?
-A: 3
-B: 4
-C: 5
-D: 6
-Correct: B
-Explanation: Basic arithmetic: 2 + 2 = 4.
-
-Q: Which planet is known as the Red Planet?
-A: Venus
-B: Mars
-C: Jupiter
-D: Saturn
-Correct: B
-Explanation: Mars is often referred to as the Red Planet due to its reddish appearance.
-
-Q: What is the chemical symbol for water?
-A: HO
-B: H2O2
-C: H2O
-D: CO2
-Correct: C
-Explanation: Water consists of two hydrogen atoms and one oxygen atom.
-
-Q: Who wrote 'Romeo and Juliet'?
-A: Charles Dickens
-B: William Shakespeare
-C: Jane Austen
-D: Mark Twain
-Correct: B
-Explanation: Shakespeare wrote this famous tragedy in the late 16th century.`;
-
+    const txtContent = `---
+question: What is your name?
+options:
+  - ALL
+  - ALL 2
+  - ALL 4
+  - ALL 7
+correctAnswer: 0
+explanation: ""
+subject: Physics
+academicYear: "2024-2026"
+examType: "Competitive Exam"
+difficulty: "Advanced"
+topic: ""
+marks: 1
+group: ""
+duplicateOf: null
+isActive: true
+metadata:
+  validationStatus: "pending"
+---
+---
+question: What is the capital of France?
+options:
+  - London
+  - Berlin
+  - Paris
+  - Madrid
+correctAnswer: 2
+explanation: "Paris is the capital and largest city of France."
+subject: Geography
+academicYear: "2024-2025"
+examType: "Board Exam"
+difficulty: "Beginner"
+topic: "World Geography"
+marks: 1
+group: ""
+duplicateOf: null
+isActive: true
+metadata:
+  validationStatus: "pending"
+---`;
     // Create a Blob with the TXT content
-    const blob = new Blob([txtContent], { 
+    const blob = new Blob([txtContent], {
         type: 'text/plain;charset=utf-8;'
     });
-    
+
     // Create a temporary link element
     const link = document.createElement('a');
-    
+
     // Create an object URL for the blob
     const url = URL.createObjectURL(blob);
-    
+
     // Generate unique filename with timestamp
     const timestamp = new Date().getTime();
     const filename = `sample_questions_${timestamp}.txt`;
-    
+
     // Set the download attributes
     link.href = url;
     link.download = filename;
     link.style.display = 'none'; // Hide the link
-    
+
     // Add to document, click, then remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     // Clean up the object URL
     URL.revokeObjectURL(url);
-    
+
     // Show confirmation
     showToast(`Downloading ${filename}`, 'success');
 }
@@ -710,6 +706,7 @@ async function saveEditedQuestion(index) {
     // Get updated values
     const updatedQuestion = {
         id: question.id,
+        _id: question._id,  // Include _id as well to handle both properties
         question: document.getElementById('editQuestionText').value,
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
@@ -723,7 +720,7 @@ async function saveEditedQuestion(index) {
 
     // Update options
     const optionElements = document.querySelectorAll('[id^="editOption"]');
-    updatedQuestion.options = Array.from(optionElements).map(el => el.value);
+    updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
 
     // Update correct answer
     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
@@ -732,8 +729,11 @@ async function saveEditedQuestion(index) {
     }
 
     try {
+        // Use either _id or id for the API call, prioritizing _id if it exists
+        const questionId = question._id || question.id;
+
         // Make API call to update question
-        const response = await fetch(API_URLS.UPDATE_QUESTION(question.id), {
+        const response = await fetch(API_URLS.UPDATE_QUESTION(questionId), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -756,9 +756,8 @@ async function saveEditedQuestion(index) {
 
             // Close modal and refresh display
             closeEditModal();
-            updateQuestionsList();
-            updateSubjectFilters();
             showToast('Question updated successfully!', 'success');
+
         } else {
             showToast(result.message || 'Failed to update question', 'error');
         }
@@ -777,13 +776,14 @@ function closeEditModal() {
 }
 
 // Delete question
+// Delete question
 async function deleteQuestion(index) {
     const question = parsedQuestions[index];
 
     showConfirmModal('Delete Question', 'Are you sure you want to delete this question? This action cannot be undone.', async () => {
         try {
             // Make API call to delete question
-            const response = await fetch(API_URLS.DELETE_QUESTION(question.id), {
+            const response = await fetch(API_URLS.DELETE_QUESTION(question._id || question.id), {  // Updated to handle both _id and id
                 method: 'DELETE'
             });
 
@@ -798,6 +798,8 @@ async function deleteQuestion(index) {
                 parsedQuestions.splice(index, 1);
                 updateQuestionsList();
                 showToast('Question deleted successfully!', 'success');
+                // Refresh data from database to show updated count
+                loadQuestionsFromAPI();
             } else {
                 showToast(result.message || 'Failed to delete question', 'error');
             }
