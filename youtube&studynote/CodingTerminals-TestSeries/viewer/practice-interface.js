@@ -123,6 +123,7 @@ function startTest() {
 
     // Set up test
     filteredQuestions = availableQuestions;
+    currentQuestionIndex = 0; // Start with first question
 
     // Calculate time (1 minute per question)
     totalTimeInSeconds = filteredQuestions.length * 60;
@@ -132,6 +133,9 @@ function startTest() {
     // Hide config section and show question section
     document.getElementById('testConfigSection').classList.add('hidden');
     document.getElementById('questionSection').classList.remove('hidden');
+
+    // Show test header information
+    document.getElementById('testHeaderInfo').classList.remove('hidden');
 
     // Initialize UI
     displayCurrentQuestion();
@@ -146,6 +150,7 @@ function startTest() {
     // Show confirmation
     showToast(`Test started with ${filteredQuestions.length} questions!`, 'success');
 }
+
 
 // Get random questions (simplified)
 function getRandomQuestions(questions, count) {
@@ -289,7 +294,9 @@ function selectOption(questionId, optionIndex) {
 
 // Toggle mark for review
 function toggleMarkForReview() {
-    const question = currentQuestions[0];
+    if (!testStarted) return; // Only allow marking during test
+
+    const question = filteredQuestions[currentQuestionIndex];
     if (!question) return;
 
     const questionId = question._id || question.id;
@@ -390,6 +397,8 @@ function goToQuestion(questionIndex) {
 
 // Update answered count
 function updateAnsweredCount() {
+    if (!testStarted) return; // Only update if test has started
+
     const answeredCount = Object.keys(userAnswers).filter(id =>
         filteredQuestions.some(q => (q._id || q.id) === id)
     ).length;
@@ -416,6 +425,8 @@ function startTimer() {
 
 // Update timer display
 function updateTimerDisplay() {
+    if (!testStarted) return; // Only update if test has started
+
     const hours = Math.floor(timeRemaining / 3600);
     const minutes = Math.floor((timeRemaining % 3600) / 60);
     const seconds = timeRemaining % 60;
@@ -477,6 +488,7 @@ function submitTest() {
     document.getElementById('resultsModal').classList.remove('hidden');
 }
 
+
 // Review answers
 function reviewAnswers() {
     // This would show detailed review of all questions and answers
@@ -488,6 +500,7 @@ function reviewAnswers() {
 function restartTest() {
     // Reset all variables
     currentPage = 0;
+    currentQuestionIndex = 0;
     userAnswers = {};
     markedForReview = new Set();
     questionStatus = {};
@@ -499,7 +512,12 @@ function restartTest() {
     // Reset UI
     document.getElementById('testConfigSection').classList.remove('hidden');
     document.getElementById('questionSection').classList.add('hidden');
+    document.getElementById('testHeaderInfo').classList.add('hidden'); // Hide header info
     document.getElementById('resultsModal').classList.add('hidden');
+
+    // Reset timer display
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerDisplay').className = 'timer-display';
 
     // Reload questions
     loadQuestions();
