@@ -1430,6 +1430,7 @@ function parseTextFile(content) {
     return questions;
 }
 
+// Save all questions to backend - Updated to save only uploaded questions
 async function saveAllQuestions() {
     if (parsedQuestions.length === 0) {
         showToast('No uploaded questions to save', 'warning');
@@ -1462,7 +1463,20 @@ async function saveAllQuestions() {
             // Switch back to database tab to show all questions
             switchToTab('database');
 
-            showToast(`${result.count || parsedQuestions.length} questions saved successfully!`, 'success');
+            // Update the question count display
+            const questionCount = document.getElementById('questionCount');
+            if (questionCount) {
+                questionCount.textContent = databaseQuestions.length;
+            }
+
+            // Show success message with actual number of questions saved
+            const savedCount = result.count || result.saved || parsedQuestions.length || databaseQuestions.length;
+            showToast(`${savedCount} questions saved successfully!`, 'success');
+
+            // Update filters after saving
+            updateSubjectFilters();
+            updateYearFilters();
+            updateDifficultyFilters();
         } else {
             showToast(result.message || 'Failed to save questions', 'error');
         }
@@ -1505,7 +1519,20 @@ async function syncWithMongoDB() {
             // Switch back to database tab to show all questions
             switchToTab('database');
 
-            showToast(`${result.synced || parsedQuestions.length} questions synced with database!`, 'success');
+            // Update the question count display
+            const questionCount = document.getElementById('questionCount');
+            if (questionCount) {
+                questionCount.textContent = databaseQuestions.length;
+            }
+
+            // Show success message with actual number of questions synced
+            const syncedCount = result.synced || result.count || result.saved || parsedQuestions.length || databaseQuestions.length;
+            showToast(`${syncedCount} questions synced with database!`, 'success');
+
+            // Update filters after syncing
+            updateSubjectFilters();
+            updateYearFilters();
+            updateDifficultyFilters();
         } else {
             showToast(result.message || 'Failed to sync with database', 'error');
         }
