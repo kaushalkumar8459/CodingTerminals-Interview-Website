@@ -138,10 +138,13 @@
                 class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                 💾 Save All Questions
             </button>
+            <button onclick="refreshExistingValues()"
+                class="px-6 py-3 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                🔄 Refresh Values
+            </button>
         </div>
 
         <!-- Bulk Entry Options -->
-        <!-- ... existing code ... -->
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <h2 class="text-xl font-bold text-purple-600 mb-4 flex items-center gap-2">
                 <span>📋</span>
@@ -205,8 +208,6 @@
             </div>
         </div>
 
-        <!-- ... existing code ... -->
-
         <!-- Questions Container -->
         <div id="questionsContainer" class="space-y-6">
             <!-- Question blocks will be added here -->
@@ -227,10 +228,7 @@
             AuthUtils.displayUserInfo('userInfo');
         }
 
-        // Initialize with one question block
-        document.addEventListener('DOMContentLoaded', function () {
-            addQuestionBlock();
-        });
+        // Initialize with one question block - REMOVED to avoid conflict with JS initialization
     </script>
 </body>
 
