@@ -5,14 +5,14 @@ let subjects = new Set();
 let years = new Set();
 let examTypes = new Set();
 let difficulties = new Set();
-let hasInitialized = false; // Flag to prevent duplicate initialization
+let hasInitialized = false;
 
 // API Endpoints Configuration
 const API_CONFIG = {
     BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
     ENDPOINTS: {
         CREATE_QUESTION: '/questions',
-        CREATE_BULK_QUESTIONS: '/questions', // Same endpoint but with array of questions
+        CREATE_BULK_QUESTIONS: '/questions',
         GET_ALL_QUESTIONS: '/questions'
     }
 };
@@ -26,8 +26,6 @@ const API_URLS = {
 
 // Fetch existing values from the database
 async function fetchExistingValues() {
-    console.log('Fetching existing values from database...');
-
     try {
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
         if (!response.ok) {
@@ -35,49 +33,38 @@ async function fetchExistingValues() {
         }
 
         const result = await response.json();
-        console.log('API Response:', result);
-
+        
         if (result.success) {
             // Clear existing sets first
             subjects.clear();
             years.clear();
             examTypes.clear();
             difficulties.clear();
-
-            console.log(`Processing ${result.data.length} questions...`);
-
+            
             // Extract unique values from all questions
-            result.data.forEach((question, index) => {
-                console.log(`Processing question ${index + 1}:`, question.subject, question.academicYear, question.examType, question.difficulty);
-
+            result.data.forEach(question => {
                 if (question.subject) subjects.add(question.subject);
                 if (question.academicYear) years.add(question.academicYear.toString());
                 if (question.examType) examTypes.add(question.examType);
                 if (question.difficulty) difficulties.add(question.difficulty);
             });
 
-            // Add common default values if not already present
+            // Add common default values
             const defaultSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'];
-            const defaultYears = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027']; // Extended year range
+            const defaultYears = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'];
             const defaultExamTypes = ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'];
             const defaultDifficulties = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-
+            
             defaultSubjects.forEach(subject => subjects.add(subject));
-            defaultYears.forEach(year => years.add(year)); // Add default years
+            defaultYears.forEach(year => years.add(year));
             defaultExamTypes.forEach(examType => examTypes.add(examType));
             defaultDifficulties.forEach(difficulty => difficulties.add(difficulty));
-
-            console.log('Final data sources populated:');
-            console.log('Subjects:', Array.from(subjects));
-            console.log('Years:', Array.from(years));
-            console.log('Exam Types:', Array.from(examTypes));
-            console.log('Difficulties:', Array.from(difficulties));
         }
     } catch (error) {
         console.error('Error fetching existing values:', error);
         // Add default values in case of error
         ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'].forEach(subject => subjects.add(subject));
-        ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'].forEach(year => years.add(year)); // Default years
+        ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'].forEach(year => years.add(year));
         ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'].forEach(examType => examTypes.add(examType));
         ['Beginner', 'Intermediate', 'Advanced', 'Expert'].forEach(difficulty => difficulties.add(difficulty));
     }
@@ -87,61 +74,57 @@ async function fetchExistingValues() {
 function setupSearchField(inputId, suggestionsId, dataSource, placeholderText) {
     const inputElement = document.getElementById(inputId);
     const suggestionsContainer = document.getElementById(suggestionsId);
-
+    
     if (!inputElement || !suggestionsContainer) {
-        console.warn(`Elements not found: ${inputId} or ${suggestionsId}`);
         return;
     }
-
-    // Set placeholder if provided
+    
     if (placeholderText) {
         inputElement.placeholder = placeholderText;
     }
-
+    
     // Input event - show suggestions as user types
-    inputElement.addEventListener('input', function () {
+    inputElement.addEventListener('input', function() {
         const query = this.value.toLowerCase();
         showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
     });
-
+    
     // Focus event - show all suggestions when field gains focus
-    inputElement.addEventListener('focus', function () {
+    inputElement.addEventListener('focus', function() {
         const query = this.value ? this.value.toLowerCase() : '';
         showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
     });
-
+    
     // Click outside - hide suggestions
-    document.addEventListener('click', function (event) {
+    document.addEventListener('click', function(event) {
         if (!event.target.closest(`#${inputId}`) && !event.target.closest(`#${suggestionsId}`)) {
             suggestionsContainer.classList.add('hidden');
         }
     });
-
-    console.log(`Search field setup complete for ${inputId}`);
 }
 
-
+// Show filtered suggestions based on query
 function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId) {
     // Filter options based on query
-    const filteredOptions = Array.from(dataSource).filter(option =>
+    const filteredOptions = Array.from(dataSource).filter(option => 
         option.toLowerCase().includes(query.toLowerCase())
     );
-
+    
     // Clear previous suggestions
     suggestionsContainer.innerHTML = '';
-
+    
     if (filteredOptions.length > 0) {
         // Show matching options
         filteredOptions.forEach(option => {
             const suggestionItem = document.createElement('div');
             suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100';
             suggestionItem.textContent = option;
-            suggestionItem.onclick = function () {
+            suggestionItem.onclick = function() {
                 selectSuggestion(option, inputId, suggestionsContainer);
             };
             suggestionsContainer.appendChild(suggestionItem);
         });
-
+        
         suggestionsContainer.classList.remove('hidden');
     } else {
         // If no matches and query is not empty, show "add new" option
@@ -149,7 +132,7 @@ function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputI
             const suggestionItem = document.createElement('div');
             suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100 text-blue-600';
             suggestionItem.textContent = `Add "${query}" as new value`;
-            suggestionItem.onclick = function () {
+            suggestionItem.onclick = function() {
                 selectSuggestion(query, inputId, suggestionsContainer);
             };
             suggestionsContainer.appendChild(suggestionItem);
@@ -165,37 +148,28 @@ function selectSuggestion(value, inputId, suggestionsContainer) {
     const inputElement = document.getElementById(inputId);
     if (inputElement) {
         inputElement.value = value;
-        console.log(`Selected value: ${value} for ${inputId}`);
     }
     suggestionsContainer.classList.add('hidden');
-
+    
     // Add to data source if it's a new value
     addToDataSource(value, inputId);
 }
 
 // Add new values to appropriate data source
 function addToDataSource(value, inputId) {
-    // Determine which data source to update based on input ID
     if (inputId.includes('subject') || inputId === 'defaultSubject') {
         subjects.add(value);
-        console.log(`Added to subjects: ${value}`);
     } else if (inputId.includes('examType') || inputId === 'defaultExamType') {
         examTypes.add(value);
-        console.log(`Added to examTypes: ${value}`);
     } else if (inputId.includes('difficulty') || inputId === 'defaultDifficulty') {
         difficulties.add(value);
-        console.log(`Added to difficulties: ${value}`);
     } else if (inputId.includes('year') || inputId === 'defaultYear') {
         years.add(value);
-        console.log(`Added to years: ${value}`);
     }
 }
 
 // Initialize search functionality for bulk entry options
 function initSearchFields() {
-    console.log('Initializing bulk search fields...');
-
-    // Setup bulk entry search fields
     setupSearchField('defaultSubject', 'subjectSuggestions', subjects, 'Type to search or enter subject...');
     setupSearchField('defaultYear', 'yearSuggestions', years, 'Type to search or enter year...');
     setupSearchField('defaultExamType', 'examTypeSuggestions', examTypes, 'Type to search or enter exam type...');
@@ -204,10 +178,6 @@ function initSearchFields() {
 
 // Initialize search functionality for individual question fields
 function initIndividualQuestionSearchFields(questionCounter) {
-    console.log(`Initializing search fields for question ${questionCounter}`);
-    console.log(`Data sources at init: subjects=${Array.from(subjects)}, examTypes=${Array.from(examTypes)}, difficulties=${Array.from(difficulties)}`);
-
-    // Setup individual question search fields
     setupSearchField(`subject-${questionCounter}`, `subjectSuggestions-${questionCounter}`, subjects, 'Type to search or enter subject...');
     setupSearchField(`examType-${questionCounter}`, `examTypeSuggestions-${questionCounter}`, examTypes, 'Type to search or enter exam type...');
     setupSearchField(`difficulty-${questionCounter}`, `difficultySuggestions-${questionCounter}`, difficulties, 'Type to search or enter difficulty...');
@@ -216,11 +186,8 @@ function initIndividualQuestionSearchFields(questionCounter) {
 // Add a new question block
 function addQuestionBlock() {
     const container = document.getElementById('questionsContainer');
-    const currentQuestionIndex = questionCounter; // Capture current index before incrementing
+    const currentQuestionIndex = questionCounter;
     const blockId = 'question-block-' + currentQuestionIndex;
-
-    console.log(`Creating question block ${currentQuestionIndex} with ID: ${blockId}`);
-    console.log(`Container element found: ${!!container}`);
 
     const blockHTML = `
         <div id="${blockId}" class="question-input bg-white rounded-2xl shadow-xl p-6">
@@ -245,7 +212,6 @@ function addQuestionBlock() {
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" 
                                    autocomplete="off">
                             <div id="subjectSuggestions-${currentQuestionIndex}" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
-                                <!-- Suggestions will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -264,7 +230,6 @@ function addQuestionBlock() {
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                                    autocomplete="off">
                             <div id="examTypeSuggestions-${currentQuestionIndex}" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
-                                <!-- Exam type suggestions will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -276,7 +241,6 @@ function addQuestionBlock() {
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
                                    autocomplete="off">
                             <div id="difficultySuggestions-${currentQuestionIndex}" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
-                                <!-- Difficulty suggestions will be populated here -->
                             </div>
                         </div>
                     </div>
@@ -348,84 +312,36 @@ function addQuestionBlock() {
         </div>
     `;
 
-    console.log(`Inserting HTML for question block ${currentQuestionIndex}`);
     container.insertAdjacentHTML('beforeend', blockHTML);
-
-    // Verify the block was added
-    const addedBlock = document.getElementById(blockId);
-    console.log(`Block element added: ${!!addedBlock}`);
-    if (addedBlock) {
-        console.log(`Block innerHTML length: ${addedBlock.innerHTML.length}`);
-    }
-
-    // Use requestAnimationFrame for better timing control
+    
+    // Initialize search functionality after DOM update
     requestAnimationFrame(() => {
-        // Try multiple times with increasing delays to ensure DOM is ready
         let attempts = 0;
         const maxAttempts = 15;
-
+        
         function tryInit() {
             attempts++;
-            console.log(`Attempt ${attempts} to initialize search fields for question ${currentQuestionIndex}`);
-
+            
             const subjectInput = document.getElementById(`subject-${currentQuestionIndex}`);
             const subjectSuggestions = document.getElementById(`subjectSuggestions-${currentQuestionIndex}`);
             const examTypeInput = document.getElementById(`examType-${currentQuestionIndex}`);
             const examTypeSuggestions = document.getElementById(`examTypeSuggestions-${currentQuestionIndex}`);
             const difficultyInput = document.getElementById(`difficulty-${currentQuestionIndex}`);
             const difficultySuggestions = document.getElementById(`difficultySuggestions-${currentQuestionIndex}`);
-
-            console.log(`Element check results:`, {
-                subjectInput: !!subjectInput,
-                subjectSuggestions: !!subjectSuggestions,
-                examTypeInput: !!examTypeInput,
-                examTypeSuggestions: !!examTypeSuggestions,
-                difficultyInput: !!difficultyInput,
-                difficultySuggestions: !!difficultySuggestions
-            });
-
+            
             if (subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
-                console.log(`All elements found for question ${currentQuestionIndex}, initializing search fields...`);
-                console.log(`Available data sources: subjects=${Array.from(subjects).length}, examTypes=${Array.from(examTypes).length}, difficulties=${Array.from(difficulties).length}`);
                 initIndividualQuestionSearchFields(currentQuestionIndex);
             } else if (attempts < maxAttempts) {
-                console.log(`Elements not found yet, retrying in ${attempts * 150}ms...`);
-                setTimeout(tryInit, attempts * 150); // Increased delay
-            } else {
-                console.error(`Failed to find elements for question ${currentQuestionIndex} after ${maxAttempts} attempts`);
-                console.log('Current DOM state:', {
-                    subjectInput: !!subjectInput,
-                    subjectSuggestions: !!subjectSuggestions,
-                    examTypeInput: !!examTypeInput,
-                    examTypeSuggestions: !!examTypeSuggestions,
-                    difficultyInput: !!difficultyInput,
-                    difficultySuggestions: !!difficultySuggestions
-                });
-
-                // Let's check what's actually in the DOM
-                console.log('Checking DOM contents:');
-                const allInputs = document.querySelectorAll('input[type="text"]');
-                console.log(`Total text inputs found: ${allInputs.length}`);
-                allInputs.forEach((input, index) => {
-                    console.log(`Input ${index}: id=${input.id}, placeholder=${input.placeholder}`);
-                });
-
-                const allDivs = document.querySelectorAll('div[id]');
-                console.log(`Total divs with IDs found: ${allDivs.length}`);
-                allDivs.forEach((div, index) => {
-                    if (div.id.includes('Suggestions')) {
-                        console.log(`Suggestions div ${index}: id=${div.id}`);
-                    }
-                });
+                setTimeout(tryInit, attempts * 150);
             }
         }
-
+        
         tryInit();
     });
-
-    // Increment counter AFTER setting up the initialization
+    
     questionCounter++;
 }
+
 // Add multiple question blocks at once
 function addMultipleQuestionBlocks() {
     const count = prompt('How many question blocks would you like to add?', '5');
@@ -439,7 +355,7 @@ function addMultipleQuestionBlocks() {
 // Add option field for a specific question
 function addOptionField(questionIndex) {
     const container = document.getElementById(`options-${questionIndex}`);
-    const optionCount = container.children.length; // Existing options
+    const optionCount = container.children.length;
     const newOptionIndex = optionCount;
 
     const optionHTML = `
@@ -510,7 +426,7 @@ async function saveAllQuestions() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ questions: questions })  // Send as array for bulk creation
+            body: JSON.stringify({ questions: questions })
         });
 
         if (!response.ok) {
@@ -521,8 +437,6 @@ async function saveAllQuestions() {
 
         if (result.success) {
             showToast(`${result.count || questions.length} questions saved successfully!`, 'success');
-            // Optionally clear the form after successful save
-            // clearAll();
         } else {
             showToast(result.message || 'Failed to save questions', 'error');
         }
@@ -536,9 +450,7 @@ async function saveAllQuestions() {
 function getQuestionData(index) {
     const question = document.getElementById(`question-${index}`).value.trim();
 
-    // Check if question is empty
     if (!question) {
-        // Skip empty questions
         return null;
     }
 
@@ -603,9 +515,8 @@ function getQuestionData(index) {
 function showToast(message, type = 'info') {
     const toastContainer = document.getElementById('toastContainer');
 
-    // Only show toast if container exists
     if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`); // Fallback to console
+        console.log(`${type.toUpperCase()}: ${message}`);
         return;
     }
 
@@ -675,41 +586,33 @@ function logout() {
 
 // Refresh existing values from database
 async function refreshExistingValues() {
-    console.log('Manually refreshing existing values...');
     showToast('Refreshing database values...', 'info');
-
+    
     await fetchExistingValues();
-
+    
     // Re-initialize search fields for all existing question blocks
     const containers = document.querySelectorAll('[id^="question-block-"]');
     containers.forEach((container, index) => {
-        const questionIndex = index;
-        console.log(`Re-initializing search fields for question ${questionIndex}`);
-        initIndividualQuestionSearchFields(questionIndex);
+        initIndividualQuestionSearchFields(index);
     });
-
+    
     showToast('Database values refreshed successfully!', 'success');
 }
 
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async function () {
-    // Prevent duplicate initialization
     if (hasInitialized) {
-        console.log('Page already initialized, skipping...');
         return;
     }
-
+    
     hasInitialized = true;
-    console.log('Initializing page...');
-
+    
     // Fetch existing values from the database
     await fetchExistingValues();
-
+    
     // Initialize search fields
     initSearchFields();
-
+    
     // Initialize with one question block
     addQuestionBlock();
-
-    console.log('Initialization complete');
 });
