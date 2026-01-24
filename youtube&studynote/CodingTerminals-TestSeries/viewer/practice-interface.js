@@ -37,12 +37,15 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
     document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
     document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
+    document.getElementById('difficultySelect').addEventListener('change', updateCalculatedValues);
+    document.getElementById('examTypeSelect').addEventListener('change', updateCalculatedValues);
     document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
     document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
 
     // Initialize calculated values
     updateCalculatedValues();
 });
+
 
 // Load existing values from database for dropdowns
 async function loadExistingValues() {
@@ -57,21 +60,20 @@ async function loadExistingValues() {
         if (result.success) {
             const subjects = new Set();
             const years = new Set();
+            const difficulties = new Set();
+            const examTypes = new Set();
 
             // Extract unique values from all questions
             result.data.forEach(question => {
                 if (question.subject) subjects.add(question.subject);
                 if (question.academicYear) years.add(question.academicYear.toString());
+                if (question.difficulty) difficulties.add(question.difficulty);
+                if (question.examType) examTypes.add(question.examType);
             });
 
             // Populate subject dropdown
             const subjectSelect = document.getElementById('subjectSelect');
-            const existingSubjectOptions = Array.from(subjectSelect.options).slice(1); // Skip "All Subjects" option
-
-            // Clear existing subject options except "All Subjects"
             subjectSelect.innerHTML = '<option value="all">All Subjects</option>';
-
-            // Add unique subjects from database
             Array.from(subjects).sort().forEach(subject => {
                 const option = document.createElement('option');
                 option.value = subject;
@@ -81,12 +83,7 @@ async function loadExistingValues() {
 
             // Populate year dropdown
             const yearSelect = document.getElementById('yearSelect');
-            const existingYearOptions = Array.from(yearSelect.options).slice(1); // Skip "All Years" option
-
-            // Clear existing year options except "All Years"
             yearSelect.innerHTML = '<option value="all">All Years</option>';
-
-            // Add unique years from database
             Array.from(years).sort().forEach(year => {
                 const option = document.createElement('option');
                 option.value = year;
@@ -94,7 +91,27 @@ async function loadExistingValues() {
                 yearSelect.appendChild(option);
             });
 
-            console.log(`Loaded ${subjects.size} subjects and ${years.size} years from database`);
+            // Populate difficulty dropdown
+            const difficultySelect = document.getElementById('difficultySelect');
+            difficultySelect.innerHTML = '<option value="all">All Difficulties</option>';
+            Array.from(difficulties).sort().forEach(difficulty => {
+                const option = document.createElement('option');
+                option.value = difficulty;
+                option.textContent = difficulty;
+                difficultySelect.appendChild(option);
+            });
+
+            // Populate exam type dropdown
+            const examTypeSelect = document.getElementById('examTypeSelect');
+            examTypeSelect.innerHTML = '<option value="all">All Exam Types</option>';
+            Array.from(examTypes).sort().forEach(examType => {
+                const option = document.createElement('option');
+                option.value = examType;
+                option.textContent = examType;
+                examTypeSelect.appendChild(option);
+            });
+
+            console.log(`Loaded ${subjects.size} subjects, ${years.size} years, ${difficulties.size} difficulties, and ${examTypes.size} exam types from database`);
         }
     } catch (error) {
         console.error('Error loading existing values:', error);
@@ -147,11 +164,12 @@ function initializeQuestionStatus() {
     });
 }
 
-
-// Start the test - updated to initialize currentQuestionIndex
+// Start the test - updated to include difficulty and exam type filters
 function startTest() {
     const subject = document.getElementById('subjectSelect').value;
     const year = document.getElementById('yearSelect').value;
+    const difficulty = document.getElementById('difficultySelect').value;
+    const examType = document.getElementById('examTypeSelect').value;
     const questionCount = parseInt(document.getElementById('questionCountSelect').value);
     const randomOrder = document.getElementById('randomOrderCheckbox').checked;
     const randomSelection = document.getElementById('randomSelectionCheckbox').checked;
@@ -160,7 +178,9 @@ function startTest() {
     let availableQuestions = allQuestions.filter(question => {
         const matchesSubject = subject === 'all' || question.subject === subject;
         const matchesYear = year === 'all' || question.academicYear == year;
-        return matchesSubject && matchesYear;
+        const matchesDifficulty = difficulty === 'all' || question.difficulty === difficulty;
+        const matchesExamType = examType === 'all' || question.examType === examType;
+        return matchesSubject && matchesYear && matchesDifficulty && matchesExamType;
     });
 
     if (availableQuestions.length === 0) {

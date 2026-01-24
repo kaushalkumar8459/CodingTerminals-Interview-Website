@@ -284,18 +284,13 @@
                     <div id="testConfigSection" class="mb-8">
                         <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Configure Your Test</h2>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
                                 <select id="subjectSelect"
                                     class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
-                                    <option value="all">All Subjects</option>
-                                    <option value="Mathematics">Mathematics</option>
-                                    <option value="Physics">Physics</option>
-                                    <option value="Chemistry">Chemistry</option>
-                                    <option value="Biology">Biology</option>
-                                    <option value="Computer Science">Computer Science</option>
-                                    <option value="English">English</option>
+                                    <option value="all">Subjects</option>
+                                    <!-- Options will be populated from database -->
                                 </select>
                             </div>
 
@@ -303,10 +298,26 @@
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Academic Year</label>
                                 <select id="yearSelect"
                                     class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
-                                    <option value="all">All Years</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2023">2023</option>
-                                    <option value="2022">2022</option>
+                                    <option value="all">Years</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Difficulty Level</label>
+                                <select id="difficultySelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Level</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
+                                <select id="examTypeSelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Exam Types</option>
+                                    <!-- Options will be populated from database -->
                                 </select>
                             </div>
 
@@ -315,15 +326,15 @@
                                     Questions</label>
                                 <select id="questionCountSelect"
                                     class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
-                                    <option value="10">10 Questions</option>
-                                    <option value="20">20 Questions</option>
-                                    <option value="30" selected>30 Questions</option>
-                                    <option value="50">50 Questions</option>
-                                    <option value="100">100 Questions</option>
+                                    <option value="10">10 Ques</option>
+                                    <option value="20">20 Ques</option>
+                                    <option value="30" selected>30 Ques</option>
+                                    <option value="50">50 Ques</option>
+                                    <option value="100">100 Ques</option>
+                                    <option value="200">200 Ques</option>
                                 </select>
                             </div>
                         </div>
-
                         <!-- Random Question Filter Section -->
                         <div class="bg-blue-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
                             <h3 class="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
@@ -474,65 +485,72 @@
 
     <!-- Results Modal -->
     <!-- Results Modal -->
-<div id="resultsModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 transform transition-all">
-        <div class="text-center">
-            <div class="text-6xl mb-4">🎉</div>
-            <h3 class="text-3xl font-bold text-green-600 mb-6">Test Completed!</h3>
+    <div id="resultsModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 transform transition-all">
+            <div class="text-center">
+                <div class="text-6xl mb-4">🎉</div>
+                <h3 class="text-3xl font-bold text-green-600 mb-6">Test Completed!</h3>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-blue-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-blue-600" id="resultTotal">0</div>
-                    <div class="text-sm text-gray-600">Total Questions</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-blue-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-blue-600" id="resultTotal">0</div>
+                        <div class="text-sm text-gray-600">Total Questions</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-green-600" id="resultAnswered">0</div>
+                        <div class="text-sm text-gray-600">Answered</div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-yellow-600" id="resultMarked">0</div>
+                        <div class="text-sm text-gray-600">Marked for Review</div>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-red-600" id="resultUnanswered">0</div>
+                        <div class="text-sm text-gray-600">Not Answered</div>
+                    </div>
                 </div>
-                <div class="bg-green-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-green-600" id="resultAnswered">0</div>
-                    <div class="text-sm text-gray-600">Answered</div>
-                </div>
-                <div class="bg-yellow-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-yellow-600" id="resultMarked">0</div>
-                    <div class="text-sm text-gray-600">Marked for Review</div>
-                </div>
-                <div class="bg-red-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-red-600" id="resultUnanswered">0</div>
-                    <div class="text-sm text-gray-600">Not Answered</div>
-                </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-indigo-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-indigo-600" id="resultScore">0</div>
-                    <div class="text-sm text-gray-600">Score</div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-indigo-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-indigo-600" id="resultScore">0</div>
+                        <div class="text-sm text-gray-600">Score</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-purple-600" id="resultMaxScore">0</div>
+                        <div class="text-sm text-gray-600">Max Score</div>
+                    </div>
                 </div>
-                <div class="bg-purple-50 p-4 rounded-xl">
-                    <div class="text-2xl font-bold text-purple-600" id="resultMaxScore">0</div>
-                    <div class="text-sm text-gray-600">Max Score</div>
+
+                <div class="text-center mb-6">
+                    <div class="text-lg font-semibold text-gray-700">Time Taken: <span id="timeTaken"
+                            class="text-blue-600">00:00:00</span></div>
                 </div>
-            </div>
 
-            <div class="text-center mb-6">
-                <div class="text-lg font-semibold text-gray-700">Time Taken: <span id="timeTaken" class="text-blue-600">00:00:00</span></div>
-            </div>
+                <div class="mb-6">
+                    <div class="text-xl font-bold text-gray-800">Accuracy: <span id="accuracyRate"
+                            class="text-green-600">0%</span></div>
+                    <div class="text-lg text-gray-600 mt-2">Final Score: <span id="percentageResult"
+                            class="text-blue-600 font-bold">0%</span></div>
+                </div>
 
-            <div class="mb-6">
-                <div class="text-xl font-bold text-gray-800">Accuracy: <span id="accuracyRate" class="text-green-600">0%</span></div>
-                <div class="text-lg text-gray-600 mt-2">Final Score: <span id="percentageResult" class="text-blue-600 font-bold">0%</span></div>
-            </div>
-
-            <div class="flex justify-center gap-4">
-                <button onclick="reviewAnswers()" class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
-                    📖 Review Answers
-                </button>
-                <button onclick="restartTest()" class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
-                    🔄 Restart Test
-                </button>
-                <button onclick="closeResults()" class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
-                    Close
-                </button>
+                <div class="flex justify-center gap-4">
+                    <button onclick="reviewAnswers()"
+                        class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                        📖 Review Answers
+                    </button>
+                    <button onclick="restartTest()"
+                        class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                        🔄 Restart Test
+                    </button>
+                    <button onclick="closeResults()"
+                        class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
     <!-- Configuration -->
     <script src="../../config/app.config.js"></script>
