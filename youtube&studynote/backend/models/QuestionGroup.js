@@ -28,7 +28,6 @@ const questionGroupSchema = new mongoose.Schema({
     },
     difficulty: {
         type: String,
-        enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert']
     },
     tags: [{
         type: String,

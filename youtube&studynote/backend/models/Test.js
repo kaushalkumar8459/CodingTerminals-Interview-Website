@@ -67,7 +67,6 @@ const testSchema = new mongoose.Schema({
         templateUsed: String,
         generationMethod: {
             type: String,
-            enum: ['manual', 'auto', 'template'],
             default: 'manual'
         },
         publishDate: Date

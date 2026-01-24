@@ -33,13 +33,11 @@ const questionSchema = new mongoose.Schema({
     examType: {
         type: String,
         required: false,
-        enum: ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'],
         default: 'Practice Paper'
     },
     difficulty: {
         type: String,
         required: false,
-        enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
         default: 'Intermediate'
     },
     topic: {
@@ -77,7 +75,6 @@ const questionSchema = new mongoose.Schema({
         ocrProcessed: Boolean,
         validationStatus: {
             type: String,
-            enum: ['pending', 'validated', 'rejected'],
             default: 'pending'
         }
     }

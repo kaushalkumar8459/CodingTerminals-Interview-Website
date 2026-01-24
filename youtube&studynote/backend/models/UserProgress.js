@@ -33,7 +33,6 @@ const userProgressSchema = new mongoose.Schema({
     },
     sessionType: {
         type: String,
-        enum: ['practice', 'mock-test', 'revision'],
         default: 'practice'
     },
     testId: {

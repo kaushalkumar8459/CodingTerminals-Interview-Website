@@ -148,7 +148,6 @@ const options = {
                         },
                         difficulty: {
                             type: 'string',
-                            enum: ['easy', 'medium', 'hard'],
                             description: 'Difficulty level'
                         },
                         category: {
