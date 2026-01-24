@@ -31,6 +31,7 @@ const API_URLS = {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
     loadQuestions();
+    loadExistingValues(); // Load existing values from database
 
     // Add event listeners for configuration changes to update calculated values
     document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
@@ -42,6 +43,64 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize calculated values
     updateCalculatedValues();
 });
+
+// Load existing values from database for dropdowns
+async function loadExistingValues() {
+    try {
+        const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            const subjects = new Set();
+            const years = new Set();
+
+            // Extract unique values from all questions
+            result.data.forEach(question => {
+                if (question.subject) subjects.add(question.subject);
+                if (question.academicYear) years.add(question.academicYear.toString());
+            });
+
+            // Populate subject dropdown
+            const subjectSelect = document.getElementById('subjectSelect');
+            const existingSubjectOptions = Array.from(subjectSelect.options).slice(1); // Skip "All Subjects" option
+
+            // Clear existing subject options except "All Subjects"
+            subjectSelect.innerHTML = '<option value="all">All Subjects</option>';
+
+            // Add unique subjects from database
+            Array.from(subjects).sort().forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                subjectSelect.appendChild(option);
+            });
+
+            // Populate year dropdown
+            const yearSelect = document.getElementById('yearSelect');
+            const existingYearOptions = Array.from(yearSelect.options).slice(1); // Skip "All Years" option
+
+            // Clear existing year options except "All Years"
+            yearSelect.innerHTML = '<option value="all">All Years</option>';
+
+            // Add unique years from database
+            Array.from(years).sort().forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            });
+
+            console.log(`Loaded ${subjects.size} subjects and ${years.size} years from database`);
+        }
+    } catch (error) {
+        console.error('Error loading existing values:', error);
+        // Keep default options if API fails
+    }
+}
 
 // Update calculated values based on configuration
 function updateCalculatedValues() {
