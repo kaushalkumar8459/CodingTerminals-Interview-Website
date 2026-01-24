@@ -376,52 +376,24 @@ function showEditModal(question) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
-                        <select id="editSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                            <option value="Mathematics">Mathematics</option>
-                            <option value="Physics">Physics</option>
-                            <option value="Chemistry">Chemistry</option>
-                            <option value="Biology">Biology</option>
-                            <option value="Computer Science">Computer Science</option>
-                            <option value="English">English</option>
-                            <option value="History">History</option>
-                            <option value="Geography">Geography</option>
-                            <option value="Economics">Economics</option>
-                            <option value="Accountancy">Accountancy</option>
-                            <option value="Business Studies">Business Studies</option>
-                            <option value="Political Science">Political Science</option>
-                            <option value="Psychology">Psychology</option>
-                            <option value="Other">Other</option>
-                        </select>
+                        <input type="text" id="editSubject" value="${question.subject || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
-                        <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
-                        <select id="editExamType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                            <option value="Board Exam" ${question.examType === 'Board Exam' ? 'selected' : ''}>Board Exam</option>
-                            <option value="University Exam" ${question.examType === 'University Exam' ? 'selected' : ''}>University Exam</option>
-                            <option value="Competitive Exam" ${question.examType === 'Competitive Exam' ? 'selected' : ''}>Competitive Exam</option>
-                            <option value="Mid-Term" ${question.examType === 'Mid-Term' ? 'selected' : ''}>Mid-Term</option>
-                            <option value="Final Exam" ${question.examType === 'Final Exam' ? 'selected' : ''}>Final Exam</option>
-                            <option value="Mock Test" ${question.examType === 'Mock Test' ? 'selected' : ''}>Mock Test</option>
-                            <option value="Practice Paper" ${question.examType === 'Practice Paper' ? 'selected' : ''}>Practice Paper</option>
-                        </select>
+                        <input type="text" id="editExamType" value="${question.examType || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                        <select id="editDifficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                            <option value="Beginner" ${question.difficulty === 'Beginner' ? 'selected' : ''}>Beginner</option>
-                            <option value="Intermediate" ${question.difficulty === 'Intermediate' ? 'selected' : ''}>Intermediate</option>
-                            <option value="Advanced" ${question.difficulty === 'Advanced' ? 'selected' : ''}>Advanced</option>
-                            <option value="Expert" ${question.difficulty === 'Expert' ? 'selected' : ''}>Expert</option>
-                        </select>
+                        <input type="text" id="editDifficulty" value="${question.difficulty || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
                     </div>
                 </div>
                 
@@ -982,52 +954,24 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Subject</label>
-                            <select id="bulkSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Mathematics">Mathematics</option>
-                                <option value="Physics">Physics</option>
-                                <option value="Chemistry">Chemistry</option>
-                                <option value="Biology">Biology</option>
-                                <option value="Computer Science">Computer Science</option>
-                                <option value="English">English</option>
-                                <option value="History">History</option>
-                                <option value="Geography">Geography</option>
-                                <option value="Economics">Economics</option>
-                                <option value="Accountancy">Accountancy</option>
-                                <option value="Business Studies">Business Studies</option>
-                                <option value="Political Science">Political Science</option>
-                                <option value="Psychology">Psychology</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <input type="text" id="bulkSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Academic Year</label>
-                            <input type="text" id="bulkYear" value="${new Date().getFullYear()}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                            <input type="text" id="bulkYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Exam Type</label>
-                            <select id="bulkExamType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Board Exam">Board Exam</option>
-                                <option value="University Exam">University Exam</option>
-                                <option value="Competitive Exam">Competitive Exam</option>
-                                <option value="Mid-Term">Mid-Term</option>
-                                <option value="Final Exam">Final Exam</option>
-                                <option value="Mock Test">Mock Test</option>
-                                <option value="Practice Paper">Practice Paper</option>
-                            </select>
+                            <input type="text" id="bulkExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Difficulty Level</label>
-                            <select id="bulkDifficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
-                                <option value="Expert">Expert</option>
-                            </select>
+                            <input type="text" id="bulkDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
                         </div>
                     </div>
                     
@@ -1055,52 +999,24 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
-                            <select id="addSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Mathematics">Mathematics</option>
-                                <option value="Physics">Physics</option>
-                                <option value="Chemistry">Chemistry</option>
-                                <option value="Biology">Biology</option>
-                                <option value="Computer Science">Computer Science</option>
-                                <option value="English">English</option>
-                                <option value="History">History</option>
-                                <option value="Geography">Geography</option>
-                                <option value="Economics">Economics</option>
-                                <option value="Accountancy">Accountancy</option>
-                                <option value="Business Studies">Business Studies</option>
-                                <option value="Political Science">Political Science</option>
-                                <option value="Psychology">Psychology</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <input type="text" id="addSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
-                            <input type="text" id="addYear" value="${new Date().getFullYear()}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                            <input type="text" id="addYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
-                            <select id="addExamType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Board Exam">Board Exam</option>
-                                <option value="University Exam">University Exam</option>
-                                <option value="Competitive Exam">Competitive Exam</option>
-                                <option value="Mid-Term">Mid-Term</option>
-                                <option value="Final Exam">Final Exam</option>
-                                <option value="Mock Test">Mock Test</option>
-                                <option value="Practice Paper">Practice Paper</option>
-                            </select>
+                            <input type="text" id="addExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                            <select id="addDifficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Beginner">Beginner</option>
-                                <option value="Intermediate">Intermediate</option>
-                                <option value="Advanced">Advanced</option>
-                                <option value="Expert">Expert</option>
-                            </select>
+                            <input type="text" id="addDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
                         </div>
                     </div>
                     
