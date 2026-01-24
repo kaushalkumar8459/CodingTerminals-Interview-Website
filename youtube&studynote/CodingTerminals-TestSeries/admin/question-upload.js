@@ -595,7 +595,7 @@ function updateQuestionsDisplay(targetContainer, targetEmptyState, targetQuestio
 }
 
 
-// Modified applyFilters function to work with search inputs
+// Modified applyFilters function to work better with search inputs
 function applyFilters(questionsToFilter = null) {
     // Use the current question set if none is provided
     if (!questionsToFilter) {
@@ -617,10 +617,15 @@ function applyFilters(questionsToFilter = null) {
     const difficultyFilterSelect = document.getElementById('filterDifficulty');
 
     // Get values from inputs (prioritize search inputs over selects)
-    const subjectValue = subjectFilterInput ? subjectFilterInput.value.toLowerCase() : (subjectFilterSelect ? subjectFilterSelect.value : 'all');
-    const yearValue = yearFilterInput ? yearFilterInput.value.toLowerCase() : (yearFilterSelect ? yearFilterSelect.value : 'all');
-    const difficultyValue = difficultyFilterInput ? difficultyFilterInput.value.toLowerCase() : (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
-    const searchValue = searchQuery ? searchQuery.value.toLowerCase() : '';
+    const subjectValue = (subjectFilterInput ? subjectFilterInput.value.toLowerCase().trim() : '') || 
+                        (subjectFilterSelect ? subjectFilterSelect.value : 'all');
+    const yearValue = (yearFilterInput ? yearFilterInput.value.toLowerCase().trim() : '') || 
+                     (yearFilterSelect ? yearFilterSelect.value : 'all');
+    const difficultyValue = (difficultyFilterInput ? difficultyFilterInput.value.toLowerCase().trim() : '') || 
+                           (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
+    const searchValue = searchQuery ? searchQuery.value.toLowerCase().trim() : '';
+
+    console.log('Filter values:', { subjectValue, yearValue, difficultyValue, searchValue }); // Debug log
 
     return questionsToFilter.filter(question => {
         const matchesSubject = subjectValue === 'all' || subjectValue === '' ||
@@ -634,9 +639,11 @@ function applyFilters(questionsToFilter = null) {
             (question.explanation && question.explanation.toLowerCase().includes(searchValue)) ||
             (question.topic && question.topic.toLowerCase().includes(searchValue));
 
-        return matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
+        const result = matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
+        return result;
     });
 }
+
 
 // Update subject filters dropdown
 function updateSubjectFilters() {
@@ -1728,6 +1735,7 @@ if (!document.querySelector('#toast-animation-styles')) {
 }
 
 // Initialize search fields after DOM is loaded
+// Initialize search fields after DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
     // Add event listeners for filter changes
     const subjectFilterInput = document.getElementById('filterSubjectInput');
@@ -1738,12 +1746,54 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize search functionality for filter inputs if they exist
     if (subjectFilterInput) {
         setupSearchField('filterSubjectInput', 'filterSubjectSuggestions', subjects, 'Search or enter subject...');
+        // Add input event listener for real-time filtering
+        subjectFilterInput.addEventListener('input', function () {
+            // Small delay to avoid excessive filtering while typing
+            clearTimeout(this.filterTimeout);
+            this.filterTimeout = setTimeout(() => {
+                updateQuestionsList();
+            }, 300);
+        });
+        // Also filter when suggestion is selected
+        subjectFilterInput.addEventListener('blur', function () {
+            setTimeout(() => {
+                updateQuestionsList();
+            }, 100);
+        });
     }
+
     if (yearFilterInput) {
         setupSearchField('filterYearInput', 'filterYearSuggestions', years, 'Search or enter year...');
+        // Add input event listener for real-time filtering
+        yearFilterInput.addEventListener('input', function () {
+            clearTimeout(this.filterTimeout);
+            this.filterTimeout = setTimeout(() => {
+                updateQuestionsList();
+            }, 300);
+        });
+        // Also filter when suggestion is selected
+        yearFilterInput.addEventListener('blur', function () {
+            setTimeout(() => {
+                updateQuestionsList();
+            }, 100);
+        });
     }
+
     if (difficultyFilterInput) {
         setupSearchField('filterDifficultyInput', 'filterDifficultySuggestions', difficulties, 'Search or enter difficulty...');
+        // Add input event listener for real-time filtering
+        difficultyFilterInput.addEventListener('input', function () {
+            clearTimeout(this.filterTimeout);
+            this.filterTimeout = setTimeout(() => {
+                updateQuestionsList();
+            }, 300);
+        });
+        // Also filter when suggestion is selected
+        difficultyFilterInput.addEventListener('blur', function () {
+            setTimeout(() => {
+                updateQuestionsList();
+            }, 100);
+        });
     }
 
     // Also handle traditional select elements
@@ -1755,7 +1805,14 @@ document.addEventListener('DOMContentLoaded', function () {
     if (yearFilterSelect) yearFilterSelect.addEventListener('change', updateQuestionsList);
     if (difficultyFilterSelect) difficultyFilterSelect.addEventListener('change', updateQuestionsList);
 
-    if (searchInput) searchInput.addEventListener('input', updateQuestionsList);
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(this.filterTimeout);
+            this.filterTimeout = setTimeout(() => {
+                updateQuestionsList();
+            }, 300);
+        });
+    }
 
     // Initialize tab functionality
     initializeTabs();
