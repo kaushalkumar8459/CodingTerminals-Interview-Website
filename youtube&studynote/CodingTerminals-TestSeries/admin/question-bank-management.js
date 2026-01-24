@@ -11,6 +11,176 @@ let testQuestions = [];
 let groups = [];
 let duplicates = [];
 
+let subjects = new Set();
+let years = new Set();
+let examTypes = new Set();
+let difficulties = new Set();
+
+// Fetch existing values from the database for search suggestions
+async function fetchExistingValues() {
+    try {
+        const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Clear existing sets first
+            subjects.clear();
+            years.clear();
+            examTypes.clear();
+            difficulties.clear();
+
+            // Extract unique values from all questions
+            result.data.forEach(question => {
+                if (question.subject) subjects.add(question.subject);
+                if (question.academicYear) years.add(question.academicYear.toString());
+                if (question.examType) examTypes.add(question.examType);
+                if (question.difficulty) difficulties.add(question.difficulty);
+            });
+
+            // Add common default values
+            const defaultSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'];
+            const defaultYears = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'];
+            const defaultExamTypes = ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'];
+            const defaultDifficulties = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+
+            defaultSubjects.forEach(subject => subjects.add(subject));
+            defaultYears.forEach(year => years.add(year));
+            defaultExamTypes.forEach(examType => examTypes.add(examType));
+            defaultDifficulties.forEach(difficulty => difficulties.add(difficulty));
+        }
+    } catch (error) {
+        console.error('Error fetching existing values:', error);
+        // Add default values in case of error
+        ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'].forEach(subject => subjects.add(subject));
+        ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'].forEach(year => years.add(year));
+        ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'].forEach(examType => examTypes.add(examType));
+        ['Beginner', 'Intermediate', 'Advanced', 'Expert'].forEach(difficulty => difficulties.add(difficulty));
+    }
+}
+
+// Common search functionality for all input fields
+function setupSearchField(inputId, suggestionsId, dataSource, placeholderText) {
+    const inputElement = document.getElementById(inputId);
+    const suggestionsContainer = document.getElementById(suggestionsId);
+
+    if (!inputElement || !suggestionsContainer) {
+        return;
+    }
+
+    if (placeholderText) {
+        inputElement.placeholder = placeholderText;
+    }
+
+    // Input event - show suggestions as user types
+    inputElement.addEventListener('input', function () {
+        const query = this.value.toLowerCase();
+        showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
+    });
+
+    // Focus event - show all suggestions when field gains focus
+    inputElement.addEventListener('focus', function () {
+        const query = this.value ? this.value.toLowerCase() : '';
+        showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
+    });
+
+    // Click outside - hide suggestions
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest(`#${inputId}`) && !event.target.closest(`#${suggestionsId}`)) {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+}
+
+// Show filtered suggestions based on query
+function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId) {
+    // Filter options based on query
+    const filteredOptions = Array.from(dataSource).filter(option =>
+        option.toLowerCase().includes(query.toLowerCase())
+    );
+
+    // Clear previous suggestions
+    suggestionsContainer.innerHTML = '';
+
+    if (filteredOptions.length > 0) {
+        // Show matching options
+        filteredOptions.forEach(option => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100';
+            suggestionItem.textContent = option;
+            suggestionItem.onclick = function () {
+                selectSuggestion(option, inputId, suggestionsContainer);
+            };
+            suggestionsContainer.appendChild(suggestionItem);
+        });
+
+        suggestionsContainer.classList.remove('hidden');
+    } else {
+        // If no matches and query is not empty, show "add new" option
+        if (query.trim() !== '') {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100 text-blue-600';
+            suggestionItem.textContent = `Add "${query}" as new value`;
+            suggestionItem.onclick = function () {
+                selectSuggestion(query, inputId, suggestionsContainer);
+            };
+            suggestionsContainer.appendChild(suggestionItem);
+            suggestionsContainer.classList.remove('hidden');
+        } else {
+            suggestionsContainer.classList.add('hidden');
+        }
+    }
+}
+
+// Handle selection of a suggestion
+function selectSuggestion(value, inputId, suggestionsContainer) {
+    const inputElement = document.getElementById(inputId);
+    if (inputElement) {
+        inputElement.value = value;
+    }
+    suggestionsContainer.classList.add('hidden');
+
+    // Add to data source if it's a new value
+    addToDataSource(value, inputId);
+}
+
+// Add new values to appropriate data source
+function addToDataSource(value, inputId) {
+    if (inputId.includes('Subject') || inputId.includes('subject')) {
+        subjects.add(value);
+    } else if (inputId.includes('ExamType') || inputId.includes('examType')) {
+        examTypes.add(value);
+    } else if (inputId.includes('Difficulty') || inputId.includes('difficulty')) {
+        difficulties.add(value);
+    } else if (inputId.includes('Year') || inputId.includes('year')) {
+        years.add(value);
+    }
+}
+
+// Initialize search functionality for edit/add modals
+function initModalSearchFields() {
+    // Edit modal fields
+    setupSearchField('editSubject', 'editSubjectSuggestions', subjects, 'Type to search or enter subject...');
+    setupSearchField('editYear', 'editYearSuggestions', years, 'Type to search or enter year...');
+    setupSearchField('editExamType', 'editExamTypeSuggestions', examTypes, 'Type to search or enter exam type...');
+    setupSearchField('editDifficulty', 'editDifficultySuggestions', difficulties, 'Type to search or enter difficulty...');
+
+    // Add modal fields
+    setupSearchField('addSubject', 'addSubjectSuggestions', subjects, 'Type to search or enter subject...');
+    setupSearchField('addYear', 'addYearSuggestions', years, 'Type to search or enter year...');
+    setupSearchField('addExamType', 'addExamTypeSuggestions', examTypes, 'Type to search or enter exam type...');
+    setupSearchField('addDifficulty', 'addDifficultySuggestions', difficulties, 'Type to search or enter difficulty...');
+
+    // Bulk modal fields
+    setupSearchField('bulkSubject', 'bulkSubjectSuggestions', subjects, 'Type to search or enter subject...');
+    setupSearchField('bulkYear', 'bulkYearSuggestions', years, 'Type to search or enter year...');
+    setupSearchField('bulkExamType', 'bulkExamTypeSuggestions', examTypes, 'Type to search or enter exam type...');
+    setupSearchField('bulkDifficulty', 'bulkDifficultySuggestions', difficulties, 'Type to search or enter difficulty...');
+}
+
 // API Endpoints Configuration
 const API_CONFIG = {
     BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
@@ -126,7 +296,7 @@ function updatePercentage(slider, displayId) {
     }
 }
 
-// Load questions from API
+// Update loadQuestions to fetch existing values
 async function loadQuestions() {
     try {
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
@@ -142,6 +312,9 @@ async function loadQuestions() {
 
             // Extract unique values for filters
             extractUniqueValues();
+
+            // Fetch existing values for search suggestions
+            await fetchExistingValues();
 
             filteredQuestions = [...allQuestions];
             renderQuestionsList();
@@ -360,7 +533,8 @@ function editQuestion(questionId) {
     showEditModal(question);
 }
 
-// Show edit modal
+
+// Modify showEditModal to include suggestion containers
 function showEditModal(question) {
     const modal = document.getElementById('editModal');
     if (!modal) return;
@@ -376,24 +550,36 @@ function showEditModal(question) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
-                        <input type="text" id="editSubject" value="${question.subject || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
+                        <div class="relative">
+                            <input type="text" id="editSubject" value="${question.subject || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
+                            <div id="editSubjectSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
-                        <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
+                        <div class="relative">
+                            <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
+                            <div id="editYearSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
-                        <input type="text" id="editExamType" value="${question.examType || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
+                        <div class="relative">
+                            <input type="text" id="editExamType" value="${question.examType || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
+                            <div id="editExamTypeSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
                     </div>
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                        <input type="text" id="editDifficulty" value="${question.difficulty || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
+                        <div class="relative">
+                            <input type="text" id="editDifficulty" value="${question.difficulty || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
+                            <div id="editDifficultySuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -442,14 +628,12 @@ function showEditModal(question) {
     `;
 
     document.getElementById('editFormContent').innerHTML = formHTML;
-
-    // Set initial values
-    document.getElementById('editSubject').value = question.subject || '';
-    document.getElementById('editYear').value = question.academicYear || '';
-    document.getElementById('editTopic').value = question.topic || '';
-    document.getElementById('editExplanation').value = question.explanation || '';
-
     modal.classList.remove('hidden');
+
+    // Initialize search functionality after DOM update
+    setTimeout(() => {
+        initModalSearchFields();
+    }, 100);
 }
 
 // Add option field
@@ -925,7 +1109,8 @@ function addNewQuestion() {
     showAddQuestionModal();
 }
 
-// Show add question modal
+
+// Modify showAddQuestionModal to include suggestion containers
 function showAddQuestionModal(isBulk = false) {
     const modal = document.getElementById('editModal');
     if (!modal) return;
@@ -954,24 +1139,36 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Subject</label>
-                            <input type="text" id="bulkSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
+                            <div class="relative">
+                                <input type="text" id="bulkSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
+                                <div id="bulkSubjectSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Academic Year</label>
-                            <input type="text" id="bulkYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
+                            <div class="relative">
+                                <input type="text" id="bulkYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
+                                <div id="bulkYearSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Exam Type</label>
-                            <input type="text" id="bulkExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
+                            <div class="relative">
+                                <input type="text" id="bulkExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
+                                <div id="bulkExamTypeSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Default Difficulty Level</label>
-                            <input type="text" id="bulkDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
+                            <div class="relative">
+                                <input type="text" id="bulkDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
+                                <div id="bulkDifficultySuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -999,24 +1196,36 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
-                            <input type="text" id="addSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter subject...">
+                            <div class="relative">
+                                <input type="text" id="addSubject" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
+                                <div id="addSubjectSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
-                            <input type="text" id="addYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter academic year...">
+                            <div class="relative">
+                                <input type="text" id="addYear" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
+                                <div id="addYearSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
-                            <input type="text" id="addExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter exam type...">
+                            <div class="relative">
+                                <input type="text" id="addExamType" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
+                                <div id="addExamTypeSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                            <input type="text" id="addDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Enter difficulty level...">
+                            <div class="relative">
+                                <input type="text" id="addDifficulty" value="" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
+                                <div id="addDifficultySuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1103,6 +1312,11 @@ function showAddQuestionModal(isBulk = false) {
 
     document.getElementById('editFormContent').innerHTML = formHTML;
     modal.classList.remove('hidden');
+
+    // Initialize search functionality after DOM update
+    setTimeout(() => {
+        initModalSearchFields();
+    }, 100);
 }
 
 // Save new question
@@ -1346,11 +1560,11 @@ function loadTestCreatorData() {
 
 // Create test
 function createTest() {
-    const testTitle = document.getElementById('testTitle').value.trim();
-    const testSubject = document.getElementById('testSubject').value;
-    const testYear = document.getElementById('testYear').value.trim();
-    const testDuration = document.getElementById('testDuration').value;
-    const totalQuestions = document.getElementById('totalQuestions').value;
+    const testTitle = document.getElementById('testTitle')?.value?.trim() || '';
+    const testSubject = document.getElementById('testSubject')?.value?.trim() || '';
+    const testYear = document.getElementById('testYear')?.value?.trim() || '';
+    const testDuration = document.getElementById('testDuration')?.value?.trim() || '';
+    const totalQuestions = document.getElementById('totalQuestions')?.value?.trim() || '';
 
     if (!testTitle || !testSubject || !testYear) {
         showToast('Please fill in required fields (Title, Subject, Year)', 'error');
@@ -1364,9 +1578,9 @@ function createTest() {
         }
     } else if (currentCreationMethod === 'auto') {
         // For auto generation, we'll use the criteria to select questions
-        const easyPercent = parseInt(document.getElementById('easyPercent').textContent);
-        const mediumPercent = parseInt(document.getElementById('mediumPercent').textContent);
-        const hardPercent = parseInt(document.getElementById('hardPercent').textContent);
+        const easyPercent = parseInt(document.getElementById('easyPercent')?.textContent || '30');
+        const mediumPercent = parseInt(document.getElementById('mediumPercent')?.textContent || '50');
+        const hardPercent = parseInt(document.getElementById('hardPercent')?.textContent || '20');
 
         if (easyPercent + mediumPercent + hardPercent !== 100) {
             showToast('Difficulty percentages must sum to 100%', 'error');
@@ -1382,6 +1596,7 @@ function createTest() {
         showToast(`Test "${testTitle}" created successfully!`, 'success');
     }, 1000);
 }
+// ... existing code ...
 
 // Preview test
 function previewTest() {
