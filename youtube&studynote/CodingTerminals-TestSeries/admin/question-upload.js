@@ -11,6 +11,110 @@ let yearList = new Set();
 let difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 let confirmModalCallback = null;
 
+// New variables for search functionality in filters
+let subjects = new Set();
+let years = new Set();
+let examTypes = new Set();
+let difficulties = new Set();
+
+// Common search functionality for all input fields
+function setupSearchField(inputId, suggestionsId, dataSource, placeholderText) {
+    const inputElement = document.getElementById(inputId);
+    const suggestionsContainer = document.getElementById(suggestionsId);
+
+    if (!inputElement || !suggestionsContainer) {
+        return;
+    }
+
+    if (placeholderText) {
+        inputElement.placeholder = placeholderText;
+    }
+
+    // Input event - show suggestions as user types
+    inputElement.addEventListener('input', function () {
+        const query = this.value.toLowerCase();
+        showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
+    });
+
+    // Focus event - show all suggestions when field gains focus
+    inputElement.addEventListener('focus', function () {
+        const query = this.value ? this.value.toLowerCase() : '';
+        showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
+    });
+
+    // Click outside - hide suggestions
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest(`#${inputId}`) && !event.target.closest(`#${suggestionsId}`)) {
+            suggestionsContainer.classList.add('hidden');
+        }
+    });
+}
+
+// Show filtered suggestions based on query
+function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId) {
+    // Filter options based on query
+    const filteredOptions = Array.from(dataSource).filter(option =>
+        option.toLowerCase().includes(query.toLowerCase())
+    );
+
+    // Clear previous suggestions
+    suggestionsContainer.innerHTML = '';
+
+    if (filteredOptions.length > 0) {
+        // Show matching options
+        filteredOptions.forEach(option => {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100';
+            suggestionItem.textContent = option;
+            suggestionItem.onclick = function () {
+                selectSuggestion(option, inputId, suggestionsContainer);
+            };
+            suggestionsContainer.appendChild(suggestionItem);
+        });
+
+        suggestionsContainer.classList.remove('hidden');
+    } else {
+        // If no matches and query is not empty, show "add new" option
+        if (query.trim() !== '') {
+            const suggestionItem = document.createElement('div');
+            suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100 text-blue-600';
+            suggestionItem.textContent = `Add "${query}" as new value`;
+            suggestionItem.onclick = function () {
+                selectSuggestion(query, inputId, suggestionsContainer);
+            };
+            suggestionsContainer.appendChild(suggestionItem);
+            suggestionsContainer.classList.remove('hidden');
+        } else {
+            suggestionsContainer.classList.add('hidden');
+        }
+    }
+}
+
+// Handle selection of a suggestion
+function selectSuggestion(value, inputId, suggestionsContainer) {
+    const inputElement = document.getElementById(inputId);
+    if (inputElement) {
+        inputElement.value = value;
+    }
+    suggestionsContainer.classList.add('hidden');
+
+    // Add to data source if it's a new value
+    addToDataSource(value, inputId);
+}
+
+// Add new values to appropriate data source
+function addToDataSource(value, inputId) {
+    if (inputId.includes('Subject') || inputId.includes('subject')) {
+        subjects.add(value);
+    } else if (inputId.includes('ExamType') || inputId.includes('examType')) {
+        examTypes.add(value);
+    } else if (inputId.includes('Difficulty') || inputId.includes('difficulty')) {
+        difficulties.add(value);
+    } else if (inputId.includes('Year') || inputId.includes('year')) {
+        years.add(value);
+    }
+}
+
 // API Endpoints Configuration
 const API_CONFIG = {
     BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
@@ -307,8 +411,7 @@ function initializeTabs() {
     }
 }
 
-
-// Update questions list display - Fixed with proper checks and tab support
+// Modified updateQuestionsList function to handle search inputs
 function updateQuestionsList() {
     // Wait for DOM to be fully loaded if needed
     if (document.readyState === 'loading') {
@@ -492,7 +595,7 @@ function updateQuestionsDisplay(targetContainer, targetEmptyState, targetQuestio
 }
 
 
-// Apply filters to questions - Updated to accept a question set as parameter
+// Modified applyFilters function to work with search inputs
 function applyFilters(questionsToFilter = null) {
     // Use the current question set if none is provided
     if (!questionsToFilter) {
@@ -503,26 +606,33 @@ function applyFilters(questionsToFilter = null) {
         }
     }
 
-    const subjectFilter = document.getElementById('filterSubject');
-    const yearFilter = document.getElementById('filterYear');
-    const difficultyFilter = document.getElementById('filterDifficulty');
+    // Try to get values from search inputs first, then fall back to select elements
+    const subjectFilterInput = document.getElementById('filterSubjectInput');
+    const yearFilterInput = document.getElementById('filterYearInput');
+    const difficultyFilterInput = document.getElementById('filterDifficultyInput');
     const searchQuery = document.getElementById('searchQuestions');
 
-    if (!subjectFilter || !yearFilter || !difficultyFilter || !searchQuery) return questionsToFilter;
+    const subjectFilterSelect = document.getElementById('filterSubject');
+    const yearFilterSelect = document.getElementById('filterYear');
+    const difficultyFilterSelect = document.getElementById('filterDifficulty');
 
-    const subjectValue = subjectFilter.value;
-    const yearValue = yearFilter.value;
-    const difficultyValue = difficultyFilter.value;
-    const searchValue = searchQuery.value.toLowerCase();
+    // Get values from inputs (prioritize search inputs over selects)
+    const subjectValue = subjectFilterInput ? subjectFilterInput.value.toLowerCase() : (subjectFilterSelect ? subjectFilterSelect.value : 'all');
+    const yearValue = yearFilterInput ? yearFilterInput.value.toLowerCase() : (yearFilterSelect ? yearFilterSelect.value : 'all');
+    const difficultyValue = difficultyFilterInput ? difficultyFilterInput.value.toLowerCase() : (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
+    const searchValue = searchQuery ? searchQuery.value.toLowerCase() : '';
 
     return questionsToFilter.filter(question => {
-        const matchesSubject = subjectValue === 'all' || question.subject === subjectValue;
-        const matchesYear = yearValue === 'all' || question.academicYear === yearValue;
-        const matchesDifficulty = difficultyValue === 'all' || question.difficulty === difficultyValue;
+        const matchesSubject = subjectValue === 'all' || subjectValue === '' ||
+            (question.subject && question.subject.toLowerCase().includes(subjectValue));
+        const matchesYear = yearValue === 'all' || yearValue === '' ||
+            (question.academicYear && question.academicYear.toLowerCase().includes(yearValue));
+        const matchesDifficulty = difficultyValue === 'all' || difficultyValue === '' ||
+            (question.difficulty && question.difficulty.toLowerCase().includes(difficultyValue));
         const matchesSearch = !searchValue ||
-            question.question.toLowerCase().includes(searchValue) ||
-            question.explanation.toLowerCase().includes(searchValue) ||
-            question.topic.toLowerCase().includes(searchValue);
+            (question.question && question.question.toLowerCase().includes(searchValue)) ||
+            (question.explanation && question.explanation.toLowerCase().includes(searchValue)) ||
+            (question.topic && question.topic.toLowerCase().includes(searchValue));
 
         return matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
     });
@@ -531,56 +641,103 @@ function applyFilters(questionsToFilter = null) {
 // Update subject filters dropdown
 function updateSubjectFilters() {
     const filterSelect = document.getElementById('filterSubject');
-    if (!filterSelect) return;
+    const filterInput = document.getElementById('filterSubjectInput');
+    const suggestionsContainer = document.getElementById('filterSubjectSuggestions');
 
-    const uniqueSubjects = new Set(parsedQuestions.map(q => q.subject));
+    if (!filterSelect && !filterInput) return;
 
-    // Clear existing options except "All Subjects"
-    filterSelect.innerHTML = '<option value="all">All Subjects</option>';
-
-    // Add unique subjects
-    uniqueSubjects.forEach(subject => {
-        const option = document.createElement('option');
-        option.value = subject;
-        option.textContent = subject;
-        filterSelect.appendChild(option);
+    // Collect unique subjects from both question sets
+    const uniqueSubjects = new Set();
+    [...databaseQuestions, ...parsedQuestions].forEach(q => {
+        if (q.subject) uniqueSubjects.add(q.subject);
     });
+
+    // Update our global subjects set
+    uniqueSubjects.forEach(subject => subjects.add(subject));
+
+    if (filterInput) {
+        // Initialize search field if we have an input element
+        setupSearchField('filterSubjectInput', 'filterSubjectSuggestions', subjects, 'Search or enter subject...');
+    } else if (filterSelect) {
+        // Clear existing options except "All Subjects"
+        filterSelect.innerHTML = '<option value="all">All Subjects</option>';
+
+        // Add unique subjects
+        uniqueSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject;
+            option.textContent = subject;
+            filterSelect.appendChild(option);
+        });
+    }
 }
 
-// Update year filters dropdown
+// Update year filters dropdown with search functionality
 function updateYearFilters() {
     const filterSelect = document.getElementById('filterYear');
-    if (!filterSelect) return;
+    const filterInput = document.getElementById('filterYearInput');
+    const suggestionsContainer = document.getElementById('filterYearSuggestions');
 
-    const uniqueYears = new Set(parsedQuestions.map(q => q.academicYear));
+    if (!filterSelect && !filterInput) return;
 
-    // Clear existing options except "All Years"
-    filterSelect.innerHTML = '<option value="all">All Years</option>';
-
-    // Add unique years
-    uniqueYears.forEach(year => {
-        const option = document.createElement('option');
-        option.value = year;
-        option.textContent = year;
-        filterSelect.appendChild(option);
+    // Collect unique years from both question sets
+    const uniqueYears = new Set();
+    [...databaseQuestions, ...parsedQuestions].forEach(q => {
+        if (q.academicYear) uniqueYears.add(q.academicYear);
     });
+
+    // Update our global years set
+    uniqueYears.forEach(year => years.add(year));
+
+    if (filterInput) {
+        // Initialize search field if we have an input element
+        setupSearchField('filterYearInput', 'filterYearSuggestions', years, 'Search or enter year...');
+    } else if (filterSelect) {
+        // Clear existing options except "All Years"
+        filterSelect.innerHTML = '<option value="all">All Years</option>';
+
+        // Add unique years
+        uniqueYears.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            filterSelect.appendChild(option);
+        });
+    }
 }
 
-// Update difficulty filters dropdown
+// Update difficulty filters dropdown with search functionality
 function updateDifficultyFilters() {
     const filterSelect = document.getElementById('filterDifficulty');
-    if (!filterSelect) return;
+    const filterInput = document.getElementById('filterDifficultyInput');
+    const suggestionsContainer = document.getElementById('filterDifficultySuggestions');
 
-    // Clear existing options except "All Levels"
-    filterSelect.innerHTML = '<option value="all">All Levels</option>';
+    if (!filterSelect && !filterInput) return;
 
-    // Add difficulty levels
-    difficultyLevels.forEach(level => {
-        const option = document.createElement('option');
-        option.value = level;
-        option.textContent = level;
-        filterSelect.appendChild(option);
+    // Collect unique difficulties from both question sets
+    const uniqueDifficulties = new Set();
+    [...databaseQuestions, ...parsedQuestions].forEach(q => {
+        if (q.difficulty) uniqueDifficulties.add(q.difficulty);
     });
+
+    // Update our global difficulties set
+    uniqueDifficulties.forEach(difficulty => difficulties.add(difficulty));
+
+    if (filterInput) {
+        // Initialize search field if we have an input element
+        setupSearchField('filterDifficultyInput', 'filterDifficultySuggestions', difficulties, 'Search or enter difficulty...');
+    } else if (filterSelect) {
+        // Clear existing options except "All Levels"
+        filterSelect.innerHTML = '<option value="all">All Levels</option>';
+
+        // Add difficulty levels
+        uniqueDifficulties.forEach(level => {
+            const option = document.createElement('option');
+            option.value = level;
+            option.textContent = level;
+            filterSelect.appendChild(option);
+        });
+    }
 }
 
 // Edit question - Fixed to handle both database and uploaded questions
@@ -616,7 +773,8 @@ function editQuestion(index) {
     showEditModal(question, index);
 }
 
-// Show edit modal - Fixed to handle undefined question parameter
+
+// Modified edit modal to include search functionality
 function showEditModal(question, index) {
     // Check if question exists
     if (!question) {
@@ -643,36 +801,36 @@ function showEditModal(question, index) {
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
-                            <select id="editSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                ${Array.from(subjectList).map(subj => `<option value="${subj}" ${subj === (question.subject || '') ? 'selected' : ''}>${subj}</option>`).join('')}
-                            </select>
+                            <div class="relative">
+                                <input type="text" id="editSubject" value="${question.subject || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
+                                <div id="editSubjectSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
-                            <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                            <div class="relative">
+                                <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
+                                <div id="editYearSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
-                            <select id="editExamType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <option value="Board Exam" ${question.examType === 'Board Exam' ? 'selected' : ''}>Board Exam</option>
-                                <option value="University Exam" ${question.examType === 'University Exam' ? 'selected' : ''}>University Exam</option>
-                                <option value="Competitive Exam" ${question.examType === 'Competitive Exam' ? 'selected' : ''}>Competitive Exam</option>
-                                <option value="Mid-Term" ${question.examType === 'Mid-Term' ? 'selected' : ''}>Mid-Term</option>
-                                <option value="Final Exam" ${question.examType === 'Final Exam' ? 'selected' : ''}>Final Exam</option>
-                                <option value="Mock Test" ${question.examType === 'Mock Test' ? 'selected' : ''}>Mock Test</option>
-                                <option value="Practice Paper" ${question.examType === 'Practice Paper' ? 'selected' : ''}>Practice Paper</option>
-                            </select>
+                            <div class="relative">
+                                <input type="text" id="editExamType" value="${question.examType || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
+                                <div id="editExamTypeSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
-                            <select id="editDifficulty" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                ${difficultyLevels.map(level => `<option value="${level}" ${level === (question.difficulty || '') ? 'selected' : ''}>${level}</option>`).join('')}
-                            </select>
+                            <div class="relative">
+                                <input type="text" id="editDifficulty" value="${question.difficulty || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
+                                <div id="editDifficultySuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                            </div>
                         </div>
                     </div>
                     
@@ -719,8 +877,15 @@ function showEditModal(question, index) {
     `;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
 
+    // Initialize search fields for the edit modal
+    setTimeout(() => {
+        setupSearchField('editSubject', 'editSubjectSuggestions', subjects, 'Type to search or enter subject...');
+        setupSearchField('editYear', 'editYearSuggestions', years, 'Type to search or enter year...');
+        setupSearchField('editExamType', 'editExamTypeSuggestions', examTypes, 'Type to search or enter exam type...');
+        setupSearchField('editDifficulty', 'editDifficultySuggestions', difficulties, 'Type to search or enter difficulty...');
+    }, 100);
+}
 
 // Add a variable to store which question set we're editing
 let currentEditingQuestionSet = 'database';
@@ -1562,17 +1727,34 @@ if (!document.querySelector('#toast-animation-styles')) {
     document.head.appendChild(style);
 }
 
-// ==================== EVENT LISTENERS FOR FILTERS ====================
+// Initialize search fields after DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
     // Add event listeners for filter changes
-    const subjectFilter = document.getElementById('filterSubject');
-    const yearFilter = document.getElementById('filterYear');
-    const difficultyFilter = document.getElementById('filterDifficulty');
+    const subjectFilterInput = document.getElementById('filterSubjectInput');
+    const yearFilterInput = document.getElementById('filterYearInput');
+    const difficultyFilterInput = document.getElementById('filterDifficultyInput');
     const searchInput = document.getElementById('searchQuestions');
 
-    if (subjectFilter) subjectFilter.addEventListener('change', updateQuestionsList);
-    if (yearFilter) yearFilter.addEventListener('change', updateQuestionsList);
-    if (difficultyFilter) difficultyFilter.addEventListener('change', updateQuestionsList);
+    // Initialize search functionality for filter inputs if they exist
+    if (subjectFilterInput) {
+        setupSearchField('filterSubjectInput', 'filterSubjectSuggestions', subjects, 'Search or enter subject...');
+    }
+    if (yearFilterInput) {
+        setupSearchField('filterYearInput', 'filterYearSuggestions', years, 'Search or enter year...');
+    }
+    if (difficultyFilterInput) {
+        setupSearchField('filterDifficultyInput', 'filterDifficultySuggestions', difficulties, 'Search or enter difficulty...');
+    }
+
+    // Also handle traditional select elements
+    const subjectFilterSelect = document.getElementById('filterSubject');
+    const yearFilterSelect = document.getElementById('filterYear');
+    const difficultyFilterSelect = document.getElementById('filterDifficulty');
+
+    if (subjectFilterSelect) subjectFilterSelect.addEventListener('change', updateQuestionsList);
+    if (yearFilterSelect) yearFilterSelect.addEventListener('change', updateQuestionsList);
+    if (difficultyFilterSelect) difficultyFilterSelect.addEventListener('change', updateQuestionsList);
+
     if (searchInput) searchInput.addEventListener('input', updateQuestionsList);
 
     // Initialize tab functionality
@@ -1580,4 +1762,53 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Load questions when page loads
     loadQuestionsFromAPI();
+
+    // Fetch existing values for search suggestions
+    fetchExistingValuesForFilters();
 });
+
+// Function to fetch existing values for filters
+async function fetchExistingValuesForFilters() {
+    try {
+        const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Clear existing sets first
+            subjects.clear();
+            years.clear();
+            examTypes.clear();
+            difficulties.clear();
+
+            // Extract unique values from all questions
+            result.data.forEach(question => {
+                if (question.subject) subjects.add(question.subject);
+                if (question.academicYear) years.add(question.academicYear.toString());
+                if (question.examType) examTypes.add(question.examType);
+                if (question.difficulty) difficulties.add(question.difficulty);
+            });
+
+            // Add common default values
+            const defaultSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'];
+            const defaultYears = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'];
+            const defaultExamTypes = ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'];
+            const defaultDifficulties = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+
+            defaultSubjects.forEach(subject => subjects.add(subject));
+            defaultYears.forEach(year => years.add(year));
+            defaultExamTypes.forEach(examType => examTypes.add(examType));
+            defaultDifficulties.forEach(difficulty => difficulties.add(difficulty));
+        }
+    } catch (error) {
+        console.error('Error fetching existing values for filters:', error);
+        // Add default values in case of error
+        ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'English', 'History', 'Geography', 'Economics', 'Accountancy', 'Business Studies', 'Political Science', 'Psychology', 'Other'].forEach(subject => subjects.add(subject));
+        ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'].forEach(year => years.add(year));
+        ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'].forEach(examType => examTypes.add(examType));
+        ['Beginner', 'Intermediate', 'Advanced', 'Expert'].forEach(difficulty => difficulties.add(difficulty));
+    }
+}
