@@ -1,0 +1,560 @@
+<!-- File: CodingTerminals-TestSeries/viewer/practice-interface.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Test Series - Coding Terminals</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .question-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background-color: #ffffff;
+            transition: all 0.2s ease;
+        }
+
+
+        /* ... existing styles ... */
+
+        .question-number-box {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            /* Prevent shrinking */
+        }
+
+        /* ... existing question status styles ... */
+
+        /* Legend specific styles */
+        #legendNotVisited,
+        #legendNotAnswered,
+        #legendAnswered,
+        #legendMarked,
+        #legendAnsweredMarked {
+            margin-bottom: 0.5rem !important;
+            /* Override any conflicting margins */
+        }
+
+        /* Ensure proper text wrapping and spacing */
+        .text-xs {
+            font-size: 0.75rem;
+            line-height: 1.25;
+            word-break: break-word;
+            max-width: 80px;
+            /* Limit width to prevent overflow */
+        }
+
+        /* Improve grid spacing */
+        .grid.grid-cols-5.gap-3 {
+            row-gap: 0.75rem;
+            column-gap: 0.75rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .question-number-box {
+                width: 30px;
+                height: 30px;
+                font-size: 0.875rem;
+            }
+
+            .text-xs {
+                font-size: 0.625rem;
+                max-width: 60px;
+            }
+        }
+
+        .question-not-visited {
+            background-color: #f9fafb;
+            border-color: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .question-not-answered {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .question-answered {
+            background-color: #d1fae5;
+            border-color: #10b981;
+            color: #10b981;
+        }
+
+        .question-marked-review {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .question-answered-marked {
+            background-color: #d1fae5;
+            border-color: #10b981;
+            color: #10b981;
+            position: relative;
+        }
+
+        .question-answered-marked::after {
+            content: "★";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 12px;
+            color: #f59e0b;
+        }
+
+        .option-item {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            background-color: #f9fafb;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .option-selected {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .navigation-btn {
+            transition: all 0.3s ease;
+        }
+
+        .navigation-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .pagination-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #d1d5db;
+        }
+
+        .dot.active {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <h1
+                    class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                    📚 Real-Time Test Series
+                </h1>
+                <div id="testHeaderInfo" class="flex items-center gap-6 hidden">
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600 font-semibold">⏱️ Time:</span>
+                        <span id="timerDisplay" class="timer-display">01:00:00</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-gray-600 font-semibold">❓ Questions:</span>
+                        <span id="answeredCount" class="font-bold text-green-600">0</span>
+                        <span class="text-gray-400">/</span>
+                        <span id="totalCount" class="font-bold">0</span>
+                    </div>
+                    <button onclick="submitTest()" id="submitTestButton"
+                        class="px-6 py-2 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                        🚀 Submit Test
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <!-- Left Sidebar - Question Navigator -->
+            <aside class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-xl p-6 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
+                    <h2 class="text-xl font-bold text-blue-600 mb-4 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Question Navigator</span>
+                    </h2>
+
+                    <!-- ... existing code ... -->
+                    <div class="mb-4">
+                        <div class="grid grid-cols-5 gap-3">
+                            <div class="flex flex-col items-center text-center">
+                                <div class="question-number-box question-not-visited mb-2" id="legendNotVisited">1</div>
+                                <span class="text-xs text-gray-600 leading-tight">Not Visited</span>
+                            </div>
+                            <div class="flex flex-col items-center text-center">
+                                <div class="question-number-box question-not-answered mb-2" id="legendNotAnswered">2
+                                </div>
+                                <span class="text-xs text-gray-600 leading-tight">Not Answered</span>
+                            </div>
+                            <div class="flex flex-col items-center text-center">
+                                <div class="question-number-box question-answered mb-2" id="legendAnswered">3</div>
+                                <span class="text-xs text-gray-600 leading-tight">Answered</span>
+                            </div>
+                            <div class="flex flex-col items-center text-center">
+                                <div class="question-number-box question-marked-review mb-2" id="legendMarked">4</div>
+                                <span class="text-xs text-gray-600 leading-tight">Marked</span>
+                            </div>
+                            <div class="flex flex-col items-center text-center">
+                                <div class="question-number-box question-answered-marked mb-2"
+                                    id="legendAnsweredMarked">5</div>
+                                <span class="text-xs text-gray-600 leading-tight">Ans &amp; Marked</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- ... existing code ... -->
+
+                    <div id="questionNavigator" class="grid grid-cols-5 gap-2">
+                        <!-- Question boxes will be generated here -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Content - Question Display -->
+            <section class="lg:col-span-3">
+                <div class="bg-white rounded-2xl shadow-xl p-8">
+
+                    <!-- Test Configuration Section -->
+                    <div id="testConfigSection" class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Configure Your Test</h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
+                                <select id="subjectSelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Subjects</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Academic Year</label>
+                                <select id="yearSelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Years</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Difficulty Level</label>
+                                <select id="difficultySelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Level</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type</label>
+                                <select id="examTypeSelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="all">Exam Types</option>
+                                    <!-- Options will be populated from database -->
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Number of
+                                    Questions</label>
+                                <select id="questionCountSelect"
+                                    class="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:outline-none transition-all">
+                                    <option value="10">10 Ques</option>
+                                    <option value="20">20 Ques</option>
+                                    <option value="30" selected>30 Ques</option>
+                                    <option value="50">50 Ques</option>
+                                    <option value="100">100 Ques</option>
+                                    <option value="200">200 Ques</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Random Question Filter Section -->
+                        <div class="bg-blue-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
+                            <h3 class="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
+                                <span>🎲</span>
+                                <span>Random Settings</span>
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="randomOrderCheckbox"
+                                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                        <span class="text-gray-700 font-medium">Random Order</span>
+                                    </label>
+                                    <p class="text-xs text-gray-500 mt-1">Shuffle questions</p>
+                                </div>
+
+                                <div>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="randomSelectionCheckbox"
+                                            class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                                        <span class="text-gray-700 font-medium">Random Selection</span>
+                                    </label>
+                                    <p class="text-xs text-gray-500 mt-1">Pick from database</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Information Section -->
+                        <div class="bg-green-50 rounded-xl p-4 mb-6 border-2 border-green-200">
+                            <h3 class="text-lg font-bold text-green-800 mb-3 flex items-center gap-2">
+                                <span>📋</span>
+                                <span>Test Information</span>
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="bg-white p-3 rounded-lg border border-green-200">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600" id="calculatedTime">00:00</div>
+                                        <div class="text-sm text-gray-600">Total Time</div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-3 rounded-lg border border-green-200">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600" id="totalMarks">0</div>
+                                        <div class="text-sm text-gray-600">Total Marks</div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-3 rounded-lg border border-green-200">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600">1 min</div>
+                                        <div class="text-sm text-gray-600">Per Question</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3 text-sm text-green-700">
+                                <p>✅ 1 mark per question | ❌ No negative marking</p>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button onclick="startTest()"
+                                class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105">
+                                🚀 Start Test Now
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ... existing code ... -->
+
+                    <!-- Question Display Section (Initially Hidden) -->
+                    <div id="questionSection" class="hidden">
+                        <!-- Question Header -->
+                        <div
+                            class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-200 gap-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 mb-3">Question <span
+                                        id="currentQuestionDisplay">1</span></h2>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold whitespace-nowrap">
+                                        Subject: <span id="questionSubject">Mathematics</span>
+                                    </span>
+                                    <span
+                                        class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold whitespace-nowrap">
+                                        Year: <span id="questionYear">2024</span>
+                                    </span>
+                                    <span
+                                        class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold whitespace-nowrap">
+                                        Difficulty: <span id="questionDifficulty">Medium</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-3">
+                                <button onclick="toggleMarkForReview()" id="markReviewBtn"
+                                    class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors whitespace-nowrap">
+                                    📝 Mark for Review
+                                </button>
+                                <div class="text-right">
+                                    <span class="text-sm font-semibold text-gray-600">Marks: </span>
+                                    <span class="text-lg font-bold text-green-600">1</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question Content -->
+                        <div id="questionContent" class="mb-8">
+                            <!-- Question will be loaded here -->
+                        </div>
+
+                        <!-- Clear Selection Button Below Options -->
+                        <div class="mb-8 text-center">
+                            <button onclick="clearSelection()" id="clearSelectionBtn"
+                                class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors whitespace-nowrap inline-flex items-center gap-2">
+                                <span>❌</span>
+                                <span>Clear Selection</span>
+                            </button>
+                        </div>
+                        <!-- Navigation Controls -->
+                        <div class="flex justify-between items-center pt-6 border-t border-gray-200">
+                            <button onclick="prevQuestion()" id="prevQuestionBtn"
+                                class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-all navigation-btn disabled:opacity-50"
+                                disabled>
+                                ⬅️ Previous
+                            </button>
+
+                            <div class="flex items-center gap-4">
+                                <span class="text-gray-600">Page <span id="currentPage">1</span> of <span
+                                        id="totalPages">1</span></span>
+                                <div class="pagination-dots" id="paginationDots">
+                                    <!-- Pagination dots will be generated here -->
+                                </div>
+                            </div>
+
+                            <button onclick="nextQuestion()" id="nextQuestionBtn"
+                                class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all navigation-btn">
+                                Next ➡️
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Results Modal -->
+    <!-- Results Modal -->
+    <div id="resultsModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 transform transition-all">
+            <div class="text-center">
+                <div class="text-6xl mb-4">🎉</div>
+                <h3 class="text-3xl font-bold text-green-600 mb-6">Test Completed!</h3>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-blue-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-blue-600" id="resultTotal">0</div>
+                        <div class="text-sm text-gray-600">Total Questions</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-green-600" id="resultAnswered">0</div>
+                        <div class="text-sm text-gray-600">Answered</div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-yellow-600" id="resultMarked">0</div>
+                        <div class="text-sm text-gray-600">Marked for Review</div>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-red-600" id="resultUnanswered">0</div>
+                        <div class="text-sm text-gray-600">Not Answered</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-indigo-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-indigo-600" id="resultScore">0</div>
+                        <div class="text-sm text-gray-600">Score</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-xl">
+                        <div class="text-2xl font-bold text-purple-600" id="resultMaxScore">0</div>
+                        <div class="text-sm text-gray-600">Max Score</div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-6">
+                    <div class="text-lg font-semibold text-gray-700">Time Taken: <span id="timeTaken"
+                            class="text-blue-600">00:00:00</span></div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="text-xl font-bold text-gray-800">Accuracy: <span id="accuracyRate"
+                            class="text-green-600">0%</span></div>
+                    <div class="text-lg text-gray-600 mt-2">Final Score: <span id="percentageResult"
+                            class="text-blue-600 font-bold">0%</span></div>
+                </div>
+
+                <div class="flex justify-center gap-4">
+                    <button onclick="reviewAnswers()"
+                        class="px-6 py-3 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-all">
+                        📖 Review Answers
+                    </button>
+                    <button onclick="restartTest()"
+                        class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all">
+                        🔄 Restart Test
+                    </button>
+                    <button onclick="closeResults()"
+                        class="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-all">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration -->
+    <script src="../../config/app.config.js"></script>
+    <script src="practice-interface.js"></script>
+</body>
+
+</html>

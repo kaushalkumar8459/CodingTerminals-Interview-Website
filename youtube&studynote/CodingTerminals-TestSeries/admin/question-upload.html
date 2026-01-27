@@ -1,0 +1,369 @@
+<!-- File: CodingTerminals-TestSeries/admin/question-upload.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Paper Upload - Coding Terminals Admin</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Quill Rich Text Editor -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+
+    <!-- Dropzone.js for drag and drop -->
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .dropzone {
+            border: 2px dashed #3b82f6;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            min-height: 200px;
+            cursor: pointer;
+        }
+
+        .dropzone:hover {
+            background-color: #eff6ff;
+        }
+
+        .file-preview {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+            background-color: #f9fafb;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            transition: width 0.3s ease;
+        }
+
+        .question-preview {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+            background-color: #ffffff;
+        }
+
+        .question-option {
+            padding: 8px 12px;
+            margin: 4px 0;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background-color: #f9fafb;
+        }
+
+        .correct-answer {
+            background-color: #d1fae5;
+            border-color: #10b981;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+
+    <!-- Authentication Check Script -->
+    <script>
+        // Check authentication using centralized AuthUtils
+        if (typeof AuthUtils !== 'undefined') {
+            AuthUtils.requireAuth(window.location.href);
+        }
+    </script>
+
+    <!-- Header with Navigation -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-center mb-4">
+                <h1
+                    class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                    📚 Question Paper Management System
+                </h1>
+                <div class="flex items-center gap-4">
+                    <div id="userInfo"></div>
+                    <button onclick="logout()"
+                        class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-300 shadow-md hover:shadow-lg">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="flex gap-3 border-t border-gray-200 pt-4">
+                <a href="../../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html"
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all duration-300 hover:shadow-md">
+                    <span class="text-2xl">🎬</span>
+                    <span class="font-semibold text-sm">Video Playlist</span>
+                </a>
+                <a href="../../CodingTerminals-StudyNotes/admin/study-notes-admin.html"
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all duration-300 hover:shadow-md">
+                    <span class="text-2xl">📝</span>
+                    <span class="font-semibold text-sm">Study Notes</span>
+                </a>
+                <a href="question-upload.html"
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg transform hover:scale-105 transition-all duration-300">
+                    <span class="text-2xl">📚</span>
+                    <span class="font-semibold text-sm">Question Papers</span>
+                </a>
+                <a href="manual-question-entry.html"
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-300 hover:shadow-md">
+                    <span class="text-2xl">✍️</span>
+                    <span class="font-semibold text-sm">Manual Entry</span>
+                </a>
+                <a href="../../backup-manager/backup-manager.html"
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 hover:shadow-md">
+                    <span class="text-2xl">💾</span>
+                    <span class="font-semibold text-sm">Backup Manager</span>
+                </a>
+                <div
+                    class="flex flex-col items-center gap-2 px-6 py-3 rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed opacity-50">
+                    <span class="text-2xl">📊</span>
+                    <span class="font-semibold text-sm">Analytics</span>
+                    <span class="text-xs">(Coming Soon)</span>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+
+        <!-- Action Buttons -->
+        <div class="flex gap-4 mb-6 flex-wrap">
+            <button onclick="saveAllQuestions()"
+                class="px-6 py-3 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                💾 Save All Questions
+            </button>
+
+            <button onclick="syncWithMongoDB()"
+                class="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                🔄 Sync with MongoDB
+            </button>
+
+            <button onclick="window.open('../viewer/practice-interface.html', '_blank')"
+                class="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                👁️ Preview Practice Interface
+            </button>
+        </div>
+
+        <!-- Main Grid Layout - Now only one column for the right section -->
+        <div class="grid grid-cols-1 gap-6">
+
+            <!-- Full Width Section - Question Management -->
+            <section class="col-span-1">
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-blue-600 flex items-center gap-2">
+                            <span>📋</span>
+                            <span>Questions Management</span>
+                        </h2>
+                        <div class="text-sm text-gray-500">
+                            <span id="questionCount">0</span> questions loaded
+                        </div>
+                    </div>
+
+
+                    <!-- ... existing code ... -->
+
+                    <!-- Bulk Import Wizard -->
+                    <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 class="font-semibold text-blue-800 mb-2">🔄 Bulk Import Wizard</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="importFromCSV()"
+                                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                                📄 Import from CSV
+                            </button>
+                            <button onclick="importFromExcel()"
+                                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                                📊 Import from Excel
+                            </button>
+                            <button onclick="importFromText()"
+                                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                                📝 Import from Text
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Download Sample Files -->
+                    <div class="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <h3 class="font-semibold text-purple-800 mb-2">💾 Download Sample Files</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <a href="#" onclick="downloadSampleCSV(); return false;"
+                                class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
+                                📄 CSV Sample
+                            </a>
+                            <a href="#" onclick="downloadSampleExcel(); return false;"
+                                class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
+                                📊 Excel Sample
+                            </a>
+                            <a href="#" onclick="downloadSampleTXT(); return false;"
+                                class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
+                                📝 Text Sample
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Question Filters -->
+                    <!-- Question Filters -->
+                    <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Subject</label>
+                            <div class="relative">
+                                <input type="text" id="filterSubjectInput" placeholder="Search or enter subject..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm">
+                                <div id="filterSubjectSuggestions"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                                    <!-- Suggestions will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Year</label>
+                            <div class="relative">
+                                <input type="text" id="filterYearInput" placeholder="Search or enter year..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm">
+                                <div id="filterYearSuggestions"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                                    <!-- Suggestions will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Difficulty</label>
+                            <div class="relative">
+                                <input type="text" id="filterDifficultyInput"
+                                    placeholder="Search or enter difficulty..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm">
+                                <div id="filterDifficultySuggestions"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto">
+                                    <!-- Suggestions will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Search</label>
+                            <input type="text" id="searchQuestions" placeholder="Search questions..."
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Tab Navigation -->
+                    <div class="mb-4 border-b border-gray-200">
+                        <nav class="flex space-x-8">
+                            <button id="dbTab"
+                                class="tab-button active px-1 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600">
+                                Database Questions
+                            </button>
+                            <button id="uploadTab"
+                                class="tab-button px-1 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent">
+                                Uploaded Questions
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Questions List -->
+                    <div id="questionsContainer" class="space-y-4 flex-grow overflow-y-auto">
+                        <div class="text-center py-8 text-gray-400" id="emptyState">
+                            <div class="text-4xl mb-4">📚</div>
+                            <h3 class="text-lg font-semibold">No questions uploaded yet</h3>
+                            <p class="text-sm">Upload question papers or import questions to get started</p>
+                        </div>
+                        <!-- Questions will be rendered here -->
+                    </div>
+                    <!-- ... existing code ... -->
+
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 transform transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="confirmModalTitle" class="text-xl font-bold text-gray-800">Confirm Action</h3>
+                <button onclick="closeConfirmModal()"
+                    class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none">
+                    ×
+                </button>
+            </div>
+            <div id="confirmModalMessage" class="text-gray-600 mb-6">
+                Are you sure you want to proceed?
+            </div>
+            <div class="flex gap-3 justify-end sticky bottom-0 bg-white pt-4 border-t border-gray-200">
+                <button onclick="closeConfirmModal()"
+                    class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-all">
+                    Cancel
+                </button>
+                <button id="confirmModalBtn" onclick="confirmModalAction()"
+                    class="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden File Input for Import -->
+    <input type="file" id="importFileInput" accept=".csv,.xlsx,.xls,.txt,.pdf,.doc,.docx" class="hidden"
+        onchange="handleFileImport(event)">
+
+    <!-- Scripts -->
+    <script src="../../config/app.config.js"></script>
+    <script src="../../auth/auth.js"></script>
+    <script src="question-upload.js"></script>
+
+    <script>
+        // Display user info in header
+        if (typeof AuthUtils !== 'undefined') {
+            AuthUtils.displayUserInfo('userInfo');
+        }
+
+        // Initialize Dropzone after page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof Dropzone !== 'undefined') {
+                initDropzone();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,362 @@
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 md:p-8">
+  <div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-2">
+            <span class="text-blue-600">💼</span> LinkedIn Posts
+          </h1>
+          <p class="text-gray-600 mt-1">Manage your LinkedIn content schedule and analytics</p>
+        </div>
+        <div class="flex gap-2">
+          @if(canCreate){
+          <button [routerLink]="['/linkedin/create']"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 shadow-md">
+            <span>➕</span> Create Post
+          </button>
+          }
+          <button (click)="clearFilters()"
+            class="px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-50 border border-gray-300 transition-colors font-semibold flex items-center gap-2">
+            <span>🔄</span> Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if(error){
+    <div
+      class="mb-6 p-4 bg-red-100 border-l-4 border-red-600 text-red-700 rounded-r-lg shadow-md flex items-center gap-3 animate-slide-in">
+      <span class="text-xl">❌</span>
+      <div>
+        <p class="font-semibold">Error</p>
+        <p class="text-sm">{{ error }}</p>
+      </div>
+    </div>
+    }
+
+    @if(success){
+    <div
+      class="mb-6 p-4 bg-green-100 border-l-4 border-green-600 text-green-700 rounded-r-lg shadow-md flex items-center gap-3 animate-slide-in">
+      <span class="text-xl">✅</span>
+      <div>
+        <p class="font-semibold">Success</p>
+        <p class="text-sm">{{ success }}</p>
+      </div>
+    </div>
+    }
+
+    <!-- Filters Section -->
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Status Filter -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Filter by Status</label>
+          <div class="flex flex-wrap gap-2">
+            <button (click)="filterByStatus('all')" [class.ring-2]="selectedStatus === 'all'"
+              [class.ring-blue-500]="selectedStatus === 'all'" [class.bg-blue-50]="selectedStatus === 'all'"
+              class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400">
+              All Posts
+            </button>
+            @for (status of statusOptions; track status) {
+            <button (click)="filterByStatus(status)" [class.ring-2]="selectedStatus === status"
+              [class.ring-blue-500]="selectedStatus === status" [class.bg-blue-50]="selectedStatus === status"
+              class="px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium transition-all hover:border-blue-400 capitalize">
+              {{ status }}
+            </button>
+            }
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Search Posts</label>
+          <div class="flex gap-2">
+            <input [(ngModel)]="searchQuery" (keyup.enter)="onSearch(searchQuery)" type="text"
+              placeholder="Search by title or content..."
+              class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <button (click)="onSearch(searchQuery)"
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+              🔍 Search
+            </button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+          <p class="text-sm text-gray-600 mb-1">Total Posts</p>
+          <p class="text-2xl font-bold text-blue-600">{{ totalPosts }}</p>
+          <p class="text-xs text-gray-500 mt-2">Page {{ currentPage }} of {{ totalPages }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    @if(loading){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <div class="inline-block animate-spin">
+        <span class="text-4xl">⏳</span>
+      </div>
+      <p class="text-gray-600 mt-4 font-semibold">Loading posts...</p>
+    </div>
+    }
+
+
+    <!-- Empty State -->
+    @if(!loading && posts.length === 0){
+    <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+      <p class="text-5xl mb-4">📭</p>
+      <h3 class="text-xl font-semibold text-gray-700 mb-2">No posts found</h3>
+      <p class="text-gray-600 mb-6">Start creating your first LinkedIn post to get started!</p>
+      @if(canCreate){
+      <button [routerLink]="['/linkedin/create']"
+        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center gap-2">
+        <span>➕</span> Create First Post
+      </button>
+      }
+
+    </div>
+    }
+
+    <!-- Posts Grid -->
+    @if(!loading && posts.length > 0){
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      @for(post of posts; track post){
+      <div
+        class="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow overflow-hidden border border-gray-100">
+
+        <!-- Post Header -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-100">
+          <div class="flex justify-between items-start gap-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-gray-900 line-clamp-2">{{ post.title }}</h3>
+              <p class="text-sm text-gray-600 mt-1">{{ formatRelativeTime(post.createdAt) }}</p>
+            </div>
+            <div [ngClass]="getStatusBadgeClass(post.status)" class="whitespace-nowrap">
+              {{ getStatusIcon(post.status) }} {{ post.status | uppercase }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Post Image (if exists) -->
+        @if(post.imageUrl){
+        <div class="h-48 bg-gray-200 overflow-hidden">
+          <img [src]="post.imageUrl" [alt]="post.title"
+            class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+        </div>
+        }
+
+        <!-- Post Content -->
+        <div class="p-4">
+          <p class="text-gray-700 line-clamp-3 mb-4">{{ post.content }}</p>
+
+          <!-- Hashtags -->
+          @if(post.hashtags && post.hashtags.length > 0){
+          <div class="flex flex-wrap gap-2 mb-4">
+            @for(tag of post.hashtags; track tag){
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-semibold">
+              {{ tag }}
+            </span>
+            }
+          </div>
+          }
+
+
+          <!-- Analytics -->
+          <div class="grid grid-cols-4 gap-2 py-4 border-y border-gray-100">
+            <div class="text-center">
+              <p class="text-sm font-semibold text-gray-900">{{ post.impressions }}</p>
+              <p class="text-xs text-gray-600">Views</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm font-semibold text-gray-900">{{ post.likes }}</p>
+              <p class="text-xs text-gray-600">Likes</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm font-semibold text-gray-900">{{ post.comments }}</p>
+              <p class="text-xs text-gray-600">Comments</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm font-semibold text-gray-900">{{ post.shares }}</p>
+              <p class="text-xs text-gray-600">Shares</p>
+            </div>
+          </div>
+
+          <!-- Post Meta Info -->
+          <div class="mt-4 text-xs text-gray-600 space-y-1">
+            @if(post.status === 'scheduled' && post.scheduledAt){
+            <div>
+              <p class="font-semibold">⏰ Scheduled for: <span class="text-blue-600">{{ formatDate(post.scheduledAt)
+                  }}</span></p>
+            </div>
+            }
+
+            @if(post.status === 'published' && post.publishedAt){
+            <div>
+              <p class="font-semibold">📤 Published: <span class="text-green-600">{{ formatDate(post.publishedAt)
+                  }}</span></p>
+            </div>
+            }
+
+            <div>
+              <p>Created by: <span class="font-semibold">{{ post.createdBy }}</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        @if(!isViewer){
+        <div class="bg-gray-50 px-4 py-3 border-t border-gray-100 flex flex-wrap gap-2">
+          <!-- Edit Button -->
+          @if(canEdit){
+          <button [routerLink]="['/linkedin/edit', post.id]"
+            class="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold flex items-center justify-center gap-1">
+            <span>✏️</span> Edit
+          </button>
+          }
+
+          <!-- Schedule/Publish Button -->
+          @if(post.status === 'draft'){
+          <button (click)="openScheduleModal(post)"
+            class="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-semibold flex items-center justify-center gap-1">
+            <span>⏰</span> Schedule
+          </button>
+          }
+
+          @if(post.status === 'scheduled'){
+          <button (click)="publishPost(post)" [disabled]="post.isPublishing"
+            class="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold flex items-center justify-center gap-1 disabled:opacity-50">
+            <span>{{ post.isPublishing ? '⏳' : '✅' }}</span> Publish
+          </button>
+          }
+
+
+          <!-- Archive Button -->
+          @if(post.status !== 'archived'){
+          <button (click)="archivePost(post)"
+            class="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-semibold flex items-center justify-center gap-1">
+            <span>📦</span> Archive
+          </button>
+          }
+
+
+          <!-- Delete Button -->
+          @if(canDelete){
+          <button (click)="confirmDelete(post)"
+            class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold flex items-center justify-center gap-1">
+            <span>🗑️</span> Delete
+          </button>
+          }
+
+        </div>
+        }
+
+        <!-- Viewer Mode -->
+        @if(isViewer){
+        <div class="bg-gray-50 px-4 py-3 border-t border-gray-100 text-center text-sm text-gray-600 font-semibold">
+          👁️ View Only Mode
+        </div>
+        }
+
+      </div>
+      }
+    </div>
+    }
+
+    <!-- Pagination -->
+    @if(!loading && posts.length > 0 && totalPages > 1){
+    <div class="flex justify-center items-center gap-2 mb-8">
+      <button (click)="previousPage()" [disabled]="currentPage === 1"
+        class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+        ← Previous
+      </button>
+
+      <div class="flex gap-1">
+        @for (page of getPageNumbers(); track page) {
+        <button (click)="goToPage(page)" [class.bg-blue-600]="page === currentPage"
+          [class.text-white]="page === currentPage" [class.bg-white]="page !== currentPage"
+          [class.text-gray-700]="page !== currentPage" [class.border]="page !== currentPage"
+          [class.border-gray-300]="page !== currentPage"
+          class="px-3 py-2 rounded-lg hover:bg-blue-500 hover:text-white transition-colors font-semibold">
+          {{ page }}
+        </button>
+        }
+      </div>
+
+      <button (click)="nextPage()" [disabled]="currentPage === totalPages"
+        class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
+        Next →
+      </button>
+    </div>
+    }
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  @if(showDeleteConfirm){
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 animate-scale-up">
+      <div class="text-center">
+        <p class="text-5xl mb-4">⚠️</p>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Delete Post?</h3>
+        <p class="text-gray-600 mb-6">
+          Are you sure you want to delete "<span class="font-semibold">{{ postToDelete?.title }}</span>"? This action
+          cannot be undone.
+        </p>
+        <div class="flex gap-3">
+          <button (click)="cancelDelete()"
+            class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+            Cancel
+          </button>
+          <button (click)="deletePost()" [disabled]="postToDelete?.isDeleting"
+            class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50">
+            {{ postToDelete?.isDeleting ? '⏳ Deleting...' : '🗑️ Delete' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- Schedule Modal -->
+  @if(showScheduleModal){
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-scale-up">
+      <h3 class="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+        <span>⏰</span> Schedule Post
+      </h3>
+      <p class="text-gray-600 mb-6">
+        Schedule "<span class="font-semibold">{{ postToSchedule?.title }}</span>" for publication
+      </p>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Date & Time</label>
+          <input [(ngModel)]="scheduleDateTime" type="datetime-local"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            [min]="getMinDateTime()">
+          <p class="text-xs text-gray-600 mt-1">💡 Select a future date and time</p>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p class="text-sm text-blue-900">
+            <span class="font-semibold">Selected:</span>
+            {{ scheduleDateTime ? (scheduleDateTime | date:'medium') : 'Not selected' }}
+          </p>
+        </div>
+
+        <div class="flex gap-3">
+          <button (click)="closeScheduleModal()"
+            class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+            Cancel
+          </button>
+          <button (click)="schedulePostAction()" [disabled]="!scheduleDateTime"
+            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50">
+            Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>

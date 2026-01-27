@@ -1,0 +1,30 @@
+<div class="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+  @for (toast of toasts; track toast.id) {
+  <div [ngClass]="getToastClass(toast.type)"
+    class="animate-slide-in rounded-lg shadow-lg p-4 flex items-start gap-3 backdrop-blur-sm">
+
+    <!-- Icon -->
+    <span class="text-xl flex-shrink-0">
+      {{ getToastIcon(toast.type) }}
+    </span>
+
+    <!-- Message -->
+    <div class="flex-1">
+      <p class="font-semibold">
+        {{ getToastTitle(toast.type) }}
+      </p>
+      <p class="text-sm mt-1">
+        {{ toast.message }}
+      </p>
+    </div>
+
+    <!-- Close Button -->
+    @if (toast.dismissible) {
+    <button (click)="removeToast(toast.id)" class="text-xl flex-shrink-0 hover:opacity-70 transition-opacity">
+      ✕
+    </button>
+    }
+
+  </div>
+  }
+</div>

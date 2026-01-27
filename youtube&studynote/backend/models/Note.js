@@ -33,7 +33,6 @@ const noteSchema = new mongoose.Schema({
     }],
     type: {
         type: String,
-        enum: ['rich', 'markdown', 'plain'],
         default: 'rich'
     },
     date: {

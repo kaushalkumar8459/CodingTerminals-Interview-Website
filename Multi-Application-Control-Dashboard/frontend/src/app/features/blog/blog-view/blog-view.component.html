@@ -1,0 +1,67 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">✍️ {{ post?.title }}</h1>
+    <a routerLink="/blog" class="btn-secondary">← Back</a>
+  </div>
+
+  <!-- Article Container -->
+  @if(post){
+  <div class="bg-white rounded-lg shadow-md p-8 max-w-4xl">
+    <!-- Metadata -->
+    <div class="mb-6 pb-6 border-b border-gray-200">
+      <span [class]="post.status === 'published' ? 'badge-success' : 'badge-warning'">
+        {{ post.status }}
+      </span>
+      <p class="text-gray-600 text-sm mt-2">By {{ post.author }} • {{ post.createdAt | date }}</p>
+    </div>
+
+    <!-- Excerpt -->
+    <p class="text-lg text-gray-700 italic mb-6">{{ post.excerpt }}</p>
+
+    <!-- Content -->
+    <div class="prose prose-lg max-w-none mb-6 text-gray-700 leading-relaxed">
+      {{ post.content }}
+    </div>
+
+    <!-- Tags -->
+    @if(post.tags && post.tags.length > 0){
+    <div class="mb-6 flex flex-wrap gap-2">
+      @for (tag of post.tags; track $index) {
+      <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+        #{{ tag }}
+      </span>
+      }
+    </div>
+    }
+
+    <!-- Engagement Stats -->
+    <div class="mb-6 grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Views</p>
+        <p class="text-2xl font-bold text-gray-900">{{ post.views }}</p>
+      </div>
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Likes</p>
+        <p class="text-2xl font-bold text-red-500">❤️ {{ post.likes }}</p>
+      </div>
+      <div class="text-center">
+        <p class="text-gray-600 text-sm">Comments</p>
+        <p class="text-2xl font-bold text-blue-500">💬 {{ post.comments }}</p>
+      </div>
+    </div>
+
+    <!-- Share Buttons -->
+    <div class="flex flex-wrap gap-2">
+      <button (click)="shareOnSocial('twitter')"
+        class="px-4 py-2 bg-blue-400 text-white rounded-lg hover:bg-blue-500">𝕏 Twitter</button>
+      <button (click)="shareOnSocial('facebook')"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">f Facebook</button>
+      <button (click)="shareOnSocial('linkedin')"
+        class="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900">in LinkedIn</button>
+      <button (click)="copyLink()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">🔗 Copy
+        Link</button>
+    </div>
+  </div>
+  }
+</div>

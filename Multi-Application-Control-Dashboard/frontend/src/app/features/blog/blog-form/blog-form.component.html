@@ -1,0 +1,69 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <h1 class="text-3xl font-bold text-gray-900">✍️ {{ form.get('title')?.value ? 'Edit Article' : 'Write Article' }}
+    </h1>
+    <a routerLink="/blog" class="btn-secondary">← Back</a>
+  </div>
+
+  <!-- Form -->
+  <div class="bg-white rounded-lg shadow-md p-8">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <!-- Title -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Article Title</label>
+        <input type="text" formControlName="title"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Enter article title">
+        @if(submitted && form.get('title')?.errors){
+        <div class="text-red-500 text-sm mt-1">Title is required</div>
+        }
+      </div>
+
+      <!-- Excerpt -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Excerpt</label>
+        <textarea formControlName="excerpt" rows="2"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Brief summary of the article"></textarea>
+      </div>
+
+      <!-- Content -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Content</label>
+        <textarea formControlName="content" rows="10"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Write your article content here..."></textarea>
+        @if(submitted && form.get('content')?.errors){
+        <div class="text-red-500 text-sm mt-1">Content is required</div>
+        }
+
+      </div>
+
+      <!-- Tags -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Tags</label>
+        <input type="text" formControlName="tags"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          placeholder="Separate tags with commas">
+      </div>
+
+      <!-- Status -->
+      <div class="mb-6">
+        <label class="block text-gray-700 font-semibold mb-2">Status</label>
+        <select formControlName="status"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+          <option value="Draft">Draft</option>
+          <option value="Published">Published</option>
+        </select>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex space-x-4">
+        <button type="submit" [disabled]="loading" class="btn-primary">{{ loading ? 'Saving...' : 'Save Article'
+          }}</button>
+        <a routerLink="/blog" class="btn-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+Missing RBAC Functionality
+1. Incomplete Permission Enforcement in Content Modules
+Issue: Content controllers like blog.controller.ts lack proper permission guards using the available decorators
+Evidence: The blog controller only uses JwtAuthGuard but doesn't implement granular permission checks
+Missing: @Permissions, @CanView, @CanCreate, @CanEdit, @CanDelete decorators are not used in content module controllers
+2. Missing "Normal User" Role Implementation
+Issue: The system defines 4 roles (Super Admin, Admin, Normal User, Viewer) but Normal User functionality is incomplete
+Evidence: In users.service.ts, Normal Users are only given access to Profile and Settings modules, but there's no redirection mechanism to their personal dashboard
+Missing: The specific behavior described where Normal Users should be redirected to a restricted admin-style dashboard for managing their own data
+3. Frontend Dynamic UI Updates Missing
+Issue: While the sidebar has some role-based visibility logic, there's no comprehensive frontend authorization directive
+Evidence: No Angular structural directives like *appHasPermission or *appHasRole to conditionally render UI elements
+Missing: Dynamic button disabling/hiding based on granular permissions
+4. Missing Action-Level Permission Enforcement
+Issue: The backend has permission guards but content modules aren't properly implementing granular permissions
+Evidence: Blog, YouTube, LinkedIn, and Study Notes controllers don't use the PermissionGuard with specific action requirements
+Missing: Individual route protection for CREATE, READ, UPDATE, DELETE operations based on user's specific permissions
+5. Incomplete Admin Permission Assignment
+Issue: Admin permissions are defined by Super Admin, but the UI for assigning granular module permissions to Admin users appears incomplete
+Evidence: While the backend has functions to assign module permissions, there's no clear UI workflow for Super Admin to configure specific permissions per Admin user
+6. Missing Granular Module Permission Assignment
+Issue: The system has capability for granular permissions but doesn't implement the full "View only", "View + Create", "View + Edit", "Full CRUD" options
+Evidence: The permission system exists but isn't fully utilized in the controllers
+7. Missing Frontend Authorization Directives/Guards
+Issue: No frontend authorization guards or structural directives for protecting routes or hiding UI elements
+Evidence: No Angular guards checking permissions before route activation
+Missing: Components that conditionally render based on user permissions
+8. Incomplete Viewer Role Implementation
+Issue: Viewer role is read-only but may still have access to some restricted UI elements
+Evidence: While backend restricts non-view actions, frontend may still show interactive elements
+9. Missing Permission Validation in Content Services
+Issue: Content services like blog service don't validate user permissions before performing operations
+Evidence: Service methods don't check if the user has the required permissions to perform actions
+10. Missing Normal User Redirection Logic
+Issue: The requirement for Normal Users to be redirected to a restricted dashboard when editing profile/account settings is not implemented
+Evidence: No routing logic that redirects Normal Users to a personal dashboard for self-management
+Recommended Fixes
+Add permission decorators to all content module controllers
+Implement frontend authorization directives for conditional UI rendering
+Create route guards for frontend permission checking
+Enhance the Normal User flow with proper redirection logic
+Complete the Admin permission assignment UI for Super Admins
+Add permission validation in service layer methods
+Implement comprehensive UI element visibility based on permissions
+The system has a solid foundation with the role and permission models, but the implementation is incomplete across both frontend and backend layers according to your specified requirements.
+
+
+was doing till 3rd

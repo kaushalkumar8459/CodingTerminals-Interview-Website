@@ -1,0 +1,111 @@
+// Navbar component styles
+// Variables
+$primary-color: #3B82F6;
+$hover-color: #2563EB;
+$text-dark: #111827;
+$text-light: #6B7280;
+$border-color: #E5E7EB;
+
+// Mixins
+@mixin smooth-transition {
+  transition: all 0.2s ease-in-out;
+}
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Navbar specific styles
+nav {
+  @include smooth-transition;
+
+  // User avatar gradient animation
+  .user-avatar {
+    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+    @include flex-center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: white;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+
+    &:hover {
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+    }
+  }
+
+  // Dropdown menu animation
+  .dropdown-menu {
+    animation: slideDown 0.2s ease-out;
+  }
+
+  // Role badge styling
+  .role-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+
+    &.super-admin {
+      background-color: #FEE2E2;
+      color: #991B1B;
+    }
+
+    &.admin {
+      background-color: #DBEAFE;
+      color: #1E3A8A;
+    }
+
+    &.viewer {
+      background-color: #F3F4F6;
+      color: #374151;
+    }
+  }
+
+  // Mobile menu toggle
+  .mobile-menu-toggle {
+    @include flex-center;
+    cursor: pointer;
+    padding: 0.5rem;
+
+    svg {
+      width: 1.5rem;
+      height: 1.5rem;
+      @include smooth-transition;
+    }
+
+    &:hover svg {
+      color: $primary-color;
+    }
+  }
+}
+
+// Animations
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  nav {
+    padding: 0.5rem;
+
+    .brand {
+      font-size: 1rem;
+    }
+
+    .nav-links {
+      display: none;
+    }
+  }
+}
