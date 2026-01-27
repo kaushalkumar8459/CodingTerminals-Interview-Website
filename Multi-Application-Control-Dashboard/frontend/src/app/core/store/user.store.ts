@@ -1,7 +1,8 @@
 import { Injectable, inject, computed } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods } from '@ngrx/signals';
 import { patchState } from '@ngrx/signals';
-import { UserService, User, UsersResponse, UserFilters } from '../services/user.service';
+import { UserService, UsersResponse, UserFilters } from '../services/user.service';
+import { User, RoleType, UserStatus } from '../models/role.model';
 import { firstValueFrom } from 'rxjs';
 
 export interface UserWithUI extends User {
@@ -48,10 +49,11 @@ export class UserStore extends signalStore(
     ),
     filteredCount: computed(() => state.users().length),
     isLoading: computed(() => state.loading()),
-    superAdminCount: computed(() => state.users().filter(u => u.role === 'SUPER_ADMIN').length),
-    adminCount: computed(() => state.users().filter(u => u.role === 'ADMIN').length),
-    viewerCount: computed(() => state.users().filter(u => u.role === 'VIEWER').length),
-    activeCount: computed(() => state.users().filter(u => u.status === 'Active').length),
+    superAdminCount: computed(() => state.users().filter(u => u.role === RoleType.SUPER_ADMIN).length),
+    adminCount: computed(() => state.users().filter(u => u.role === RoleType.ADMIN).length),
+    normalUserCount: computed(() => state.users().filter(u => u.role === RoleType.NORMAL_USER).length),
+    viewerCount: computed(() => state.users().filter(u => u.role === RoleType.VIEWER).length),
+    activeCount: computed(() => state.users().filter(u => u.status === UserStatus.ACTIVE).length),
     isEmpty: computed(() => state.users().length === 0 && !state.loading())
   })),
   withMethods((store, userService = inject(UserService)) => {

@@ -1,6 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { HasRoleDirective, HasPermissionDirective, AuthDisabledDirective, HasPermissionPipe } from '../../core/directives';
+import { RoleType } from '../../core/models/role.model';
 // import { DashboardStore } from '../../../core/store/dashboard.store';
 // import { AuthStore } from '../../../core/store/auth.store';
 // import { PermissionService } from '../../../core/services/permission.service';
@@ -28,11 +30,17 @@ interface Activity {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink,
+    HasRoleDirective,
+    HasPermissionDirective,
+    AuthDisabledDirective,
+    HasPermissionPipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
 export class DashboardComponent implements OnInit {
+  RoleType = RoleType;
+
   // ===== INJECT STORE AND SERVICES =====
   // readonly dashboardStore = inject(DashboardStore);
   // readonly authStore = inject(AuthStore);

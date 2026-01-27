@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { UserStore } from '../../../core/store/user.store';
 import { PermissionService } from '../../../core/services/permission.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { RoleType, UserStatus, RoleDisplayNames, StatusDisplayNames } from '../../../core/models/role.model';
 
 @Component({
   selector: 'app-user-management',
@@ -35,15 +36,18 @@ export class UserManagementComponent implements OnInit {
   userForm: FormGroup;
 
   // ===== CONFIG =====
-  roles = ['SUPER_ADMIN', 'ADMIN', 'VIEWER'];
-  statusOptions = ['Active', 'Inactive', 'Suspended'];
+  roles = Object.values(RoleType);
+  roleDisplayNames = RoleDisplayNames;
+  statusOptions = Object.values(UserStatus);
+  statusDisplayNames = StatusDisplayNames;
 
   constructor() {
     this.userForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(2)]],
+      firstName: ['', [Validators.required, Validators.minLength(2)]],
+      lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      role: ['VIEWER', Validators.required],
-      status: ['Active', Validators.required]
+      role: [RoleType.NORMAL_USER, Validators.required],
+      status: [UserStatus.ACTIVE, Validators.required]
     });
   }
 
@@ -57,7 +61,7 @@ export class UserManagementComponent implements OnInit {
   openCreateForm(): void {
     this.isEditingUser = false;
     this.userToEdit = null;
-    this.userForm.reset({ role: 'VIEWER', status: 'Active' });
+    this.userForm.reset({ role: RoleType.NORMAL_USER, status: UserStatus.ACTIVE });
     this.showUserForm = true;
   }
 
@@ -65,7 +69,8 @@ export class UserManagementComponent implements OnInit {
     this.isEditingUser = true;
     this.userToEdit = user;
     this.userForm.patchValue({
-      name: user.name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
       status: user.status
@@ -187,11 +192,13 @@ export class UserManagementComponent implements OnInit {
   getRoleBadgeClass(role: string): string {
     const baseClass = 'px-3 py-1 rounded-full text-sm font-semibold';
     switch (role) {
-      case 'SUPER_ADMIN':
+      case RoleType.SUPER_ADMIN:
         return `${baseClass} bg-red-100 text-red-800`;
-      case 'ADMIN':
+      case RoleType.ADMIN:
         return `${baseClass} bg-blue-100 text-blue-800`;
-      case 'VIEWER':
+      case RoleType.NORMAL_USER:
+        return `${baseClass} bg-purple-100 text-purple-800`;
+      case RoleType.VIEWER:
         return `${baseClass} bg-gray-100 text-gray-800`;
       default:
         return `${baseClass} bg-gray-100 text-gray-800`;
@@ -201,11 +208,11 @@ export class UserManagementComponent implements OnInit {
   getStatusBadgeClass(status: string): string {
     const baseClass = 'px-3 py-1 rounded-full text-sm font-semibold';
     switch (status) {
-      case 'Active':
+      case UserStatus.ACTIVE:
         return `${baseClass} bg-green-100 text-green-800`;
-      case 'Inactive':
+      case UserStatus.INACTIVE:
         return `${baseClass} bg-yellow-100 text-yellow-800`;
-      case 'Suspended':
+      case UserStatus.SUSPENDED:
         return `${baseClass} bg-red-100 text-red-800`;
       default:
         return `${baseClass} bg-gray-100 text-gray-800`;

@@ -33,7 +33,6 @@ const videoSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['published', 'draft', 'archived'],
         default: 'published'
     },
     isUpcoming: {

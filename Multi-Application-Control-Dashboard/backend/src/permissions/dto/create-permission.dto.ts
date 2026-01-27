@@ -1,4 +1,5 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, IsEnum, IsMongoId, IsBoolean } from 'class-validator';
+import { PermissionAction } from '../../roles/schemas/role.schema';
 
 export class CreatePermissionDto {
   @IsString()
@@ -6,17 +7,33 @@ export class CreatePermissionDto {
   name: string;
 
   @IsString()
+  description: string;
+
+  @IsMongoId()
+  moduleId: string;
+
+  @IsString()
+  moduleName: string;
+
+  @IsEnum(PermissionAction)
+  action: PermissionAction;
+
+  @IsBoolean()
   @IsOptional()
-  description?: string;
-
-  @IsString()
-  module: string;
-
-  @IsString()
-  action: string;
+  isActive?: boolean;
 }
 
 export class UpdatePermissionDto {
+  @IsString()
+  @MinLength(3)
+  @IsOptional()
   name?: string;
+
+  @IsString()
+  @IsOptional()
   description?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }

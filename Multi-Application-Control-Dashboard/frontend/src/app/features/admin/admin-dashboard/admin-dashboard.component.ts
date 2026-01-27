@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AdminDashboardStore } from '../../../core/store/admin-dashboard.store';
 import { PermissionService } from '../../../core/services/permission.service';
+// Import the authorization directives
+import { HasRoleDirective, HasPermissionDirective, AuthDisabledDirective, HasPermissionPipe } from '../../../core/directives';
+import { RoleType } from '../../../core/models/role.model';
 
 interface Stat {
   title: string;
@@ -30,11 +33,21 @@ interface Module {
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [
+    CommonModule, 
+    RouterLink,
+    // Add the authorization directives
+    HasRoleDirective,
+    HasPermissionDirective,
+    AuthDisabledDirective,
+    HasPermissionPipe
+  ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
 })
 export class AdminDashboardComponent implements OnInit {
+  RoleType = RoleType;
+  
   // ===== INJECT STORE AND SERVICES =====
   adminDashboardStore = inject(AdminDashboardStore);
   private permissionService = inject(PermissionService);

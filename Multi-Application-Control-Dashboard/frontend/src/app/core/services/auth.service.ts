@@ -2,16 +2,22 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { RoleType, UserStatus } from '../models/role.model';
+import { Router } from '@angular/router';
 
 export interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
-  role: 'super_admin' | 'admin' | 'viewer';
+  role: RoleType;
+  customRoleId?: string;
   assignedModules: string[];
+  status: UserStatus;
   isActive: boolean;
   lastLogin?: Date;
+  phoneNumber?: string;
+  avatarUrl?: string;
 }
 
 export interface LoginRequest {
@@ -36,7 +42,7 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasToken());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private router: Router) {
     this.loadStoredUser();
   }
 
@@ -52,6 +58,38 @@ export class AuthService {
         console.error('Error parsing stored user:', e);
       }
     }
+  }
+
+  /**
+   * Check if current user is a Normal User
+   */
+  isNormalUser(): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === RoleType.NORMAL_USER;
+  }
+
+  /**
+   * Check if current user is trying to access admin functionality
+   * and redirect to personal dashboard if needed
+   */
+  checkNormalUserRedirection(currentRoute: string): boolean {
+    const user = this.getCurrentUser();
+    
+    if (user?.role === RoleType.NORMAL_USER) {
+      // Define routes that Normal Users should not access
+      const adminRoutes = ['/admin', '/blog', '/youtube', '/linkedin', '/study-notes'];
+      
+      // Check if current route starts with any of the admin routes
+      const isTryingAdminRoute = adminRoutes.some(route => currentRoute.startsWith(route));
+      
+      if (isTryingAdminRoute) {
+        // Redirect to personal dashboard
+        this.router.navigate(['/personal-dashboard']);
+        return false; // Indicate that access should be blocked
+      }
+    }
+    
+    return true; // Allow access for other users or allowed routes
   }
 
   /**

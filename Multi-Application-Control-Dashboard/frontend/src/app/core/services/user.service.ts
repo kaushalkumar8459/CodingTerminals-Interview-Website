@@ -3,17 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'VIEWER';
-  status: 'Active' | 'Inactive' | 'Suspended';
-  modules?: string[];
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import { User, RoleType, UserStatus } from '../models/role.model';
 
 export interface UsersResponse {
   data: User[];
@@ -24,8 +14,8 @@ export interface UsersResponse {
 
 export interface UserFilters {
   searchQuery?: string;
-  role?: string;
-  status?: string;
+  role?: RoleType | string;
+  status?: UserStatus | string;
   page?: number;
   limit?: number;
 }

@@ -15,7 +15,11 @@
       <!-- First Name -->
       <div class="mb-6">
         <label class="block text-gray-700 font-semibold mb-2">First Name</label>
-        <input type="text" formControlName="firstName"
+        <input 
+          type="text" 
+          formControlName="firstName"
+          appAuthDisabled="Profile" 
+          appAuthDisabledAction="edit"
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="Your first name">
 
@@ -29,7 +33,11 @@
       <!-- Last Name -->
       <div class="mb-6">
         <label class="block text-gray-700 font-semibold mb-2">Last Name</label>
-        <input type="text" formControlName="lastName"
+        <input 
+          type="text" 
+          formControlName="lastName"
+          appAuthDisabled="Profile" 
+          appAuthDisabledAction="edit"
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="Your last name">
 
@@ -43,7 +51,11 @@
       <!-- Email -->
       <div class="mb-6">
         <label class="block text-gray-700 font-semibold mb-2">Email</label>
-        <input type="email" formControlName="email"
+        <input 
+          type="email" 
+          formControlName="email"
+          appAuthDisabled="Profile" 
+          appAuthDisabledAction="edit"
           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           placeholder="your@email.com">
 
@@ -60,10 +72,31 @@
         <p class="text-sm text-gray-600 mt-2"><strong>Member Since:</strong> {{ currentUser?.lastLogin | date }}</p>
       </div>
 
-      <!-- Submit Button -->
-      <button type="submit" [disabled]="loading" class="btn-primary">
+      <!-- Submit Button with Permission Check -->
+      <button 
+        type="submit" 
+        [disabled]="loading || !('Profile' | hasPermission:'edit')"
+        appAuthDisabled="Profile" 
+        appAuthDisabledAction="edit"
+        class="btn-primary">
         {{ loading ? 'Saving...' : 'Update Profile' }}
       </button>
     </form>
+  </div>
+
+  <!-- Role-specific content -->
+  <div *appHasRole="[RoleType.SUPER_ADMIN]" class="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+    <h3 class="font-semibold text-red-800">Super Admin Tools</h3>
+    <p class="text-red-600 text-sm">Special administrative functions available</p>
+  </div>
+
+  <div *appHasRole="[RoleType.ADMIN]" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+    <h3 class="font-semibold text-blue-800">Admin Panel</h3>
+    <p class="text-blue-600 text-sm">Administrative dashboard access</p>
+  </div>
+
+  <div *appHasRole="[RoleType.VIEWER]" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+    <h3 class="font-semibold text-gray-800">Viewer Mode</h3>
+    <p class="text-gray-600 text-sm">Read-only access to content</p>
   </div>
 </div>

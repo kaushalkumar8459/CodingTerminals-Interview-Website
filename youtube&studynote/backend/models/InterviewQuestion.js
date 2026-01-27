@@ -25,7 +25,6 @@ const interviewQuestionSchema = new mongoose.Schema({
     },
     difficulty: {
         type: String,
-        enum: ['easy', 'medium', 'hard', ''],
         default: ''
     },
     orderIndex: {

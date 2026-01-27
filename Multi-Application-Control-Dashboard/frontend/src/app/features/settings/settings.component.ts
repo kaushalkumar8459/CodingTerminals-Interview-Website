@@ -2,15 +2,28 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { SettingsStore } from '../../core/store/settings.store';
+// Import the authorization directives
+import { HasRoleDirective, HasPermissionDirective, AuthDisabledDirective, HasPermissionPipe } from '../../core/directives';
+import { RoleType } from '../../core/models/role.model';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule, 
+    ReactiveFormsModule,
+    // Add the authorization directives
+    HasRoleDirective,
+    HasPermissionDirective,
+    AuthDisabledDirective,
+    HasPermissionPipe
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.scss']
 })
 export class SettingsComponent implements OnInit {
+  RoleType = RoleType;
+  
   // ===== INJECT STORE AND SERVICES =====
   readonly settingsStore = inject(SettingsStore);
   private fb = inject(FormBuilder);
@@ -34,11 +47,13 @@ export class SettingsComponent implements OnInit {
    */
   private initSettingsForm(): void {
     this.settingsForm = this.fb.group({
-      theme: ['light'],
-      notifications: [true],
-      emailNotifications: [true],
-      twoFactorAuth: [false],
-      dataCollection: [false]
+      theme: ['light', Validators.required],
+      notifications: [true, Validators.required],
+      emailNotifications: [true, Validators.required],
+      twoFactorAuth: [false, Validators.required],
+      dataCollection: [false, Validators.required],
+      language: ['en', Validators.required],
+      timezone: ['UTC', Validators.required]
     });
 
     // Auto-populate form with store settings
@@ -82,6 +97,8 @@ export class SettingsComponent implements OnInit {
       : null;
   }
 
+  // ===== GETTERS FOR TEMPLATE ACCESS =====
+
   /**
    * Get loading state from store
    */
@@ -118,6 +135,43 @@ export class SettingsComponent implements OnInit {
   }
 
   /**
+   * Get all settings from store
+   */
+  get settings() {
+    return this.settingsStore.settings();
+  }
+
+  /**
+   * Get current theme
+   */
+  get currentTheme() {
+    return this.settingsStore.theme();
+  }
+
+  /**
+   * Get notifications enabled status
+   */
+  get notificationsEnabled() {
+    return this.settingsStore.notificationsEnabled();
+  }
+
+  /**
+   * Get email notifications enabled status
+   */
+  get emailNotificationsEnabled() {
+    return this.settingsStore.emailNotificationsEnabled();
+  }
+
+  /**
+   * Check if 2FA is available (role-based)
+   */
+  get twoFactorAvailable() {
+    return this.settingsStore.twoFactorAvailable();
+  }
+
+  // ===== FORM CONTROL GETTERS =====
+
+  /**
    * Get form controls
    */
   get f() {
@@ -130,6 +184,23 @@ export class SettingsComponent implements OnInit {
   get pf() {
     return this.passwordForm.controls;
   }
+
+  /**
+   * Get individual form controls
+   */
+  get emailNotificationsControl() {
+    return this.settingsForm.get('emailNotifications');
+  }
+
+  get twoFactorAuthControl() {
+    return this.settingsForm.get('twoFactorAuth');
+  }
+
+  get dataCollectionControl() {
+    return this.settingsForm.get('dataCollection');
+  }
+
+  // ===== ACTION METHODS =====
 
   /**
    * Submit settings form - Update all settings through store (NO direct API call)
@@ -156,6 +227,24 @@ export class SettingsComponent implements OnInit {
   }
 
   /**
+   * Individual toggle methods
+   */
+  async toggleEmailNotifications(): Promise<void> {
+    const currentValue = this.emailNotificationsControl?.value;
+    await this.onSettingChange('emailNotifications', !currentValue);
+  }
+
+  async toggleTwoFactorAuth(): Promise<void> {
+    const currentValue = this.twoFactorAuthControl?.value;
+    await this.onSettingChange('twoFactorAuth', !currentValue);
+  }
+
+  async toggleDataCollection(): Promise<void> {
+    const currentValue = this.dataCollectionControl?.value;
+    await this.onSettingChange('dataCollection', !currentValue);
+  }
+
+  /**
    * Handle theme change
    */
   async onThemeChange(theme: 'light' | 'dark'): Promise<void> {
@@ -173,6 +262,22 @@ export class SettingsComponent implements OnInit {
     const field = this.settingsForm.get(fieldName);
     return !!(field && field.hasError(errorType) && (field.dirty || field.touched || this.submitted));
   }
+
+  /**
+   * Password form helpers
+   */
+  isPasswordValid(): boolean {
+    return this.passwordForm.valid && 
+           this.passwordForm.get('newPassword')?.value === this.passwordForm.get('confirmPassword')?.value;
+  }
+
+  getPasswordStrength(password: string): 'weak' | 'medium' | 'strong' {
+    if (password.length < 8) return 'weak';
+    if (password.length >= 12 && /[A-Z]/.test(password) && /[0-9]/.test(password)) return 'strong';
+    return 'medium';
+  }
+
+  // ===== PASSWORD MODAL METHODS =====
 
   /**
    * Open password change modal
@@ -219,6 +324,8 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  // ===== RESET METHODS =====
+
   /**
    * Reset all settings to defaults - through store
    */
@@ -239,5 +346,29 @@ export class SettingsComponent implements OnInit {
    */
   isFieldSaving(fieldName: string): boolean {
     return this.settingsStore.isFieldSaving(fieldName);
+  }
+
+  // ===== ROLE-BASED CHECKS =====
+
+  /**
+   * Check if user can manage security settings
+   */
+  canManageSecuritySettings(): boolean {
+    return this.settingsStore.twoFactorAvailable();
+  }
+
+  /**
+   * Check if user can reset settings (super admin only)
+   */
+  canResetSettings(): boolean {
+    // This should check user role - implement proper role service integration
+    return false; // Placeholder - should integrate with AuthService
+  }
+
+  /**
+   * All authenticated users can change password
+   */
+  canChangePassword(): boolean {
+    return true;
   }
 }

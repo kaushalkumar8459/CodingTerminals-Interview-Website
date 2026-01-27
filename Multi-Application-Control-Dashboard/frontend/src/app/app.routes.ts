@@ -1,9 +1,10 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
-import { RoleGuard, ModuleGuard } from './core/guards/role.guard';
+import { RoleGuard, ModuleGuard, NormalUserRedirectGuard } from './core/guards/role.guard';
 import { LayoutComponent } from './shared/layouts/layout.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
+import { RoleType } from './core/models/role.model';
 
 export const routes: Routes = [
   // Auth Routes (No Layout)
@@ -32,7 +33,7 @@ export const routes: Routes = [
     component: LayoutComponent,
     canActivate: [AuthGuard],
     children: [
-      // Dashboard
+      // Dashboard - accessible to all users including Normal Users
       {
         path: 'dashboard',
         component: DashboardComponent,
@@ -75,19 +76,26 @@ export const routes: Routes = [
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then(m => m.ADMIN_ROUTES),
         canActivate: [RoleGuard],
-        data: { roles: ['SUPER_ADMIN', 'ADMIN'] }
+        data: { roles: [RoleType.SUPER_ADMIN, RoleType.ADMIN] }
       },
 
-      // User Profile
+      // User Profile (accessible to all authenticated users including Normal Users)
       {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
       },
 
-      // Settings
+      // Settings (accessible to all authenticated users)
       {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
+      },
+
+      // Personal Dashboard for Normal Users (protected by NormalUserRedirectGuard)
+      {
+        path: 'personal-dashboard',
+        loadComponent: () => import('./features/personal-dashboard/personal-dashboard.component').then(m => m.PersonalDashboardComponent),
+        canActivate: [NormalUserRedirectGuard]
       },
 
       // Access Denied
