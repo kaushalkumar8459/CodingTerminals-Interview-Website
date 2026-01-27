@@ -119,15 +119,15 @@ function addToDataSource(value, inputId) {
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        UPLOAD_QUESTION_PAPER: '/questions/upload',
-        GET_ALL_QUESTIONS: '/questions',
-        CREATE_QUESTION: '/questions',
-        UPDATE_QUESTION: '/questions/',
-        DELETE_QUESTION: '/questions/',
-        IMPORT_CSV: '/questions/import/csv',
-        IMPORT_EXCEL: '/questions/import/excel',
-        IMPORT_TEXT: '/questions/import/text',
-        SYNC_WITH_DB: '/questions/sync',
+        UPLOAD_QUESTION_PAPER: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/upload',
+        GET_ALL_QUESTIONS: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        CREATE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        UPDATE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/',
+        DELETE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/',
+        IMPORT_CSV: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/import/csv',
+        IMPORT_EXCEL: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/import/excel',
+        IMPORT_TEXT: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/import/text',
+        SYNC_WITH_DB: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/sync',
     }
 };
 
@@ -137,10 +137,10 @@ function determineBaseUrl() {
     if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.API.BASE_URL) {
         return APP_CONFIG.API.BASE_URL;
     }
-    
+
     // Determine environment based on current hostname
     const hostname = window.location.hostname;
-    
+
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Local development
         return 'http://localhost:3000';
