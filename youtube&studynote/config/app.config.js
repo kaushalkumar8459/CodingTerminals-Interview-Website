@@ -15,7 +15,7 @@ function getEnvironmentConfig() {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
-        
+
         // Determine environment based on hostname
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return {
@@ -40,7 +40,7 @@ function getEnvironmentConfig() {
     } else {
         // Running in Node.js (backend) - use environment variables
         const env = process.env.NODE_ENV || 'development';
-        
+
         const configs = {
             development: {
                 ENV: 'development',
@@ -58,7 +58,7 @@ function getEnvironmentConfig() {
                 API_BASE_URL: process.env.BACKEND_URL || 'https://your-production-domain.com'
             }
         };
-        
+
         return configs[env] || configs.development;
     }
 }
@@ -69,7 +69,7 @@ const APP_CONFIG = {
     // Environment Detection
     ENVIRONMENT: ENV_CONFIG.ENV,
     BASE_URL: ENV_CONFIG.BASE_URL,
-    
+
     // API Configuration
     API: {
         BASE_URL: ENV_CONFIG.API_BASE_URL,
@@ -78,7 +78,8 @@ const APP_CONFIG = {
             STUDY_NOTES: '/api/notes',
             LOGIN: '/api/auth/login',
             AUTH_CONFIG: '/api/auth-config',
-            HEALTH: '/api/health'
+            HEALTH: '/api/health',
+            QUESTIONS: '/api/questions',
         }
     },
 
@@ -123,7 +124,7 @@ const APP_CONFIG = {
                 FROM_STUDY_NOTES_VIEWER: '../../CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html',
                 FROM_ROOT: './CodingTerminals-YouTubeRoadmap/admin/YouTubeRoadmap-admin.html',
             },
-            
+
             VIEWER: {
                 FROM_STUDY_NOTES_ADMIN: '../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html',
                 FROM_STUDY_NOTES_VIEWER: '../../CodingTerminals-YouTubeRoadmap/viewer/YouTubeRoadmap-viewer.html',
@@ -139,7 +140,7 @@ const APP_CONFIG = {
                 FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/admin/study-notes-admin.html',
                 FROM_ROOT: './CodingTerminals-StudyNotes/admin/study-notes-admin.html',
             },
-            
+
             VIEWER: {
                 FROM_YOUTUBE_ADMIN: '../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html',
                 FROM_YOUTUBE_VIEWER: '../../CodingTerminals-StudyNotes/viewer/study-notes-viewer.html',
@@ -172,7 +173,7 @@ const APP_CONFIG = {
          * @returns {string} Full API URL
          * @example APP_CONFIG.URL_HELPERS.getApiUrl('YOUTUBE_ROADMAP')
          */
-        getApiUrl: function(endpoint) {
+        getApiUrl: function (endpoint) {
             return `${APP_CONFIG.API.BASE_URL}${APP_CONFIG.API.ENDPOINTS[endpoint]}`;
         },
 
@@ -182,7 +183,7 @@ const APP_CONFIG = {
          * @param {string} page - Page type
          * @param {string} from - Current location
          */
-        navigateTo: function(module, page, from) {
+        navigateTo: function (module, page, from) {
             // Only works in browser
             if (typeof window === 'undefined') {
                 console.error('Navigation only available in browser');
@@ -207,7 +208,7 @@ const APP_CONFIG = {
          * @param {string} from - Current location
          * @returns {string} URL string
          */
-        getUrl: function(module, page, from) {
+        getUrl: function (module, page, from) {
             try {
                 return APP_CONFIG.URLS[module][page][from] || '';
             } catch (error) {
@@ -220,7 +221,7 @@ const APP_CONFIG = {
          * Navigate to external link
          * @param {string} linkKey - External link key
          */
-        navigateToExternal: function(linkKey) {
+        navigateToExternal: function (linkKey) {
             // Only works in browser
             if (typeof window === 'undefined') {
                 console.error('External navigation only available in browser');
@@ -240,11 +241,11 @@ const APP_CONFIG = {
         YOUTUBE_ADMIN_LOGIN: '../CodingTerminals-YouTubeRoadmap/admin/login.html',
         YOUTUBE_ADMIN_PANEL: '../CodingTerminals-YouTubeRoadmap/admin/admin.html',
         YOUTUBE_VIEWER: '../CodingTerminals-YouTubeRoadmap/viewer/viewer.html',
-        
+
         STUDY_NOTES_ADMIN_LOGIN: '../CodingTerminals-StudyNotes/admin/login.html',
         STUDY_NOTES_ADMIN_PANEL: '../CodingTerminals-StudyNotes/admin/admin.html',
         STUDY_NOTES_VIEWER: '../CodingTerminals-StudyNotes/viewer/viewer.html',
-        
+
         HOME: '../index.html'
     },
 
