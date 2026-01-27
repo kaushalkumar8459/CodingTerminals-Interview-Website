@@ -412,27 +412,20 @@ function initializeTabs() {
 }
 
 // Modified updateQuestionsList function to handle search inputs
+// Main function to update questions list display
 function updateQuestionsList() {
-    // Wait for DOM to be fully loaded if needed
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', updateQuestionsList);
         return;
     }
 
-    // Find the main container element
     const container = document.getElementById('questionsContainer');
     const questionCount = document.getElementById('questionCount');
 
-    // Log what we found to help debug
-    console.log('Looking for elements: questionsContainer:', !!container, 'questionCount:', !!questionCount);
-
-    // Check if main elements exist
     if (!container || !questionCount) {
-        console.log('Main UI elements not found.');
-        return; // Exit if critical elements are missing
+        return;
     }
 
-    // Determine which question set to display based on current tab
     let questionsToDisplay;
     if (currentQuestionSet === 'database') {
         questionsToDisplay = databaseQuestions;
@@ -440,13 +433,9 @@ function updateQuestionsList() {
         questionsToDisplay = parsedQuestions;
     }
 
-    console.log('Updating questions list, total questions:', questionsToDisplay.length); // Debug log
-
-    // Update the question count display based on current tab
     questionCount.textContent = questionsToDisplay.length;
 
     if (questionsToDisplay.length === 0) {
-        // If there are no questions, we need to restore the empty state
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400" id="emptyState">
                 <div class="text-4xl mb-4">📚</div>
@@ -457,15 +446,10 @@ function updateQuestionsList() {
         return;
     }
 
-    // If there are questions, clear the container and add the questions
-    // We don't need the empty state anymore since we have questions
     container.innerHTML = '';
 
-    // Apply filters based on current question set
     const filteredQuestions = applyFilters(questionsToDisplay);
-    console.log('Filtered questions count:', filteredQuestions.length); // Debug log
 
-    // Generate HTML for questions - Fixed to properly display Unicode text
     let questionsHTML = '';
     if (filteredQuestions.length === 0) {
         questionsHTML = '<div class="text-center py-8 text-gray-500">No questions match the current filters</div>';
@@ -474,8 +458,7 @@ function updateQuestionsList() {
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
-                        <!-- Ensure proper Unicode display for question text -->
-                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap;">${question.question || 'No question text'}</h4>
+                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${question.question || 'No question text'}</h4>
                         <div class="flex flex-wrap gap-2 mb-2">
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject || 'No subject'}</span>
                             <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear || 'No year'}</span>
@@ -499,8 +482,7 @@ function updateQuestionsList() {
                         <div class="question-option ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
                             <label class="flex items-center">
                                 <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''}>
-                                <!-- Ensure proper Unicode display for options -->
-                                <span class="ml-2" style="white-space: pre-wrap;">${String.fromCharCode(65 + optIndex)}. ${option || 'No option text'}</span>
+                                <span class="ml-2" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${String.fromCharCode(65 + optIndex)}. ${option || 'No option text'}</span>
                                 ${optIndex === question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
                             </label>
                         </div>
@@ -510,17 +492,104 @@ function updateQuestionsList() {
                 ${question.explanation ? `
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <div class="font-semibold text-blue-800 text-sm mb-1">Explanation:</div>
-                        <!-- Ensure proper Unicode display for explanation -->
-                        <div class="text-sm text-blue-700" style="white-space: pre-wrap;">${question.explanation}</div>
+                        <div class="text-sm text-blue-700" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${question.explanation}</div>
                     </div>
                 ` : ''}
             </div>
         `).join('');
     }
 
-    // Update the container with new HTML
     container.innerHTML = questionsHTML;
-    console.log('Questions list updated in UI'); // Debug log
+}
+
+async function handleFileImport(event, importType = 'auto') {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileName = file.name;
+    const fileExtension = fileName.split('.').pop().toLowerCase();
+
+    if (importType === 'auto') {
+        if (['csv'].includes(fileExtension)) {
+            importType = 'csv';
+        } else if (['xlsx', 'xls'].includes(fileExtension)) {
+            importType = 'excel';
+        } else {
+            importType = 'text';
+        }
+    }
+
+    try {
+        showToast(`Parsing ${fileName}...`, 'info');
+
+        const fileContent = await readFileContent(file);
+
+        let parsedQuestionsFromFile = [];
+
+        switch (importType) {
+            case 'csv':
+                parsedQuestionsFromFile = parseCSVFile(fileContent);
+                break;
+            case 'excel':
+                parsedQuestionsFromFile = parseExcelFile(fileContent);
+                break;
+            case 'text':
+                parsedQuestionsFromFile = parseTextFile(fileContent);
+                break;
+        }
+
+        if (parsedQuestionsFromFile.length > 0) {
+            parsedQuestions = [...parsedQuestions, ...parsedQuestionsFromFile];
+
+            switchToTab('upload');
+
+            setTimeout(() => {
+                updateQuestionsList();
+                updateSubjectFilters();
+                updateYearFilters();
+                updateDifficultyFilters();
+
+                const questionCount = document.getElementById('questionCount');
+                if (questionCount) {
+                    questionCount.textContent = parsedQuestions.length;
+                }
+            }, 100);
+
+            showToast(`${parsedQuestionsFromFile.length} questions loaded from ${fileName}! Review and click 'Process Upload' to save.`, 'success');
+        } else {
+            showToast('No valid questions found in the file', 'warning');
+        }
+    } catch (error) {
+        console.error('Error parsing file:', error);
+        showToast('Error parsing file: ' + error.message, 'error');
+    }
+}
+
+function detectEncoding(content) {
+    // Check for UTF-8 BOM
+    if (content.charCodeAt(0) === 0xEF && content.charCodeAt(1) === 0xBB && content.charCodeAt(2) === 0xBF) {
+        return 'UTF-8 with BOM';
+    }
+
+    // Check for UTF-16 BOM
+    if (content.charCodeAt(0) === 0xFF && content.charCodeAt(1) === 0xFE) {
+        return 'UTF-16 LE';
+    }
+
+    if (content.charCodeAt(0) === 0xFE && content.charCodeAt(1) === 0xFF) {
+        return 'UTF-16 BE';
+    }
+
+    // Check if content contains high-ASCII characters (possible Unicode)
+    let hasHighAscii = false;
+    for (let i = 0; i < Math.min(content.length, 1000); i++) {
+        if (content.charCodeAt(i) > 127) {
+            hasHighAscii = true;
+            break;
+        }
+    }
+
+    return hasHighAscii ? 'UTF-8 or Unicode' : 'ASCII/Unknown';
 }
 
 // Helper function to actually update the display
@@ -620,12 +689,12 @@ function applyFilters(questionsToFilter = null) {
     const difficultyFilterSelect = document.getElementById('filterDifficulty');
 
     // Get values from inputs (prioritize search inputs over selects)
-    const subjectValue = (subjectFilterInput ? subjectFilterInput.value.toLowerCase().trim() : '') || 
-                        (subjectFilterSelect ? subjectFilterSelect.value : 'all');
-    const yearValue = (yearFilterInput ? yearFilterInput.value.toLowerCase().trim() : '') || 
-                     (yearFilterSelect ? yearFilterSelect.value : 'all');
-    const difficultyValue = (difficultyFilterInput ? difficultyFilterInput.value.toLowerCase().trim() : '') || 
-                           (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
+    const subjectValue = (subjectFilterInput ? subjectFilterInput.value.toLowerCase().trim() : '') ||
+        (subjectFilterSelect ? subjectFilterSelect.value : 'all');
+    const yearValue = (yearFilterInput ? yearFilterInput.value.toLowerCase().trim() : '') ||
+        (yearFilterSelect ? yearFilterSelect.value : 'all');
+    const difficultyValue = (difficultyFilterInput ? difficultyFilterInput.value.toLowerCase().trim() : '') ||
+        (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
     const searchValue = searchQuery ? searchQuery.value.toLowerCase().trim() : '';
 
     console.log('Filter values:', { subjectValue, yearValue, difficultyValue, searchValue }); // Debug log
@@ -1309,9 +1378,22 @@ async function importFromText() {
 function readFileContent(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
+
+        // Try to read with UTF-8 encoding
+        reader.onload = (e) => {
+            let content = e.target.result;
+
+            // Handle UTF-8 BOM if present
+            if (content.charCodeAt(0) === 0xEF && content.charCodeAt(1) === 0xBB && content.charCodeAt(2) === 0xBF) {
+                content = content.substring(3); // Remove BOM
+            }
+            resolve(content);
+        };
+
+        reader.onerror = (e) => reject(new Error('Failed to read file: ' + reader.error?.message || 'Unknown error'));
+
+        // Try to read as text with UTF-8 encoding
+        reader.readAsText(file, 'UTF-8');
     });
 }
 
@@ -1455,76 +1537,105 @@ function parseTextFile(content) {
     const sections = content.split('---').filter(section => section.trim());
     const questions = [];
 
-    sections.forEach(section => {
+    sections.forEach((section, sectionIndex) => {
         const lines = section.trim().split('\n');
         const questionObj = {
             options: []
         };
 
-        let currentKey = '';
-        let currentValue = '';
         let inOptions = false;
+        let collectingQuestionText = false;
 
-        lines.forEach(line => {
+        lines.forEach((line, lineIndex) => {
             const trimmedLine = line.trim();
 
-            if (trimmedLine.startsWith('- ')) {
-                // Option line - preserve Unicode text
-                if (inOptions) {
-                    questionObj.options.push(trimmedLine.substring(2).trim());
+            if (trimmedLine.startsWith('(') && trimmedLine.endsWith(')') && collectingQuestionText) {
+                const hindiText = trimmedLine;
+                if (questionObj.question) {
+                    questionObj.question += ' ' + hindiText;
                 }
+                return;
+            }
+
+            if (trimmedLine.startsWith('- ')) {
+                const optionText = trimmedLine.substring(2).trim();
+                if (inOptions) {
+                    questionObj.options.push(optionText);
+                }
+                collectingQuestionText = false;
             } else if (trimmedLine.includes(':')) {
-                // Key-value line
                 const colonIndex = trimmedLine.indexOf(':');
                 const key = trimmedLine.substring(0, colonIndex).trim();
                 const value = trimmedLine.substring(colonIndex + 1).trim().replace(/^"|"$/g, '');
 
                 switch (key.toLowerCase()) {
                     case 'question':
-                        // Preserve Unicode text exactly as it is
                         questionObj.question = value.trim();
+                        collectingQuestionText = true;
                         break;
                     case 'options':
                         inOptions = true;
+                        collectingQuestionText = false;
                         break;
                     case 'correctanswer':
                         questionObj.correctAnswer = parseInt(value) || 0;
+                        collectingQuestionText = false;
                         break;
                     case 'subject':
                         questionObj.subject = value.trim() || 'General';
+                        collectingQuestionText = false;
                         break;
                     case 'academicyear':
                         questionObj.academicYear = value.trim() || new Date().getFullYear().toString();
+                        collectingQuestionText = false;
                         break;
                     case 'examtype':
                         questionObj.examType = value.trim() || 'Practice Paper';
+                        collectingQuestionText = false;
                         break;
                     case 'difficulty':
                         questionObj.difficulty = value.trim() || 'Beginner';
+                        collectingQuestionText = false;
                         break;
                     case 'topic':
                         questionObj.topic = value.trim() || '';
+                        collectingQuestionText = false;
                         break;
                     case 'explanation':
                         questionObj.explanation = value.trim() || '';
+                        collectingQuestionText = false;
                         break;
                     case 'marks':
                         questionObj.marks = parseInt(value) || 1;
+                        collectingQuestionText = false;
                         break;
                     case 'group':
                         questionObj.group = value.trim() || '';
+                        collectingQuestionText = false;
                         break;
                     case 'duplicateof':
                         questionObj.duplicateOf = value === 'null' ? null : value.trim();
+                        collectingQuestionText = false;
                         break;
                     case 'isactive':
                         questionObj.isActive = value.toLowerCase() === 'true';
+                        collectingQuestionText = false;
+                        break;
+                    case 'metadata':
+                        collectingQuestionText = false;
+                        break;
+                    case 'validationstatus':
+                        collectingQuestionText = false;
+                        break;
+                    default:
+                        collectingQuestionText = false;
                         break;
                 }
+            } else {
+                collectingQuestionText = false;
             }
         });
 
-        // Validate and add question - ensure question text exists
         if (questionObj.question && questionObj.question.length > 0 && questionObj.options.length >= 2) {
             questions.push(questionObj);
         }
