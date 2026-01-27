@@ -18,11 +18,30 @@ let currentQuestionIndex = 0;
 
 // API Configuration
 const API_CONFIG = {
-    BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
+    BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
         GET_ALL_QUESTIONS: '/questions'
     }
 };
+// Function to determine base URL based on environment
+function determineBaseUrl() {
+    // Check if we have an appConfig with API_BASE_URL defined
+    if (typeof appConfig !== 'undefined' && appConfig.API_BASE_URL) {
+        return appConfig.API_BASE_URL;
+    }
+
+    // Determine environment based on current hostname
+    const hostname = window.location.hostname;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development
+        return 'http://localhost:3000/api';
+    } else {
+        // Production environment - Replace with your actual backend URL
+        return 'https://your-backend-name.onrender.com/api'; // TODO: Replace with actual backend URL
+    }
+}
+
 
 const API_URLS = {
     GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS
