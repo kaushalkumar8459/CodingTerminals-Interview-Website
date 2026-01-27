@@ -431,7 +431,6 @@ function updateStats() {
     if (duplicatesElement) duplicatesElement.textContent = duplicates.length;
 }
 
-// Improved renderQuestionsList function with better error handling
 function renderQuestionsList() {
     const container = document.getElementById('questionsContainer');
     const emptyState = document.getElementById('emptyState');
@@ -448,7 +447,7 @@ function renderQuestionsList() {
     }
 
     emptyState.style.display = 'none';
-    
+
     // Clear the container first to ensure proper refresh
     container.innerHTML = '';
 
@@ -535,9 +534,7 @@ function editQuestion(questionId) {
     currentEditingQuestion = questionId;
     showEditModal(question);
 }
-
-
-// Modify showEditModal to include suggestion containers
+// Show edit modal
 function showEditModal(question) {
     const modal = document.getElementById('editModal');
     if (!modal) return;
@@ -662,75 +659,6 @@ function addOptionField() {
     container.insertAdjacentHTML('beforeend', optionHTML);
 }
 
-// Save edited question
-// async function saveEditedQuestion(event) {
-//     event.preventDefault();
-
-//     if (!currentEditingQuestion) {
-//         showToast('No question selected for editing', 'error');
-//         return;
-//     }
-
-//     const question = allQuestions.find(q => q.id === currentEditingQuestion);
-//     if (!question) {
-//         showToast('Question not found', 'error');
-//         return;
-//     }
-
-//     // Get updated values
-//     const updatedQuestion = {
-//         id: question.id,
-//         question: document.getElementById('editQuestionText').value,
-//         subject: document.getElementById('editSubject').value,
-//         academicYear: document.getElementById('editYear').value,
-//         examType: document.getElementById('editExamType').value,
-//         difficulty: document.getElementById('editDifficulty').value,
-//         topic: document.getElementById('editTopic').value,
-//         explanation: document.getElementById('editExplanation').value,
-//         options: [],
-//         correctAnswer: 0
-//     };
-
-//     // Get options
-//     const optionElements = document.querySelectorAll('[id^="editOption"]');
-//     updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val.trim() !== '');
-
-//     // Get correct answer
-//     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
-//     if (correctAnswerRadio) {
-//         updatedQuestion.correctAnswer = parseInt(correctAnswerRadio.value);
-//     }
-
-//     try {
-//         const response = await fetch(API_URLS.UPDATE_QUESTION(question.id), {
-//             method: 'PUT',
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify(updatedQuestion)
-//         });
-
-//         if (!response.ok) {
-//             throw new Error(`HTTP error! status: ${response.status}`);
-//         }
-
-//         const result = await response.json();
-
-//         if (result.success) {
-//             // Update local data
-//             Object.assign(question, updatedQuestion);
-
-//             closeEditModal();
-//             renderQuestionsList();
-//             showToast('Question updated successfully!', 'success');
-//         } else {
-//             showToast(result.message || 'Failed to update question', 'error');
-//         }
-//     } catch (error) {
-//         console.error('Error updating question:', error);
-//         showToast('Error updating question: ' + error.message, 'error');
-//     }
-// }
 
 async function saveEditedQuestion(event) {
     event.preventDefault();
@@ -1465,44 +1393,6 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
     return questions;
 }
 
-// Add option field for dynamic form - Fixed version
-function addOptionField(prefix = 'add') {
-    const container = document.getElementById(`${prefix}OptionsContainer`);
-    if (!container) {
-        console.error(`Options container with ID '${prefix}OptionsContainer' not found`);
-        return;
-    }
-    
-    // Count the number of existing option fields (excluding the button)
-    const optionDivs = Array.from(container.children).filter(child => 
-        child.tagName === 'DIV' && child.querySelector(`[id^="${prefix}Option"]`)
-    );
-    const optionCount = optionDivs.length;
-    const newIndex = optionCount;
-
-    const optionHTML = `
-        <div class="flex items-center gap-2 mb-2">
-            <span class="text-sm font-medium">${String.fromCharCode(65 + newIndex)}.</span>
-            <input type="text" 
-                   id="${prefix}Option${newIndex}" 
-                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                   placeholder="Option ${String.fromCharCode(65 + newIndex)}">
-            <label class="flex items-center gap-1">
-                <input type="radio" name="${prefix}CorrectAnswer" value="${newIndex}">
-                <span class="text-sm">Correct</span>
-            </label>
-        </div>
-    `;
-
-    // Insert before the button if there is one, otherwise at the end
-    const button = container.querySelector('button');
-    if (button) {
-        button.insertAdjacentHTML('beforebegin', optionHTML);
-    } else {
-        container.insertAdjacentHTML('beforeend', optionHTML);
-    }
-}
-
 // Refresh questions
 function refreshQuestions() {
     loadQuestions();
@@ -1577,7 +1467,7 @@ function createTest() {
         showToast(`Test "${testTitle}" created successfully!`, 'success');
     }, 1000);
 }
-// ... existing code ...
+
 
 // Preview test
 function previewTest() {
@@ -1649,7 +1539,6 @@ function previewTest() {
 
     previewWindow.document.close();
 }
-
 // Save test template
 function saveTestTemplate() {
     const templateName = prompt('Enter template name:');
@@ -1659,8 +1548,6 @@ function saveTestTemplate() {
     showToast(`Template "${templateName}" saved successfully!`, 'success');
 }
 
-// Load analytics
-// ... existing code ...
 // Load analytics
 async function loadAnalytics() {
     try {
@@ -1698,8 +1585,6 @@ async function loadAnalytics() {
         showToast('Error loading analytics: ' + error.message, 'error');
     }
 }
-
-// ... existing code ...
 // Draw subject chart
 function drawSubjectChart(data) {
     const ctx = document.getElementById('subjectChart').getContext('2d');
@@ -1767,7 +1652,6 @@ function drawDifficultyChart(data) {
         }
     });
 }
-// ... existing code ...
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function () {
     // Load questions when page loads
@@ -1815,6 +1699,7 @@ function showToast(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
 
 // ==================== AUTHENTICATION ====================
 function logout() {
