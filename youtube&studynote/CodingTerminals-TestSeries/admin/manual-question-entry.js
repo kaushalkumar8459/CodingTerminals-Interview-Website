@@ -9,13 +9,31 @@ let hasInitialized = false;
 
 // API Endpoints Configuration
 const API_CONFIG = {
-    BASE_URL: typeof appConfig !== 'undefined' && appConfig.API_BASE_URL ? appConfig.API_BASE_URL : 'http://localhost:3000/api',
+    BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
         CREATE_QUESTION: '/questions',
         CREATE_BULK_QUESTIONS: '/questions',
         GET_ALL_QUESTIONS: '/questions'
     }
 };
+// Function to determine base URL based on environment
+function determineBaseUrl() {
+    // Check if we have an appConfig with API_BASE_URL defined
+    if (typeof appConfig !== 'undefined' && appConfig.API_BASE_URL) {
+        return appConfig.API_BASE_URL;
+    }
+
+    // Determine environment based on current hostname
+    const hostname = window.location.hostname;
+
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development
+        return 'http://localhost:3000/api';
+    } else {
+        // Production environment - Replace with your actual backend URL
+        return 'https://your-backend-name.onrender.com/api'; // TODO: Replace with actual backend URL
+    }
+}
 
 // Construct full API URLs
 const API_URLS = {
@@ -33,14 +51,14 @@ async function fetchExistingValues() {
         }
 
         const result = await response.json();
-        
+
         if (result.success) {
             // Clear existing sets first
             subjects.clear();
             years.clear();
             examTypes.clear();
             difficulties.clear();
-            
+
             // Extract unique values from all questions
             result.data.forEach(question => {
                 if (question.subject) subjects.add(question.subject);
@@ -54,7 +72,7 @@ async function fetchExistingValues() {
             const defaultYears = ['2020-2021', '2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026', '2026-2027'];
             const defaultExamTypes = ['Board Exam', 'University Exam', 'Competitive Exam', 'Mid-Term', 'Final Exam', 'Mock Test', 'Practice Paper'];
             const defaultDifficulties = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-            
+
             defaultSubjects.forEach(subject => subjects.add(subject));
             defaultYears.forEach(year => years.add(year));
             defaultExamTypes.forEach(examType => examTypes.add(examType));
@@ -74,29 +92,29 @@ async function fetchExistingValues() {
 function setupSearchField(inputId, suggestionsId, dataSource, placeholderText) {
     const inputElement = document.getElementById(inputId);
     const suggestionsContainer = document.getElementById(suggestionsId);
-    
+
     if (!inputElement || !suggestionsContainer) {
         return;
     }
-    
+
     if (placeholderText) {
         inputElement.placeholder = placeholderText;
     }
-    
+
     // Input event - show suggestions as user types
-    inputElement.addEventListener('input', function() {
+    inputElement.addEventListener('input', function () {
         const query = this.value.toLowerCase();
         showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
     });
-    
+
     // Focus event - show all suggestions when field gains focus
-    inputElement.addEventListener('focus', function() {
+    inputElement.addEventListener('focus', function () {
         const query = this.value ? this.value.toLowerCase() : '';
         showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId);
     });
-    
+
     // Click outside - hide suggestions
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         if (!event.target.closest(`#${inputId}`) && !event.target.closest(`#${suggestionsId}`)) {
             suggestionsContainer.classList.add('hidden');
         }
@@ -106,25 +124,25 @@ function setupSearchField(inputId, suggestionsId, dataSource, placeholderText) {
 // Show filtered suggestions based on query
 function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputId) {
     // Filter options based on query
-    const filteredOptions = Array.from(dataSource).filter(option => 
+    const filteredOptions = Array.from(dataSource).filter(option =>
         option.toLowerCase().includes(query.toLowerCase())
     );
-    
+
     // Clear previous suggestions
     suggestionsContainer.innerHTML = '';
-    
+
     if (filteredOptions.length > 0) {
         // Show matching options
         filteredOptions.forEach(option => {
             const suggestionItem = document.createElement('div');
             suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100';
             suggestionItem.textContent = option;
-            suggestionItem.onclick = function() {
+            suggestionItem.onclick = function () {
                 selectSuggestion(option, inputId, suggestionsContainer);
             };
             suggestionsContainer.appendChild(suggestionItem);
         });
-        
+
         suggestionsContainer.classList.remove('hidden');
     } else {
         // If no matches and query is not empty, show "add new" option
@@ -132,7 +150,7 @@ function showFilteredSuggestions(query, dataSource, suggestionsContainer, inputI
             const suggestionItem = document.createElement('div');
             suggestionItem.className = 'px-4 py-2 cursor-pointer hover:bg-blue-100 text-blue-600';
             suggestionItem.textContent = `Add "${query}" as new value`;
-            suggestionItem.onclick = function() {
+            suggestionItem.onclick = function () {
                 selectSuggestion(query, inputId, suggestionsContainer);
             };
             suggestionsContainer.appendChild(suggestionItem);
@@ -150,7 +168,7 @@ function selectSuggestion(value, inputId, suggestionsContainer) {
         inputElement.value = value;
     }
     suggestionsContainer.classList.add('hidden');
-    
+
     // Add to data source if it's a new value
     addToDataSource(value, inputId);
 }
@@ -313,32 +331,32 @@ function addQuestionBlock() {
     `;
 
     container.insertAdjacentHTML('beforeend', blockHTML);
-    
+
     // Initialize search functionality after DOM update
     requestAnimationFrame(() => {
         let attempts = 0;
         const maxAttempts = 15;
-        
+
         function tryInit() {
             attempts++;
-            
+
             const subjectInput = document.getElementById(`subject-${currentQuestionIndex}`);
             const subjectSuggestions = document.getElementById(`subjectSuggestions-${currentQuestionIndex}`);
             const examTypeInput = document.getElementById(`examType-${currentQuestionIndex}`);
             const examTypeSuggestions = document.getElementById(`examTypeSuggestions-${currentQuestionIndex}`);
             const difficultyInput = document.getElementById(`difficulty-${currentQuestionIndex}`);
             const difficultySuggestions = document.getElementById(`difficultySuggestions-${currentQuestionIndex}`);
-            
+
             if (subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
                 initIndividualQuestionSearchFields(currentQuestionIndex);
             } else if (attempts < maxAttempts) {
                 setTimeout(tryInit, attempts * 150);
             }
         }
-        
+
         tryInit();
     });
-    
+
     questionCounter++;
 }
 
@@ -587,15 +605,15 @@ function logout() {
 // Refresh existing values from database
 async function refreshExistingValues() {
     showToast('Refreshing database values...', 'info');
-    
+
     await fetchExistingValues();
-    
+
     // Re-initialize search fields for all existing question blocks
     const containers = document.querySelectorAll('[id^="question-block-"]');
     containers.forEach((container, index) => {
         initIndividualQuestionSearchFields(index);
     });
-    
+
     showToast('Database values refreshed successfully!', 'success');
 }
 
@@ -604,15 +622,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (hasInitialized) {
         return;
     }
-    
+
     hasInitialized = true;
-    
+
     // Fetch existing values from the database
     await fetchExistingValues();
-    
+
     // Initialize search fields
     initSearchFields();
-    
+
     // Initialize with one question block
     addQuestionBlock();
 });
