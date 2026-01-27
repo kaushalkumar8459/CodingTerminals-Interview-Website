@@ -20,7 +20,7 @@ let currentQuestionIndex = 0;
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        GET_ALL_QUESTIONS: '/questions'
+        GET_ALL_QUESTIONS: APP_CONFIG.API.ENDPOINTS.QUESTIONS
     }
 };
 // Function to determine base URL based on environment
@@ -29,10 +29,10 @@ function determineBaseUrl() {
     if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.API.BASE_URL) {
         return APP_CONFIG.API.BASE_URL;
     }
-    
+
     // Determine environment based on current hostname
     const hostname = window.location.hostname;
-    
+
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Local development
         return 'http://localhost:3000';

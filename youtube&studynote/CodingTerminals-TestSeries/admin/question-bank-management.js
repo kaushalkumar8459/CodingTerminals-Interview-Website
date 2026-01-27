@@ -185,21 +185,21 @@ function initModalSearchFields() {
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        GET_ALL_QUESTIONS: '/questions',
-        GET_QUESTIONS_BY_SUBJECT: '/questions/subject/',
-        GET_QUESTIONS_BY_YEAR: '/questions/year/',
-        GET_QUESTIONS_BY_DIFFICULTY: '/questions/difficulty/',
-        CREATE_QUESTION: '/questions',
-        UPDATE_QUESTION: '/questions/',
-        DELETE_QUESTION: '/questions/',
-        BULK_DELETE: '/questions/bulk-delete',
-        FIND_DUPLICATES: '/questions/duplicates/find',
-        CREATE_GROUP: '/groups',
-        ASSIGN_TO_GROUP: '/groups/assign',
-        GET_GROUPS: '/groups',
-        CREATE_TEST: '/tests',
-        GET_TESTS: '/tests',
-        GET_ANALYTICS: '/questions/analytics'  // Updated to correct endpoint
+        GET_ALL_QUESTIONS: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        GET_QUESTIONS_BY_SUBJECT: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/subject/',
+        GET_QUESTIONS_BY_YEAR: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/year/',
+        GET_QUESTIONS_BY_DIFFICULTY: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/difficulty/',
+        CREATE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        UPDATE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/',
+        DELETE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/',
+        BULK_DELETE: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/bulk-delete',
+        FIND_DUPLICATES: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/duplicates/find',
+        CREATE_GROUP: '/api/groups',
+        ASSIGN_TO_GROUP: '/api/groups/assign',
+        GET_GROUPS: '/api/groups',
+        CREATE_TEST: '/api/tests',
+        GET_TESTS: '/api/tests',
+        GET_ANALYTICS: APP_CONFIG.API.ENDPOINTS.QUESTIONS + '/analytics'
     }
 };
 // Function to determine base URL based on environment
