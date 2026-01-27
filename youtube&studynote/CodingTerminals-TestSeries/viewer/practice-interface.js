@@ -25,23 +25,22 @@ const API_CONFIG = {
 };
 // Function to determine base URL based on environment
 function determineBaseUrl() {
-    // Check if we have an appConfig with API_BASE_URL defined
-    if (typeof appConfig !== 'undefined' && appConfig.API_BASE_URL) {
-        return appConfig.API_BASE_URL;
+    // Check if we have an APP_CONFIG with API_BASE_URL defined
+    if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.API.BASE_URL) {
+        return APP_CONFIG.API.BASE_URL;
     }
-
+    
     // Determine environment based on current hostname
     const hostname = window.location.hostname;
-
+    
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Local development
-        return 'http://localhost:3000/api';
+        return 'http://localhost:3000';
     } else {
-        // Production environment - Replace with your actual backend URL
-        return 'https://your-backend-name.onrender.com/api'; // TODO: Replace with actual backend URL
+        // Production environment - Use APP_CONFIG.BASE_URL
+        return APP_CONFIG.BASE_URL;
     }
 }
-
 
 const API_URLS = {
     GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS

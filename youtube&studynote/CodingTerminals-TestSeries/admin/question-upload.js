@@ -133,26 +133,20 @@ const API_CONFIG = {
 
 // Function to determine base URL based on environment
 function determineBaseUrl() {
-    // Check if we have an appConfig with API_BASE_URL defined
-    if (typeof appConfig !== 'undefined' && appConfig.API_BASE_URL) {
-        return appConfig.API_BASE_URL;
+    // Check if we have an APP_CONFIG with API_BASE_URL defined
+    if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.API.BASE_URL) {
+        return APP_CONFIG.API.BASE_URL;
     }
-
+    
     // Determine environment based on current hostname
     const hostname = window.location.hostname;
-
+    
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Local development
-        return 'http://localhost:3000/api';
-    } else if (hostname.includes('vercel.app') || hostname.includes('netlify.app') || hostname.includes('github.io')) {
-        // Preview deployments or static hosting
-        // Use a default production API URL or a staging API
-        return 'https://your-backend-app-name.onrender.com/api'; // Replace with your actual backend URL
+        return 'http://localhost:3000';
     } else {
-        // Production environment
-        // Use the same host as the frontend is served from, but with /api prefix
-        // This assumes you've set up proxying in your deployment
-        return `${window.location.protocol}//${window.location.host}/api`;
+        // Production environment - Use APP_CONFIG.BASE_URL
+        return APP_CONFIG.BASE_URL;
     }
 }
 
