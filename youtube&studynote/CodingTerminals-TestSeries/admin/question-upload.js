@@ -465,7 +465,7 @@ function updateQuestionsList() {
     const filteredQuestions = applyFilters(questionsToDisplay);
     console.log('Filtered questions count:', filteredQuestions.length); // Debug log
 
-    // Generate HTML for questions
+    // Generate HTML for questions - Fixed to properly display Unicode text
     let questionsHTML = '';
     if (filteredQuestions.length === 0) {
         questionsHTML = '<div class="text-center py-8 text-gray-500">No questions match the current filters</div>';
@@ -474,7 +474,8 @@ function updateQuestionsList() {
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2">${question.question || 'No question text'}</h4>
+                        <!-- Ensure proper Unicode display for question text -->
+                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap;">${question.question || 'No question text'}</h4>
                         <div class="flex flex-wrap gap-2 mb-2">
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject || 'No subject'}</span>
                             <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear || 'No year'}</span>
@@ -498,7 +499,8 @@ function updateQuestionsList() {
                         <div class="question-option ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
                             <label class="flex items-center">
                                 <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''}>
-                                <span class="ml-2">${String.fromCharCode(65 + optIndex)}. ${option || 'No option text'}</span>
+                                <!-- Ensure proper Unicode display for options -->
+                                <span class="ml-2" style="white-space: pre-wrap;">${String.fromCharCode(65 + optIndex)}. ${option || 'No option text'}</span>
                                 ${optIndex === question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
                             </label>
                         </div>
@@ -508,7 +510,8 @@ function updateQuestionsList() {
                 ${question.explanation ? `
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <div class="font-semibold text-blue-800 text-sm mb-1">Explanation:</div>
-                        <div class="text-sm text-blue-700">${question.explanation}</div>
+                        <!-- Ensure proper Unicode display for explanation -->
+                        <div class="text-sm text-blue-700" style="white-space: pre-wrap;">${question.explanation}</div>
                     </div>
                 ` : ''}
             </div>
@@ -1351,47 +1354,48 @@ function parseCSVFile(content) {
 
             switch (cleanHeader) {
                 case 'question':
-                    questionObj.question = value;
+                    // Preserve Unicode text exactly as it is
+                    questionObj.question = value.trim();
                     break;
                 case 'optionsa':
                 case 'options_a':
-                    questionObj.options[0] = value;
+                    questionObj.options[0] = value.trim();
                     break;
                 case 'optionsb':
                 case 'options_b':
-                    questionObj.options[1] = value;
+                    questionObj.options[1] = value.trim();
                     break;
                 case 'optionsc':
                 case 'options_c':
-                    questionObj.options[2] = value;
+                    questionObj.options[2] = value.trim();
                     break;
                 case 'optionsd':
                 case 'options_d':
-                    questionObj.options[3] = value;
+                    questionObj.options[3] = value.trim();
                     break;
                 case 'correctanswer':
                     // Handle only numeric correct answers (0,1,2,3)
                     questionObj.correctAnswer = parseInt(value) || 0;
                     break;
                 case 'subject':
-                    questionObj.subject = value || 'General';
+                    questionObj.subject = value.trim() || 'General';
                     break;
                 case 'academicyear':
                 case 'academicyear':
-                    questionObj.academicYear = value || new Date().getFullYear().toString();
+                    questionObj.academicYear = value.trim() || new Date().getFullYear().toString();
                     break;
                 case 'examtype':
                 case 'examtype':
-                    questionObj.examType = value || 'Practice Paper';
+                    questionObj.examType = value.trim() || 'Practice Paper';
                     break;
                 case 'difficulty':
-                    questionObj.difficulty = value || 'Beginner';
+                    questionObj.difficulty = value.trim() || 'Beginner';
                     break;
                 case 'topic':
-                    questionObj.topic = value || '';
+                    questionObj.topic = value.trim() || '';
                     break;
                 case 'explanation':
-                    questionObj.explanation = value || '';
+                    questionObj.explanation = value.trim() || '';
                     break;
                 case 'marks':
                     questionObj.marks = parseInt(value) || 1;
@@ -1399,8 +1403,9 @@ function parseCSVFile(content) {
             }
         });
 
-        // Validate required fields
-        if (questionObj.question && questionObj.options.filter(opt => opt !== undefined && opt !== '').length >= 2) {
+        // Validate required fields - ensure question text exists
+        if (questionObj.question && questionObj.question.length > 0 &&
+            questionObj.options.filter(opt => opt !== undefined && opt !== '' && opt.length > 0).length >= 2) {
             questions.push(questionObj);
         }
     }
@@ -1464,9 +1469,9 @@ function parseTextFile(content) {
             const trimmedLine = line.trim();
 
             if (trimmedLine.startsWith('- ')) {
-                // Option line
+                // Option line - preserve Unicode text
                 if (inOptions) {
-                    questionObj.options.push(trimmedLine.substring(2));
+                    questionObj.options.push(trimmedLine.substring(2).trim());
                 }
             } else if (trimmedLine.includes(':')) {
                 // Key-value line
@@ -1476,7 +1481,8 @@ function parseTextFile(content) {
 
                 switch (key.toLowerCase()) {
                     case 'question':
-                        questionObj.question = value;
+                        // Preserve Unicode text exactly as it is
+                        questionObj.question = value.trim();
                         break;
                     case 'options':
                         inOptions = true;
@@ -1485,31 +1491,31 @@ function parseTextFile(content) {
                         questionObj.correctAnswer = parseInt(value) || 0;
                         break;
                     case 'subject':
-                        questionObj.subject = value || 'General';
+                        questionObj.subject = value.trim() || 'General';
                         break;
                     case 'academicyear':
-                        questionObj.academicYear = value || new Date().getFullYear().toString();
+                        questionObj.academicYear = value.trim() || new Date().getFullYear().toString();
                         break;
                     case 'examtype':
-                        questionObj.examType = value || 'Practice Paper';
+                        questionObj.examType = value.trim() || 'Practice Paper';
                         break;
                     case 'difficulty':
-                        questionObj.difficulty = value || 'Beginner';
+                        questionObj.difficulty = value.trim() || 'Beginner';
                         break;
                     case 'topic':
-                        questionObj.topic = value || '';
+                        questionObj.topic = value.trim() || '';
                         break;
                     case 'explanation':
-                        questionObj.explanation = value || '';
+                        questionObj.explanation = value.trim() || '';
                         break;
                     case 'marks':
                         questionObj.marks = parseInt(value) || 1;
                         break;
                     case 'group':
-                        questionObj.group = value || '';
+                        questionObj.group = value.trim() || '';
                         break;
                     case 'duplicateof':
-                        questionObj.duplicateOf = value === 'null' ? null : value;
+                        questionObj.duplicateOf = value === 'null' ? null : value.trim();
                         break;
                     case 'isactive':
                         questionObj.isActive = value.toLowerCase() === 'true';
@@ -1518,8 +1524,8 @@ function parseTextFile(content) {
             }
         });
 
-        // Validate and add question
-        if (questionObj.question && questionObj.options.length >= 2) {
+        // Validate and add question - ensure question text exists
+        if (questionObj.question && questionObj.question.length > 0 && questionObj.options.length >= 2) {
             questions.push(questionObj);
         }
     });
