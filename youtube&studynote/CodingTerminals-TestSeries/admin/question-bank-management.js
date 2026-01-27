@@ -222,7 +222,7 @@ const API_URLS = {
     GET_ANALYTICS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ANALYTICS
 };
 
-// Switch between tabs
+// Switch between tabs - Fixed version without duplicate
 function switchTab(tabName) {
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -235,10 +235,20 @@ function switchTab(tabName) {
     });
 
     // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+    const tabElement = document.getElementById(`${tabName}-tab`);
+    if (tabElement) {
+        tabElement.classList.remove('hidden');
+    }
 
-    // Add active class to clicked button
-    event.target.classList.add('active');
+    // Find and activate the correct button based on its onclick attribute
+    const buttons = document.querySelectorAll('.tab-button');
+    for (let button of buttons) {
+        const onclickValue = button.getAttribute('onclick');
+        if (onclickValue && onclickValue.includes(tabName)) {
+            button.classList.add('active');
+            break;
+        }
+    }
 
     currentTab = tabName;
 
@@ -421,25 +431,31 @@ function updateStats() {
     if (duplicatesElement) duplicatesElement.textContent = duplicates.length;
 }
 
-// Render questions list
-// Update renderQuestionsList function to handle both _id and id in HTML
+// Improved renderQuestionsList function with better error handling
 function renderQuestionsList() {
     const container = document.getElementById('questionsContainer');
     const emptyState = document.getElementById('emptyState');
 
-    if (!container || !emptyState) return;
+    if (!container || !emptyState) {
+        console.error('Required DOM elements not found for rendering questions');
+        return;
+    }
 
     if (filteredQuestions.length === 0) {
         emptyState.style.display = 'block';
-        container.innerHTML = '';
+        container.innerHTML = ''; // Clear the container
         return;
     }
 
     emptyState.style.display = 'none';
+    
+    // Clear the container first to ensure proper refresh
+    container.innerHTML = '';
 
-    container.innerHTML = filteredQuestions.map((question, index) => {
-        // Use _id if available, otherwise id
-        const questionId = question._id || question.id;
+    // Build HTML for all questions and insert at once for better performance
+    const questionsHTML = filteredQuestions.map((question, index) => {
+        // Use _id if available, otherwise id, fallback to questionId
+        const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
 
         return `
@@ -492,22 +508,9 @@ function renderQuestionsList() {
             </div>
         `;
     }).join('');
+
+    container.innerHTML = questionsHTML;
 }
-
-// Update toggleQuestionSelection function to handle both _id and id
-function toggleQuestionSelection(questionId) {
-    if (selectedQuestions.has(questionId)) {
-        selectedQuestions.delete(questionId);
-    } else {
-        selectedQuestions.add(questionId);
-    }
-
-    // Re-render the list to update selection indicators
-    renderQuestionsList();
-    updateStats();
-}
-
-// Toggle question selection
 function toggleQuestionSelection(questionId) {
     if (selectedQuestions.has(questionId)) {
         selectedQuestions.delete(questionId);
@@ -809,7 +812,7 @@ function closeEditModal() {
     }
 }
 
-// Delete question
+// Improved delete question function with proper UI refresh
 async function deleteQuestion(questionId) {
     if (!confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
         return;
@@ -827,12 +830,27 @@ async function deleteQuestion(questionId) {
         const result = await response.json();
 
         if (result.success) {
-            // Remove from local array - check both _id and id
-            allQuestions = allQuestions.filter(q => !(q._id === questionId || q.id === questionId));
-            filteredQuestions = filteredQuestions.filter(q => !(q._id === questionId || q.id === questionId));
+            // Remove from allQuestions array
+            allQuestions = allQuestions.filter(q => {
+                const idToCheck = q._id || q.id || q.questionId;
+                return idToCheck !== questionId;
+            });
 
+            // Remove from filteredQuestions array
+            filteredQuestions = filteredQuestions.filter(q => {
+                const idToCheck = q._id || q.id || q.questionId;
+                return idToCheck !== questionId;
+            });
+
+            // Remove from selected questions if it was selected
+            selectedQuestions.delete(questionId);
+
+            // Update the UI to reflect the deletion
             renderQuestionsList();
+            renderFilters(); // Update filter options
             updateStats();
+
+            // Show success message
             showToast('Question deleted successfully!', 'success');
         } else {
             showToast(result.message || 'Failed to delete question', 'error');
@@ -853,51 +871,6 @@ function bulkEdit() {
     // For now, just show a message - in real implementation, this would open a bulk edit form
     showToast(`Preparing to edit ${selectedQuestions.size} questions`, 'info');
 }
-
-// Bulk delete selected questions
-// async function bulkDelete() {
-//     if (selectedQuestions.size === 0) {
-//         showToast('Please select questions to delete', 'warning');
-//         return;
-//     }
-
-//     if (!confirm(`Are you sure you want to delete ${selectedQuestions.size} questions? This action cannot be undone.`)) {
-//         return;
-//     }
-
-//     try {
-//         const response = await fetch(API_URLS.BULK_DELETE, {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify({ questionIds: Array.from(selectedQuestions) })
-//         });
-
-//         if (!response.ok) {
-//             throw new Error(`HTTP error! status: ${response.status}`);
-//         }
-
-//         const result = await response.json();
-
-//         if (result.success) {
-//             // Remove from local arrays
-//             allQuestions = allQuestions.filter(q => !selectedQuestions.has(q.id));
-//             filteredQuestions = filteredQuestions.filter(q => !selectedQuestions.has(q.id));
-
-//             selectedQuestions.clear();
-
-//             renderQuestionsList();
-//             updateStats();
-//             showToast(`${result.deleted || selectedQuestions.size} questions deleted successfully!`, 'success');
-//         } else {
-//             showToast(result.message || 'Failed to delete questions', 'error');
-//         }
-//     } catch (error) {
-//         console.error('Error bulk deleting questions:', error);
-//         showToast('Error deleting questions: ' + error.message, 'error');
-//     }
-// }
 
 // Update bulkDelete function to handle both _id and id
 async function bulkDelete() {
@@ -1492,10 +1465,19 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
     return questions;
 }
 
-// Add option field for dynamic form
+// Add option field for dynamic form - Fixed version
 function addOptionField(prefix = 'add') {
     const container = document.getElementById(`${prefix}OptionsContainer`);
-    const optionCount = container.children.length - 1; // Subtract the button
+    if (!container) {
+        console.error(`Options container with ID '${prefix}OptionsContainer' not found`);
+        return;
+    }
+    
+    // Count the number of existing option fields (excluding the button)
+    const optionDivs = Array.from(container.children).filter(child => 
+        child.tagName === 'DIV' && child.querySelector(`[id^="${prefix}Option"]`)
+    );
+    const optionCount = optionDivs.length;
     const newIndex = optionCount;
 
     const optionHTML = `
@@ -1512,7 +1494,7 @@ function addOptionField(prefix = 'add') {
         </div>
     `;
 
-    // Insert before the button
+    // Insert before the button if there is one, otherwise at the end
     const button = container.querySelector('button');
     if (button) {
         button.insertAdjacentHTML('beforebegin', optionHTML);
@@ -1520,7 +1502,6 @@ function addOptionField(prefix = 'add') {
         container.insertAdjacentHTML('beforeend', optionHTML);
     }
 }
-
 
 // Refresh questions
 function refreshQuestions() {
@@ -1880,42 +1861,3 @@ if (!document.querySelector('#toast-animation-styles')) {
     `;
     document.head.appendChild(style);
 }
-// ... existing code ...
-// Switch between tabs
-function switchTab(tabName) {
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.add('hidden');
-    });
-
-    // Remove active class from all buttons
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-
-    // Show selected tab content
-    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
-
-    // Add active class to clicked button
-    // Find the button that was clicked by looking for the one with the correct onclick attribute
-    const buttons = document.querySelectorAll('.tab-button');
-    for (let button of buttons) {
-        const onclickValue = button.getAttribute('onclick');
-        if (onclickValue && onclickValue.includes(tabName)) {
-            button.classList.add('active');
-            break;
-        }
-    }
-
-    currentTab = tabName;
-
-    // Load data based on tab
-    if (tabName === 'question-bank') {
-        loadQuestions();
-    } else if (tabName === 'test-creator') {
-        loadTestCreatorData();
-    } else if (tabName === 'analytics') {
-        loadAnalytics();
-    }
-}
-// ... existing code ...
