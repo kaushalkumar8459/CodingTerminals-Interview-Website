@@ -11,7 +11,6 @@ const interviewQuestionRoutes = require('./interviewQuestion.routes');
 const questionRoutes = require('./question.routes');
 const testRoutes = require('./test.routes');
 const questionGroupRoutes = require('./questionGroup.routes');
-const translationRoutes = require('./translation.routes');
 
 module.exports = {
     authRoutes,
@@ -22,5 +21,4 @@ module.exports = {
     questionRoutes,
     testRoutes,
     questionGroupRoutes,
-    translationRoutes
 };

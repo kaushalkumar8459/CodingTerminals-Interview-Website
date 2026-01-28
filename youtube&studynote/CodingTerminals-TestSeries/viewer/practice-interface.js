@@ -16,18 +16,11 @@ let testStarted = false;
 let startTime;
 let currentQuestionIndex = 0;
 
-// Translation variables
-let isTranslated = false;
-let translatedQuestions = new Map(); // Cache for translated questions
-let translationCache = new Map(); // Cache for API translations
-
-
 // API Configuration
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        GET_ALL_QUESTIONS: '/api/questions',
-        TRANSLATE: '/api/translation/translate'
+        GET_ALL_QUESTIONS: '/api/questions'
     }
 };
 // Function to determine base URL based on environment
@@ -50,9 +43,7 @@ function determineBaseUrl() {
 }
 
 const API_URLS = {
-    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS,
-    TRANSLATE: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.TRANSLATE
-
+    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS
 };
 
 // Initialize the application
@@ -319,31 +310,19 @@ async function displayCurrentQuestion() {
     const question = filteredQuestions[currentQuestionIndex];
     const questionId = question._id || question.id;
 
-    // Apply translation if needed
-    let displayQuestion = question;
-    if (isTranslated) {
-        try {
-            displayQuestion = await translateQuestion(question);
-        } catch (error) {
-            console.error('Translation failed:', error);
-            showToast('Translation failed, showing original text', 'warning');
-            displayQuestion = question;
-        }
-    }
-
     // Update question header with correct question number
     document.getElementById('currentQuestionDisplay').textContent = currentQuestionIndex + 1;
-    document.getElementById('questionSubject').textContent = displayQuestion.subject;
-    document.getElementById('questionYear').textContent = displayQuestion.academicYear;
-    document.getElementById('questionDifficulty').textContent = displayQuestion.difficulty;
+    document.getElementById('questionSubject').textContent = question.subject;
+    document.getElementById('questionYear').textContent = question.academicYear;
+    document.getElementById('questionDifficulty').textContent = question.difficulty;
 
     // Update question content
     const questionContent = `
         <div class="mb-6">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">${displayQuestion.question}</h3>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">${question.question}</h3>
             
             <div class="space-y-3">
-                ${displayQuestion.options.map((option, index) => `
+                ${question.options.map((option, index) => `
                     <div class="option-item ${userAnswers[questionId] === index ? 'option-selected' : ''}" 
                          onclick="selectOption('${questionId}', ${index})">
                         <label class="flex items-center cursor-pointer">
@@ -490,94 +469,6 @@ function toggleMarkForReview() {
     }
 
     updateQuestionNavigator();
-}
-
-// Translation functions using MyMemory API
-async function translateTextViaMyMemory(text) {
-    // Check cache first
-    if (translationCache.has(text)) {
-        return translationCache.get(text);
-    }
-
-    try {
-        const response = await fetch(API_URLS.TRANSLATE, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                text: text,
-                target: 'hi',
-                source: 'en'
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Translation API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Cache the result
-            translationCache.set(text, result.translatedText);
-            return result.translatedText;
-        } else {
-            throw new Error(result.message || 'Translation failed');
-        }
-    } catch (error) {
-        console.error('MyMemory translation failed:', error);
-        return text; // Return original if translation fails
-    }
-}
-
-async function translateQuestion(questionObj) {
-    // Check if already translated
-    const questionId = questionObj._id || questionObj.id;
-    if (translatedQuestions.has(questionId)) {
-        return translatedQuestions.get(questionId);
-    }
-
-    try {
-        // Translate question and all options
-        const [translatedQuestion, ...translatedOptions] = await Promise.all([
-            translateTextViaMyMemory(questionObj.question),
-            ...questionObj.options.map(option => translateTextViaMyMemory(option))
-        ]);
-
-        const translated = {
-            ...questionObj,
-            question: translatedQuestion,
-            options: translatedOptions
-        };
-
-        // Cache the translation
-        translatedQuestions.set(questionId, translated);
-        return translated;
-
-    } catch (error) {
-        console.error('Question translation failed:', error);
-        return questionObj; // Return original if translation fails
-    }
-}
-function toggleTranslation() {
-    if (!testStarted) return;
-
-    isTranslated = !isTranslated;
-    const translateBtn = document.getElementById('translateBtn');
-
-    if (isTranslated) {
-        translateBtn.innerHTML = '🌐 Show Original';
-        translateBtn.className = 'px-4 py-2 bg-purple-500 text-white rounded-lg font-semibold hover:bg-purple-600 transition-colors whitespace-nowrap';
-        showToast('Translating to Hindi...', 'info');
-    } else {
-        translateBtn.innerHTML = '🌐 Translate to Hindi';
-        translateBtn.className = 'px-4 py-2 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition-colors whitespace-nowrap';
-        showToast('Showing original English', 'info');
-    }
-
-    // Redisplay current question with new language
-    displayCurrentQuestion();
 }
 
 // Get current question number in overall sequence

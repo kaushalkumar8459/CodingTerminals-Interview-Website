@@ -7,7 +7,7 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const connectDB = require('./config/database');
-const { authRoutes, videoRoutes, noteRoutes, backupRoutes, translationRoutes } = require('./routes');
+const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const questionRoutes = require('./routes/question.routes');
 // const questionUploadRoutes = require('./routes/questionUpload.routes'); // REMOVED
@@ -84,8 +84,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // ============================================
 // API ROUTES (MODERN ARCHITECTURE)
 // ============================================
-// Translation API
-app.use('/api/translation', translationRoutes);
 
 // Individual video documents API
 app.use('/api/videos', videoRoutes);
