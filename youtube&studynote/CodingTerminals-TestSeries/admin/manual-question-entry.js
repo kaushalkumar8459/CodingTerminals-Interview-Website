@@ -11,9 +11,9 @@ let hasInitialized = false;
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        CREATE_QUESTION: '/api/questions',
-        CREATE_BULK_QUESTIONS: '/api/questions',
-        GET_ALL_QUESTIONS: '/api/questions'
+        CREATE_QUESTION: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        CREATE_BULK_QUESTIONS: APP_CONFIG.API.ENDPOINTS.QUESTIONS,
+        GET_ALL_QUESTIONS: APP_CONFIG.API.ENDPOINTS.QUESTIONS
     }
 };
 // Function to determine base URL based on environment
