@@ -304,8 +304,7 @@ function showToast(message, type = 'info') {
 }
 
 // Display current question
-// Display current question
-function displayCurrentQuestion() {
+async function displayCurrentQuestion() {
     if (filteredQuestions.length === 0) return;
 
     const question = filteredQuestions[currentQuestionIndex];
@@ -384,28 +383,6 @@ function updateMarkForReviewButton(questionId) {
         markBtn.className = 'px-4 py-2 bg-yellow-500 text-white rounded-lg font-semibold hover:bg-yellow-600 transition-colors';
     }
 }
-
-// Get current question number in overall sequence
-// Get current question number in overall sequence
-function getCurrentQuestionNumber() {
-    // Find the actual position of the current displayed question
-    const currentQuestion = currentQuestions[0];
-    if (!currentQuestion) return 1;
-
-    const questionId = currentQuestion._id || currentQuestion.id;
-
-    // Find this question's position in the filtered questions array
-    for (let i = 0; i < filteredQuestions.length; i++) {
-        const qId = filteredQuestions[i]._id || filteredQuestions[i].id;
-        if (qId === questionId) {
-            return i + 1;
-        }
-    }
-
-    // Fallback to page-based calculation
-    return currentPage * questionsPerPage + 1;
-}
-
 // Clear the current question's selection
 function clearSelection() {
     if (!testStarted) return; // Only allow clearing during test
@@ -457,7 +434,6 @@ function selectOption(questionId, optionIndex) {
 }
 
 // Toggle mark for review
-// Toggle mark for review
 function toggleMarkForReview() {
     if (!testStarted) return; // Only allow marking during test
 
@@ -494,6 +470,27 @@ function toggleMarkForReview() {
 
     updateQuestionNavigator();
 }
+
+// Get current question number in overall sequence
+function getCurrentQuestionNumber() {
+    // Find the actual position of the current displayed question
+    const currentQuestion = currentQuestions[0];
+    if (!currentQuestion) return 1;
+
+    const questionId = currentQuestion._id || currentQuestion.id;
+
+    // Find this question's position in the filtered questions array
+    for (let i = 0; i < filteredQuestions.length; i++) {
+        const qId = filteredQuestions[i]._id || filteredQuestions[i].id;
+        if (qId === questionId) {
+            return i + 1;
+        }
+    }
+
+    // Fallback to page-based calculation
+    return currentPage * questionsPerPage + 1;
+}
+
 // Navigate to next question
 function nextQuestion() {
     if (currentQuestionIndex < filteredQuestions.length - 1) {
@@ -559,7 +556,7 @@ function updateQuestionNavigator() {
     });
 }
 
-// Go to specific question
+
 // Go to specific question
 function goToQuestion(questionIndex) {
     if (questionIndex >= 0 && questionIndex < filteredQuestions.length) {
