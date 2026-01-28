@@ -185,21 +185,21 @@ function initModalSearchFields() {
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        GET_ALL_QUESTIONS: '/questions',
-        GET_QUESTIONS_BY_SUBJECT: '/questions/subject/',
-        GET_QUESTIONS_BY_YEAR: '/questions/year/',
-        GET_QUESTIONS_BY_DIFFICULTY: '/questions/difficulty/',
-        CREATE_QUESTION: '/questions',
-        UPDATE_QUESTION: '/questions/',
-        DELETE_QUESTION: '/questions/',
-        BULK_DELETE: '/questions/bulk-delete',
-        FIND_DUPLICATES: '/questions/duplicates/find',
-        CREATE_GROUP: '/groups',
-        ASSIGN_TO_GROUP: '/groups/assign',
-        GET_GROUPS: '/groups',
-        CREATE_TEST: '/tests',
-        GET_TESTS: '/tests',
-        GET_ANALYTICS: '/questions/analytics'  // Updated to correct endpoint
+        GET_ALL_QUESTIONS: '/api/questions',
+        GET_QUESTIONS_BY_SUBJECT: '/api/questions/subject/',
+        GET_QUESTIONS_BY_YEAR: '/api/questions/year/',
+        GET_QUESTIONS_BY_DIFFICULTY: '/api/questions/difficulty/',
+        CREATE_QUESTION: '/api/questions',
+        UPDATE_QUESTION: '/api/questions/',
+        DELETE_QUESTION: '/api/questions/',
+        BULK_DELETE: '/api/questions/bulk-delete',
+        FIND_DUPLICATES: '/api/questions/duplicates/find',
+        CREATE_GROUP: '/api/groups',
+        ASSIGN_TO_GROUP: '/api/groups/assign',
+        GET_GROUPS: '/api/groups',
+        CREATE_TEST: '/api/tests',
+        GET_TESTS: '/api/tests',
+        GET_ANALYTICS: '/api/questions/analytics'  // Updated to correct endpoint
     }
 };
 // Function to determine base URL based on environment

@@ -119,15 +119,15 @@ function addToDataSource(value, inputId) {
 const API_CONFIG = {
     BASE_URL: determineBaseUrl(),
     ENDPOINTS: {
-        UPLOAD_QUESTION_PAPER: '/questions/upload',
-        GET_ALL_QUESTIONS: '/questions',
-        CREATE_QUESTION: '/questions',
-        UPDATE_QUESTION: '/questions/',
-        DELETE_QUESTION: '/questions/',
-        IMPORT_CSV: '/questions/import/csv',
-        IMPORT_EXCEL: '/questions/import/excel',
-        IMPORT_TEXT: '/questions/import/text',
-        SYNC_WITH_DB: '/questions/sync',
+        UPLOAD_QUESTION_PAPER: '/api/questions/upload',
+        GET_ALL_QUESTIONS: '/api/questions',
+        CREATE_QUESTION: '/api/questions',
+        UPDATE_QUESTION: '/api/questions/',
+        DELETE_QUESTION: '/api/questions/',
+        IMPORT_CSV: '/api/questions/import/csv',
+        IMPORT_EXCEL: '/api/questions/import/excel',
+        IMPORT_TEXT: '/api/questions/import/text',
+        SYNC_WITH_DB: '/api/questions/sync',
     }
 };
 
