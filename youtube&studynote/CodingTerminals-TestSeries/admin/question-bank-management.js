@@ -1623,7 +1623,12 @@ async function saveBulkQuestions(event) {
     const questions = parseBulkQuestions(bulkText, defaultSubject, defaultYear, defaultExamType, defaultDifficulty);
 
     if (questions.length === 0) {
-        showToast('No valid questions found in the input', 'error');
+        showToast('No valid questions found. Please use the format: Q: Question, A: Option A, B: Option B, etc.', 'error');
+        return;
+    }
+
+    // Confirm before saving
+    if (!confirm(`${questions.length} question(s) will be saved. Continue?`)) {
         return;
     }
 
@@ -1644,14 +1649,16 @@ async function saveBulkQuestions(event) {
         const result = await response.json();
 
         if (result.success) {
-            // Add to local data
-            allQuestions.unshift(...result.data);
+            // Add to local data - handle both array and single object responses
+            const addedQuestions = Array.isArray(result.data) ? result.data : 
+                                   (result.data ? [result.data] : questions);
+            allQuestions.unshift(...addedQuestions);
             filteredQuestions = [...allQuestions];
 
             closeEditModal();
             renderQuestionsList();
             updateStats();
-            showToast(`${result.count || questions.length} questions added successfully!`, 'success');
+            showToast(`${result.count || addedQuestions.length} questions added successfully!`, 'success');
         } else {
             showToast(result.message || 'Failed to add questions', 'error');
         }
@@ -1663,8 +1670,14 @@ async function saveBulkQuestions(event) {
 
 // Parse bulk questions from text
 function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, defaultDifficulty) {
-    const questionBlocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');
+    // Normalize line endings and clean up extra blank lines
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+    
+    // Split by double newlines to get question blocks
+    const questionBlocks = normalizedText.split(/\n\n+/).filter(block => block.trim() !== '');
     const questions = [];
+
+    console.log('Parsing bulk questions:', questionBlocks.length, 'blocks found');
 
     for (const block of questionBlocks) {
         const lines = block.split('\n').map(line => line.trim()).filter(line => line !== '');
@@ -1673,10 +1686,12 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
         const options = [];
         let correctAnswer = 0;
         let explanation = '';
+        let hasValidContent = false;
 
         for (const line of lines) {
             if (line.toLowerCase().startsWith('q:')) {
                 question = line.substring(2).trim();
+                hasValidContent = true;
             } else if (/^[A-D]:/i.test(line)) {
                 const optionLetter = line.charAt(0).toUpperCase();
                 const optionText = line.substring(2).trim();
@@ -1684,6 +1699,7 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
                 // Map A->0, B->1, C->2, D->3
                 const optionIndex = optionLetter.charCodeAt(0) - 'A'.charCodeAt(0);
                 options[optionIndex] = optionText;
+                hasValidContent = true;
             } else if (line.toLowerCase().startsWith('correct:')) {
                 const correctLetter = line.substring(8).trim().charAt(0).toUpperCase();
                 correctAnswer = correctLetter.charCodeAt(0) - 'A'.charCodeAt(0);
@@ -1692,12 +1708,13 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
             }
         }
 
-        // Only add if we have a question and at least 2 options
-        if (question && options.filter(opt => opt !== undefined).length >= 2) {
+        // Only add if we have a question with Q: prefix and at least 2 options
+        const validOptions = options.filter(opt => opt !== undefined);
+        if (hasValidContent && question && validOptions.length >= 2) {
             questions.push({
                 question: question,
-                options: options.filter(opt => opt !== undefined),
-                correctAnswer: correctAnswer,
+                options: validOptions,
+                correctAnswer: Math.min(correctAnswer, validOptions.length - 1), // Ensure correctAnswer is valid
                 subject: defaultSubject,
                 academicYear: defaultYear,
                 examType: defaultExamType,
@@ -1705,9 +1722,11 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
                 topic: '',
                 explanation: explanation
             });
+            console.log('Added question:', question.substring(0, 50));
         }
     }
 
+    console.log('Total questions parsed:', questions.length);
     return questions;
 }
 
