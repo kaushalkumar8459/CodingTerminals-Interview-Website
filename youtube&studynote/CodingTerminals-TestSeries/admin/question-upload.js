@@ -1,34 +1,5 @@
 // File: CodingTerminals-TestSeries/admin/question-upload.js
-
-// Sanitize HTML to prevent XSS attacks
-function sanitizeHTML(html) {
-    if (!html) return '';
-    // Use DOMPurify if available, otherwise strip all HTML tags
-    if (typeof DOMPurify !== 'undefined') {
-        return DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
-        });
-    }
-    // Fallback: basic HTML entity encoding
-    const div = document.createElement('div');
-    div.textContent = html;
-    return div.innerHTML;
-}
-
-// Destroy Quill editor instance properly
-function destroyQuillEditor(editor) {
-    if (editor && editor.container) {
-        // Remove event listeners
-        editor.off('text-change');
-        editor.off('selection-change');
-        // Clear the container
-        if (editor.container.parentNode) {
-            editor.container.innerHTML = '';
-        }
-    }
-    return null;
-}
+// Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, etc.) are loaded from shared/utils.js
 
 // Global Variables
 let uploadedFiles = [];
@@ -1938,80 +1909,7 @@ function confirmModalAction() {
     closeConfirmModal();
 }
 
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-
-    // Only show toast if container exists
-    if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`); // Fallback to console
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
-
-// ==================== AUTHENTICATION ====================
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.clear();
-        window.location.href = '../../auth/login.html';
-    }
-}
-
-// ==================== ANIMATION STYLES ====================
-// Add CSS animations dynamically if they don't exist
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
-    `;
-    document.head.appendChild(style);
-}
+// Note: showToast, logout, and animation styles are loaded from shared/utils.js
 
 // Initialize search fields after DOM is loaded
 // Initialize search fields after DOM is loaded

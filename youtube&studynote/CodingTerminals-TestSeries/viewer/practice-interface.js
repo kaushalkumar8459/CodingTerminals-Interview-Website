@@ -1,20 +1,5 @@
 // File: CodingTerminals-TestSeries/viewer/practice-interface.js
-
-// Sanitize HTML to prevent XSS attacks
-function sanitizeHTML(html) {
-    if (!html) return '';
-    // Use DOMPurify if available, otherwise strip all HTML tags
-    if (typeof DOMPurify !== 'undefined') {
-        return DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
-        });
-    }
-    // Fallback: basic HTML entity encoding
-    const div = document.createElement('div');
-    div.textContent = html;
-    return div.innerHTML;
-}
+// Note: Common utilities (sanitizeHTML, showToast, etc.) are loaded from shared/utils.js
 
 // Global variables
 let allQuestions = [];
@@ -283,41 +268,7 @@ function shuffleArray(array) {
     return newArray;
 }
 
-// Enhanced toast notification function
-function showToast(message, type = 'info') {
-    // Create toast container if it doesn't exist
-    let toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toastContainer';
-        toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
-        document.body.appendChild(toastContainer);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
-
-    // Animate in
-    setTimeout(() => {
-        toast.classList.remove('translate-x-full');
-    }, 10);
-
-    // Remove after delay
-    setTimeout(() => {
-        toast.classList.add('translate-x-full');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
+// Note: showToast is loaded from shared/utils.js
 
 // Display current question
 async function displayCurrentQuestion() {

@@ -1,34 +1,5 @@
 // File: CodingTerminals-TestSeries/admin/manual-question-entry.js
-
-// Sanitize HTML to prevent XSS attacks
-function sanitizeHTML(html) {
-    if (!html) return '';
-    // Use DOMPurify if available, otherwise strip all HTML tags
-    if (typeof DOMPurify !== 'undefined') {
-        return DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
-        });
-    }
-    // Fallback: basic HTML entity encoding
-    const div = document.createElement('div');
-    div.textContent = html;
-    return div.innerHTML;
-}
-
-// Destroy Quill editor instance properly
-function destroyQuillEditor(editor) {
-    if (editor && editor.container) {
-        // Remove event listeners
-        editor.off('text-change');
-        editor.off('selection-change');
-        // Clear the container
-        if (editor.container.parentNode) {
-            editor.container.innerHTML = '';
-        }
-    }
-    return null;
-}
+// Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, fullToolbarOptions, etc.) are loaded from shared/utils.js
 
 // Global Variables
 let questionBlocks = [];
@@ -41,24 +12,6 @@ let hasInitialized = false;
 
 // Store Quill editor instances for each question block
 let questionEditors = {}; // {questionIndex: {question: Quill, explanation: Quill, options: [Quill, ...]}}
-
-// Quill toolbar configurations
-const fullToolbarOptions = [
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'script': 'sub' }, { 'script': 'super' }],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    ['code-block'],
-    ['link', 'image'],
-    ['clean']
-];
-
-const minimalToolbarOptions = [
-    ['bold', 'italic', 'underline'],
-    [{ 'script': 'sub' }, { 'script': 'super' }],
-    ['code-block'],
-    ['clean']
-];
 
 // API Endpoints Configuration
 const API_CONFIG = {
@@ -742,78 +695,7 @@ function getQuestionData(index) {
     };
 }
 
-// Show toast notification
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-
-    if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`);
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
-
-// Add CSS animations for toasts
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Logout function
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.clear();
-        window.location.href = '../../auth/login.html';
-    }
-}
+// Note: showToast, logout, and animation styles are loaded from shared/utils.js
 
 // Refresh existing values from database
 async function refreshExistingValues() {
