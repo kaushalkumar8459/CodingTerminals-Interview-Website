@@ -107,6 +107,70 @@
             padding: 0.5rem;
             margin-top: 0.5rem;
         }
+
+        /* Option content display - handle HTML from Quill */
+        .option-content {
+            display: inline;
+        }
+        .option-content p {
+            display: inline;
+            margin: 0;
+        }
+        .option-content p:first-child {
+            display: inline;
+        }
+        .option-item .flex {
+            align-items: center;
+        }
+
+        /* Question and explanation content display */
+        .question-card h4 p,
+        .question-card .text-blue-700 p {
+            margin: 0;
+            display: inline;
+        }
+
+        /* Quill Editor Styles for Edit Modal */
+        #editModal .ql-toolbar {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            background-color: #f8fafc;
+            border-color: #e5e7eb;
+        }
+
+        #editModal .ql-container {
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            border-color: #e5e7eb;
+            font-size: 14px;
+        }
+
+        #editModal .ql-editor {
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #editModal .ql-editor.ql-blank::before {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        /* Smaller toolbar for option editors */
+        #editOptionsContainer .ql-toolbar {
+            padding: 4px 8px;
+        }
+
+        #editOptionsContainer .ql-editor {
+            min-height: 40px;
+            max-height: 100px;
+        }
+
+        /* Focus styles for Quill editors */
+        #editModal .ql-container:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
     </style>
 </head>
 
