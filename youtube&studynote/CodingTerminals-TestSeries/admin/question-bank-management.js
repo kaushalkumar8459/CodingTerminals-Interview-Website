@@ -1310,13 +1310,14 @@ function showAddQuestionModal(isBulk = false) {
             <form id="bulkAddQuestionForm" onsubmit="saveBulkQuestions(event)">
                 <div class="space-y-4">
                     <div>
-                        <div class="flex items-center gap-2 mb-2">
+                        <div class="flex items-center gap-2 mb-1">
                             <label class="block text-sm font-semibold text-gray-700">Bulk Question Entry</label>
                             <div class="relative group">
                                 <span class="cursor-help text-blue-500 hover:text-blue-700 text-lg" title="Format Instructions">ℹ️</span>
                                 <div class="absolute left-0 top-6 z-50 hidden group-hover:block w-80 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-xl">
                                     <p class="font-semibold mb-2">📝 Format Instructions:</p>
                                     <div class="bg-gray-700 p-2 rounded font-mono text-xs mb-2">
+                                        Q.No: 1<br>
                                         Q: Question text<br>
                                         A: Option A<br>
                                         B: Option B<br>
@@ -1647,7 +1648,7 @@ async function saveBulkQuestions(event) {
         return;
     }
 
-    // Parse bulk questions
+    // Parse bulk questions (Q.No: is parsed from text)
     const questions = parseBulkQuestions(bulkText, defaultSubject, defaultYear, defaultExamType, defaultDifficulty);
 
     if (questions.length === 0) {
@@ -1710,6 +1711,7 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
     for (const block of questionBlocks) {
         const lines = block.split('\n').map(line => line.trim()).filter(line => line !== '');
 
+        let questionNumber = null;
         let question = '';
         const options = [];
         let correctAnswer = 0;
@@ -1717,7 +1719,11 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
         let hasValidContent = false;
 
         for (const line of lines) {
-            if (line.toLowerCase().startsWith('q:')) {
+            if (line.toLowerCase().startsWith('q.no:') || line.toLowerCase().startsWith('qno:')) {
+                // Parse Q.No: 15 or QNo: 15
+                const numStr = line.replace(/q\.?no:/i, '').trim();
+                questionNumber = parseInt(numStr) || null;
+            } else if (line.toLowerCase().startsWith('q:')) {
                 question = line.substring(2).trim();
                 hasValidContent = true;
             } else if (/^[A-D]:/i.test(line)) {
@@ -1740,6 +1746,7 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
         const validOptions = options.filter(opt => opt !== undefined);
         if (hasValidContent && question && validOptions.length >= 2) {
             questions.push({
+                questionNumber: questionNumber, // Will be null if not specified
                 question: question,
                 options: validOptions,
                 correctAnswer: Math.min(correctAnswer, validOptions.length - 1), // Ensure correctAnswer is valid
@@ -1750,7 +1757,7 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
                 topic: '',
                 explanation: explanation
             });
-            console.log('Added question:', question.substring(0, 50));
+            console.log('Added question' + (questionNumber ? ' #' + questionNumber : '') + ':', question.substring(0, 50));
         }
     }
 
