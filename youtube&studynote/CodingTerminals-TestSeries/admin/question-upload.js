@@ -993,8 +993,8 @@ let currentEditingQuestionSet = 'database';
 // Download sample CSV file - Pure CSV format
 function downloadSampleCSV() {
     const csvContent = `"question","options_a","options_b","options_c","options_d","correctAnswer","explanation","subject","academicYear","examType","difficulty","topic","marks","group","duplicateOf","isActive","metadata_validationStatus"
-"What is your name?","ALL","ALL 2","ALL 4","ALL 7",0,"","Physics","2024-2026","Competitive Exam","Advanced","","1","","null",true,"pending"
-"What is the capital of France?","London","Berlin","Paris","Madrid",2,"Paris is the capital and largest city of France.","Geography","2024-2025","Board Exam","Beginner","World Geography",1,"","null",true,"pending"`;
+"What is your name?","ALL","ALL 2","ALL 4","ALL 7",0,"","Mathematics and Science","Jan 2024 (PAPER - 2, Set - M)","CTET","Advanced","","1","","null",true,"pending"
+"What is the capital of France?","London","Berlin","Paris","Madrid",2,"Paris is the capital and largest city of France.","Mathematics and Science","Jan 2024 (PAPER - 2, Set - M)","CTET","Beginner","World Geography",1,"","null",true,"pending"`;
 
     // Create a Blob with pure CSV content - standard CSV MIME type
     const blob = new Blob([csvContent], {
@@ -1031,8 +1031,8 @@ function downloadSampleCSV() {
 // Download sample Excel-compatible file - Different format for Excel
 function downloadSampleExcel() {
     const excelContent = `question	options_a	options_b	options_c	options_d	correctAnswer	explanation	subject	academicYear	examType	difficulty	topic	marks	group	duplicateOf	isActive	metadata_validationStatus
-What is your name?	ALL	ALL 2	ALL 4	ALL 7	0		Physics	2024-2026	Competitive Exam	Advanced		1			true	pending
-What is the capital of France?	London	Berlin	Paris	Madrid	2	Paris is the capital and largest city of France.	Geography	2024-2025	Board Exam	Beginner	World Geography	1	    	true	pending`;
+What is your name?	ALL	ALL 2	ALL 4	ALL 7	0		Mathematics and Science	Jan 2024 (PAPER - 2, Set - M)	CTET	Advanced		1			true	pending
+What is the capital of France?	London	Berlin	Paris	Madrid	2	Paris is the capital and largest city of France.	Mathematics and Science	Jan 2024 (PAPER - 2, Set - M)	CTET	Beginner	World Geography	1	    	true	pending`;
 
     // Create a Blob with tab-separated content - Excel-friendly format
     const blob = new Blob([excelContent], {
@@ -1079,9 +1079,9 @@ options:
   - ALL 7
 correctAnswer: 0
 explanation: ""
-subject: Physics
-academicYear: "2024-2026"
-examType: "Competitive Exam"
+subject: Mathematics and Science
+academicYear: "Jan 2024 (PAPER - 2, Set - M)"
+examType: "CTET"
 difficulty: "Advanced"
 topic: ""
 marks: 1
@@ -1100,9 +1100,9 @@ options:
   - Madrid
 correctAnswer: 2
 explanation: "Paris is the capital and largest city of France."
-subject: Geography
-academicYear: "2024-2025"
-examType: "Board Exam"
+subject: Mathematics and Science
+academicYear: "Jan 2024 (PAPER - 2, Set - M)"
+examType: "CTET"
 difficulty: "Beginner"
 topic: "World Geography"
 marks: 1
