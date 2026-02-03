@@ -1,5 +1,35 @@
 // File: CodingTerminals-TestSeries/admin/question-upload.js
 
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(html) {
+    if (!html) return '';
+    // Use DOMPurify if available, otherwise strip all HTML tags
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+        });
+    }
+    // Fallback: basic HTML entity encoding
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Destroy Quill editor instance properly
+function destroyQuillEditor(editor) {
+    if (editor && editor.container) {
+        // Remove event listeners
+        editor.off('text-change');
+        editor.off('selection-change');
+        // Clear the container
+        if (editor.container.parentNode) {
+            editor.container.innerHTML = '';
+        }
+    }
+    return null;
+}
+
 // Global Variables
 let uploadedFiles = [];
 let parsedQuestions = []; // Questions from file uploads (will be stored temporarily)
@@ -477,13 +507,13 @@ function updateQuestionsList() {
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${question.question || 'No question text'}</h4>
+                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.question) || 'No question text'}</h4>
                         <div class="flex flex-wrap gap-2 mb-2">
-                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject || 'No subject'}</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear || 'No year'}</span>
-                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType || 'No exam type'}</span>
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty || 'No difficulty'}</span>
-                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">${question.topic || 'No topic'}</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject) || 'No subject'}</span>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear) || 'No year'}</span>
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${sanitizeHTML(question.examType) || 'No exam type'}</span>
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${sanitizeHTML(question.difficulty) || 'No difficulty'}</span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">${sanitizeHTML(question.topic) || 'No topic'}</span>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -502,7 +532,7 @@ function updateQuestionsList() {
                             <div class="flex items-start gap-2">
                                 <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
                                 <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
-                                <div class="flex-1 option-content">${option || 'No option text'}</div>
+                                <div class="flex-1 option-content">${sanitizeHTML(option) || 'No option text'}</div>
                                 ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
                             </div>
                         </div>
@@ -512,7 +542,7 @@ function updateQuestionsList() {
                 ${question.explanation ? `
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <div class="font-semibold text-blue-800 text-sm mb-1">Explanation:</div>
-                        <div class="text-sm text-blue-700" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${question.explanation}</div>
+                        <div class="text-sm text-blue-700" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.explanation)}</div>
                     </div>
                 ` : ''}
             </div>
@@ -640,13 +670,13 @@ function updateQuestionsDisplay(targetContainer, targetEmptyState, targetQuestio
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2">${question.question || 'No question text'}</h4>
+                        <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question) || 'No question text'}</h4>
                         <div class="flex flex-wrap gap-2 mb-2">
-                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject || 'No subject'}</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear || 'No year'}</span>
-                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType || 'No exam type'}</span>
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty || 'No difficulty'}</span>
-                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">${question.topic || 'No topic'}</span>
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject) || 'No subject'}</span>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear) || 'No year'}</span>
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${sanitizeHTML(question.examType) || 'No exam type'}</span>
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${sanitizeHTML(question.difficulty) || 'No difficulty'}</span>
+                            <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">${sanitizeHTML(question.topic) || 'No topic'}</span>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -665,7 +695,7 @@ function updateQuestionsDisplay(targetContainer, targetEmptyState, targetQuestio
                             <div class="flex items-start gap-2">
                                 <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
                                 <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
-                                <div class="flex-1 option-content">${option || 'No option text'}</div>
+                                <div class="flex-1 option-content">${sanitizeHTML(option) || 'No option text'}</div>
                                 ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
                             </div>
                         </div>
@@ -675,7 +705,7 @@ function updateQuestionsDisplay(targetContainer, targetEmptyState, targetQuestio
                 ${question.explanation ? `
                     <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
                         <div class="font-semibold text-blue-800 text-sm mb-1">Explanation:</div>
-                        <div class="text-sm text-blue-700">${question.explanation}</div>
+                        <div class="text-sm text-blue-700">${sanitizeHTML(question.explanation)}</div>
                     </div>
                 ` : ''}
             </div>
@@ -1387,14 +1417,11 @@ async function saveEditedQuestion(index) {
 
 // Close edit modal and cleanup Quill editors
 function closeEditModal() {
-    // Clean up Quill editor instances
-    if (editQuestionEditor) {
-        editQuestionEditor = null;
-    }
-    if (editExplanationEditor) {
-        editExplanationEditor = null;
-    }
+    // Properly destroy Quill editor instances
+    editQuestionEditor = destroyQuillEditor(editQuestionEditor);
+    editExplanationEditor = destroyQuillEditor(editExplanationEditor);
     if (editOptionEditors && editOptionEditors.length > 0) {
+        editOptionEditors.forEach(editor => destroyQuillEditor(editor));
         editOptionEditors = [];
     }
     

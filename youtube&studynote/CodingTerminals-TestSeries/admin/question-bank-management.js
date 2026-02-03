@@ -1,5 +1,35 @@
 // File: CodingTerminals-TestSeries/admin/question-bank-management.js
 
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(html) {
+    if (!html) return '';
+    // Use DOMPurify if available, otherwise strip all HTML tags
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+        });
+    }
+    // Fallback: basic HTML entity encoding
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Destroy Quill editor instance properly
+function destroyQuillEditor(editor) {
+    if (editor && editor.container) {
+        // Remove event listeners
+        editor.off('text-change');
+        editor.off('selection-change');
+        // Clear the container
+        if (editor.container.parentNode) {
+            editor.container.innerHTML = '';
+        }
+    }
+    return null;
+}
+
 // Global Variables
 let allQuestions = [];
 let filteredQuestions = [];
@@ -521,13 +551,13 @@ function renderQuestionsList() {
                         <!-- Header with question and actions -->
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex-1">
-                                <h4 class="font-semibold text-gray-800 mb-2">${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}</h4>
+                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question.substring(0, 100))}${question.question.length > 100 ? '...' : ''}</h4>
                                 <div class="flex flex-wrap gap-2 mb-2">
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject}</span>
-                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear}</span>
-                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType}</span>
-                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty}</span>
-                                    ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${question.group}</span>` : ''}
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject)}</span>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear)}</span>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${sanitizeHTML(question.examType)}</span>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${sanitizeHTML(question.difficulty)}</span>
+                                    ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${sanitizeHTML(question.group)}</span>` : ''}
                                 </div>
                             </div>
                             <div class="flex gap-2 ml-2">
@@ -547,7 +577,7 @@ function renderQuestionsList() {
                                     <div class="flex items-start gap-2">
                                         <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
                                         <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
-                                        <div class="flex-1 option-content">${option}</div>
+                                        <div class="flex-1 option-content">${sanitizeHTML(option)}</div>
                                         ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
                                     </div>
                                 </div>
@@ -557,7 +587,7 @@ function renderQuestionsList() {
                         
                         ${question.explanation ? `
                             <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                                <div class="text-xs text-blue-700">${question.explanation.substring(0, 100)}${question.explanation.length > 100 ? '...' : ''}</div>
+                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation.substring(0, 100))}${question.explanation.length > 100 ? '...' : ''}</div>
                             </div>
                         ` : ''}
                         
@@ -1012,18 +1042,20 @@ function closeEditModal() {
         modal.classList.add('hidden');
         currentEditingQuestion = null;
         
-        // Clean up edit modal Quill editor instances
-        editQuestionEditor = null;
+        // Properly destroy edit modal Quill editor instances
+        editQuestionEditor = destroyQuillEditor(editQuestionEditor);
+        editOptionEditors.forEach(editor => destroyQuillEditor(editor));
         editOptionEditors = [];
-        editExplanationEditor = null;
+        editExplanationEditor = destroyQuillEditor(editExplanationEditor);
         
-        // Clean up add modal Quill editor instances
-        addQuestionEditor = null;
+        // Properly destroy add modal Quill editor instances
+        addQuestionEditor = destroyQuillEditor(addQuestionEditor);
+        addOptionEditors.forEach(editor => destroyQuillEditor(editor));
         addOptionEditors = [];
-        addExplanationEditor = null;
+        addExplanationEditor = destroyQuillEditor(addExplanationEditor);
         
-        // Clean up bulk add Quill editor instance
-        bulkQuestionsEditor = null;
+        // Properly destroy bulk add Quill editor instance
+        bulkQuestionsEditor = destroyQuillEditor(bulkQuestionsEditor);
     }
 }
 

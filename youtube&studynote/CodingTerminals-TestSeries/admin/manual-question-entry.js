@@ -1,3 +1,35 @@
+// File: CodingTerminals-TestSeries/admin/manual-question-entry.js
+
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(html) {
+    if (!html) return '';
+    // Use DOMPurify if available, otherwise strip all HTML tags
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+        });
+    }
+    // Fallback: basic HTML entity encoding
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Destroy Quill editor instance properly
+function destroyQuillEditor(editor) {
+    if (editor && editor.container) {
+        // Remove event listeners
+        editor.off('text-change');
+        editor.off('selection-change');
+        // Clear the container
+        if (editor.container.parentNode) {
+            editor.container.innerHTML = '';
+        }
+    }
+    return null;
+}
+
 // Global Variables
 let questionBlocks = [];
 let questionCounter = 0;

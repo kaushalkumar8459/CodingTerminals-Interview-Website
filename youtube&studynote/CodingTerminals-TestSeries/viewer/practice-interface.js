@@ -1,5 +1,21 @@
 // File: CodingTerminals-TestSeries/viewer/practice-interface.js
 
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(html) {
+    if (!html) return '';
+    // Use DOMPurify if available, otherwise strip all HTML tags
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+        });
+    }
+    // Fallback: basic HTML entity encoding
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
 // Global variables
 let allQuestions = [];
 let filteredQuestions = [];
@@ -319,7 +335,7 @@ async function displayCurrentQuestion() {
     // Update question content
     const questionContent = `
         <div class="mb-6">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">${question.question}</h3>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">${sanitizeHTML(question.question)}</h3>
             
             <div class="space-y-3">
                 ${question.options.map((option, index) => `
@@ -329,7 +345,7 @@ async function displayCurrentQuestion() {
                             <input type="radio" name="question_${questionId}" value="${index}" 
                                    ${userAnswers[questionId] === index ? 'checked' : ''}
                                    class="mr-3">
-                            <span class="font-medium">${String.fromCharCode(65 + index)}. ${option}</span>
+                            <span class="font-medium">${String.fromCharCode(65 + index)}. ${sanitizeHTML(option)}</span>
                         </label>
                     </div>
                 `).join('')}
@@ -722,11 +738,11 @@ function generateReviewContent() {
         const isAnswered = userAnswerIndex != null;
 
         const userAnswerText = isAnswered ?
-            `${String.fromCharCode(65 + userAnswerIndex)}. ${question.options[userAnswerIndex]}` :
+            `${String.fromCharCode(65 + userAnswerIndex)}. ${sanitizeHTML(question.options[userAnswerIndex])}` :
             'Not answered';
 
         const correctAnswerText = question.correctAnswer != null ?
-            `${String.fromCharCode(65 + question.correctAnswer)}. ${question.options[question.correctAnswer]}` :
+            `${String.fromCharCode(65 + question.correctAnswer)}. ${sanitizeHTML(question.options[question.correctAnswer])}` :
             'No correct answer provided';
 
         content += `
@@ -741,7 +757,7 @@ function generateReviewContent() {
                 </span>
             </div>
             
-            <p class="text-gray-700 mb-4">${question.question}</p>
+            <p class="text-gray-700 mb-4">${sanitizeHTML(question.question)}</p>
             
             <div class="space-y-3 mb-4">
                 ${question.options.map((option, optIndex) => {
@@ -764,7 +780,7 @@ function generateReviewContent() {
                     <div class="${optionClass}">
                         <label class="flex items-center">
                             <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} class="mr-3">
-                            <span class="font-medium">${String.fromCharCode(65 + optIndex)}. ${option}</span>
+                            <span class="font-medium">${String.fromCharCode(65 + optIndex)}. ${sanitizeHTML(option)}</span>
                         </label>
                     </div>
                     `;
@@ -783,7 +799,7 @@ function generateReviewContent() {
             ${question.explanation ? `
             <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                 <p class="text-sm font-semibold text-green-800">Explanation:</p>
-                <p class="text-gray-700">${question.explanation}</p>
+                <p class="text-gray-700">${sanitizeHTML(question.explanation)}</p>
             </div>
             ` : ''}
         </div>
