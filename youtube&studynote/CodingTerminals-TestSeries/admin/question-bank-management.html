@@ -156,6 +156,17 @@
             font-style: italic;
         }
 
+        /* Bulk questions editor - no height limit */
+        #bulkQuestionsEditor .ql-editor {
+            min-height: 350px;
+            max-height: none !important;
+            overflow-y: auto;
+        }
+
+        #bulkQuestionsEditor .ql-container {
+            height: calc(100% - 42px);
+        }
+
         /* Smaller toolbar for option editors */
         #editOptionsContainer .ql-toolbar {
             padding: 4px 8px;

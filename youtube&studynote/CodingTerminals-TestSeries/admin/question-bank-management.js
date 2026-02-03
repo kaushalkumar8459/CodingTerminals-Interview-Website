@@ -26,6 +26,9 @@ let addQuestionEditor = null;
 let addOptionEditors = [];
 let addExplanationEditor = null;
 
+// Store Quill editor instance for bulk add modal
+let bulkQuestionsEditor = null;
+
 // Quill toolbar configurations
 const fullToolbarOptions = [
     ['bold', 'italic', 'underline', 'strike'],
@@ -997,6 +1000,9 @@ function closeEditModal() {
         addQuestionEditor = null;
         addOptionEditors = [];
         addExplanationEditor = null;
+        
+        // Clean up bulk add Quill editor instance
+        bulkQuestionsEditor = null;
     }
 }
 
@@ -1278,23 +1284,32 @@ function showAddQuestionModal(isBulk = false) {
 
     let formHTML;
     if (isBulk) {
-        // Bulk question entry form
+        // Bulk question entry form with Quill editor
         formHTML = `
             <form id="bulkAddQuestionForm" onsubmit="saveBulkQuestions(event)">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Bulk Question Entry</label>
-                        <p class="text-xs text-gray-500 mb-3">Enter questions in the following format:<br>
-                        Q: Question text<br>
-                        A: Option A<br>
-                        B: Option B<br>
-                        C: Option C<br>
-                        D: Option D<br>
-                        Correct: A<br>
-                        Explanation: Explanation text<br><br>
-                        
-                        Separate multiple questions with blank lines.</p>
-                        <textarea id="bulkQuestionsInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="15" placeholder="Paste your questions here in the format described above..."></textarea>
+                        <div class="flex items-center gap-2 mb-2">
+                            <label class="block text-sm font-semibold text-gray-700">Bulk Question Entry</label>
+                            <div class="relative group">
+                                <span class="cursor-help text-blue-500 hover:text-blue-700 text-lg" title="Format Instructions">ℹ️</span>
+                                <div class="absolute left-0 top-6 z-50 hidden group-hover:block w-80 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-xl">
+                                    <p class="font-semibold mb-2">📝 Format Instructions:</p>
+                                    <div class="bg-gray-700 p-2 rounded font-mono text-xs mb-2">
+                                        Q: Question text<br>
+                                        A: Option A<br>
+                                        B: Option B<br>
+                                        C: Option C<br>
+                                        D: Option D<br>
+                                        Correct: A<br>
+                                        Explanation: Explanation text
+                                    </div>
+                                    <p class="text-gray-300">💡 Separate multiple questions with blank lines.</p>
+                                    <div class="absolute -top-2 left-2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="bulkQuestionsEditor" class="bg-white border border-gray-300 rounded-lg overflow-auto" style="height: 400px;"></div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1449,11 +1464,29 @@ function showAddQuestionModal(isBulk = false) {
 
     // Initialize Quill editors and search functionality after DOM update
     setTimeout(() => {
-        if (!isBulk) {
+        if (isBulk) {
+            initBulkQuillEditor();
+        } else {
             initAddModalQuillEditors();
         }
         initModalSearchFields();
     }, 100);
+}
+
+// Initialize Quill editor for bulk add modal
+function initBulkQuillEditor() {
+    bulkQuestionsEditor = null;
+    
+    const editorContainer = document.getElementById('bulkQuestionsEditor');
+    if (editorContainer) {
+        bulkQuestionsEditor = new Quill('#bulkQuestionsEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter questions in the format: Q: Question, A: Option A, B: Option B, C: Option C, D: Option D, Correct: A, Explanation: ...'    
+        });
+    }
 }
 
 // Initialize Quill editors for the add modal
@@ -1574,7 +1607,8 @@ async function saveNewQuestion(event) {
 async function saveBulkQuestions(event) {
     event.preventDefault();
 
-    const bulkText = document.getElementById('bulkQuestionsInput').value;
+    // Get text content from Quill editor (strip HTML for parsing)
+    const bulkText = bulkQuestionsEditor ? bulkQuestionsEditor.getText() : '';
     const defaultSubject = document.getElementById('bulkSubject').value;
     const defaultYear = document.getElementById('bulkYear').value;
     const defaultExamType = document.getElementById('bulkExamType').value;
