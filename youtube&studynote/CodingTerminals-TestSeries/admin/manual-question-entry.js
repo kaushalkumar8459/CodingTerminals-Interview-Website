@@ -293,43 +293,63 @@ function addQuestionBlock() {
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
                     <div id="options-${currentQuestionIndex}" class="space-y-3">
-                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-lg font-bold text-blue-600 min-w-[24px]">A.</span>
-                                <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                                    <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0" class="w-4 h-4 text-green-600">
-                                    <span class="text-sm text-gray-600">Correct Answer</span>
-                                </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="0">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">A.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
                             </div>
                             <div id="option-editor-${currentQuestionIndex}-0" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-lg font-bold text-blue-600 min-w-[24px]">B.</span>
-                                <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                                    <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1" class="w-4 h-4 text-green-600">
-                                    <span class="text-sm text-gray-600">Correct Answer</span>
-                                </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="1">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">B.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
                             </div>
                             <div id="option-editor-${currentQuestionIndex}-1" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-lg font-bold text-blue-600 min-w-[24px]">C.</span>
-                                <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                                    <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2" class="w-4 h-4 text-green-600">
-                                    <span class="text-sm text-gray-600">Correct Answer</span>
-                                </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="2">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">C.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
                             </div>
                             <div id="option-editor-${currentQuestionIndex}-2" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-lg font-bold text-blue-600 min-w-[24px]">D.</span>
-                                <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                                    <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3" class="w-4 h-4 text-green-600">
-                                    <span class="text-sm text-gray-600">Correct Answer</span>
-                                </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="3">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">D.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
                             </div>
                             <div id="option-editor-${currentQuestionIndex}-3" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
@@ -457,13 +477,18 @@ function addOptionField(questionIndex) {
     const newOptionIndex = optionCount;
 
     const optionHTML = `
-        <div class="option-editor-container p-3 bg-gray-50 rounded-lg">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newOptionIndex)}.</span>
-                <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                    <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}" class="w-4 h-4 text-green-600">
-                    <span class="text-sm text-gray-600">Correct Answer</span>
-                </label>
+        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${newOptionIndex}">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newOptionIndex)}.</span>
+                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                        <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}" class="w-4 h-4 text-green-600">
+                        <span class="text-sm text-gray-600">Correct Answer</span>
+                    </label>
+                </div>
+                <button type="button" onclick="removeOptionField(${questionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                    🗑️
+                </button>
             </div>
             <div id="option-editor-${questionIndex}-${newOptionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
         </div>
@@ -487,6 +512,52 @@ function addOptionField(questionIndex) {
             }
         }
     }, 100);
+}
+
+// Remove option field from a specific question
+function removeOptionField(questionIndex, buttonElement) {
+    const container = document.getElementById(`options-${questionIndex}`);
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Ensure at least 2 options remain
+    if (optionContainers.length <= 2) {
+        showToast('A question must have at least 2 options.', 'warning');
+        return;
+    }
+    
+    // Find the option container to remove
+    const optionContainer = buttonElement.closest('.option-editor-container');
+    const optionIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container from DOM
+    optionContainer.remove();
+    
+    // Remove the corresponding Quill editor from the array
+    if (questionEditors[questionIndex] && questionEditors[questionIndex].options[optionIndex]) {
+        questionEditors[questionIndex].options.splice(optionIndex, 1);
+    }
+    
+    // Re-index remaining options (update letters A, B, C, etc.)
+    const remainingOptions = container.querySelectorAll('.option-editor-container');
+    remainingOptions.forEach((opt, idx) => {
+        // Update data-option-index
+        opt.dataset.optionIndex = idx;
+        
+        // Update option letter
+        const letterSpan = opt.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = String.fromCharCode(65 + idx) + '.';
+        }
+        
+        // Update radio button value
+        const radio = opt.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = idx;
+            radio.id = `correct-${questionIndex}-${idx}`;
+        }
+    });
+    
+    showToast('Option removed successfully.', 'info');
 }
 
 // Remove a question block
