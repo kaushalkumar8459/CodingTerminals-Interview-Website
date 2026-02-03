@@ -505,55 +505,69 @@ function renderQuestionsList() {
         // Use _id if available, otherwise id, fallback to questionId
         const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
+        // Use stored question number if available, otherwise use index + 1
+        const displayNumber = question.questionNumber || (index + 1);
 
         return `
             <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
-                <div class="flex justify-between items-start mb-3">
+                <div class="flex gap-3">
+                    <!-- Question Number Badge -->
+                    <div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">
+                        ${displayNumber}
+                    </div>
+                    
+                    <!-- Question Content -->
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2">${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}</h4>
-                        <div class="flex flex-wrap gap-2 mb-2">
-                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject}</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear}</span>
-                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType}</span>
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty}</span>
-                            ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${question.group}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="event.stopPropagation(); editQuestion('${questionId}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                            ✏️ Edit
-                        </button>
-                        <button onclick="event.stopPropagation(); deleteQuestion('${questionId}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
-                            🗑️ Delete
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="space-y-2 mb-3">
-                    ${question.options?.slice(0, 4).map((option, optIndex) => `
-                        <div class="option-item ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
-                            <div class="flex items-start gap-2">
-                                <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
-                                <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
-                                <div class="flex-1 option-content">${option}</div>
-                                ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
+                        <!-- Header with question and actions -->
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800 mb-2">${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}</h4>
+                                <div class="flex flex-wrap gap-2 mb-2">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject}</span>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear}</span>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType}</span>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty}</span>
+                                    ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${question.group}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-2">
+                                <button onclick="event.stopPropagation(); editQuestion('${questionId}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteQuestion('${questionId}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                                    🗑️ Delete
+                                </button>
                             </div>
                         </div>
-                    `).join('')}
-                    ${question.options?.length > 4 ? `<div class="text-xs text-gray-500">+ ${question.options.length - 4} more options</div>` : ''}
+                        
+                        <!-- Options -->
+                        <div class="space-y-2 mb-3">
+                            ${question.options?.slice(0, 4).map((option, optIndex) => `
+                                <div class="option-item ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
+                                    <div class="flex items-start gap-2">
+                                        <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
+                                        <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
+                                        <div class="flex-1 option-content">${option}</div>
+                                        ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${question.options?.length > 4 ? `<div class="text-xs text-gray-500">+ ${question.options.length - 4} more options</div>` : ''}
+                        </div>
+                        
+                        ${question.explanation ? `
+                            <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
+                                <div class="text-xs text-blue-700">${question.explanation.substring(0, 100)}${question.explanation.length > 100 ? '...' : ''}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${question.duplicateOf ? `
+                            <div class="duplicate-indicator">
+                                ⚠️ Duplicate of question: ${question.duplicateOf}
+                            </div>
+                        ` : ''}
+                    </div>
                 </div>
-                
-                ${question.explanation ? `
-                    <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                        <div class="text-xs text-blue-700">${question.explanation.substring(0, 100)}${question.explanation.length > 100 ? '...' : ''}</div>
-                    </div>
-                ` : ''}
-                
-                ${question.duplicateOf ? `
-                    <div class="duplicate-indicator">
-                        ⚠️ Duplicate of question: ${question.duplicateOf}
-                    </div>
-                ` : ''}
             </div>
         `;
     }).join('');
@@ -602,9 +616,15 @@ function showEditModal(question) {
     const formHTML = `
         <form id="editQuestionForm" onsubmit="saveEditedQuestion(event)">
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                    <div id="editQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                <div class="flex gap-3 items-start">
+                    <div class="w-20 flex-shrink-0">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
+                        <input type="number" id="editQuestionNumber" value="${question.questionNumber || ''}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
+                        <div id="editQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -931,6 +951,7 @@ async function saveEditedQuestion(event) {
     const updatedQuestion = {
         id: question.id || question._id,
         _id: question._id || question.id,
+        questionNumber: parseInt(document.getElementById('editQuestionNumber').value) || question.questionNumber,
         question: getQuillHTML(editQuestionEditor),
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
@@ -1364,9 +1385,15 @@ function showAddQuestionModal(isBulk = false) {
         formHTML = `
             <form id="addQuestionForm" onsubmit="saveNewQuestion(event)">
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                        <div id="addQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                    <div class="flex gap-3 items-start">
+                        <div class="w-20 flex-shrink-0">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
+                            <input type="number" id="addQuestionNumber" value="${allQuestions.length + 1}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
+                            <div id="addQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1542,6 +1569,7 @@ async function saveNewQuestion(event) {
 
     // Get form values using Quill editors
     const questionData = {
+        questionNumber: parseInt(document.getElementById('addQuestionNumber').value) || (allQuestions.length + 1),
         question: getQuillHTML(addQuestionEditor),
         subject: document.getElementById('addSubject').value,
         academicYear: document.getElementById('addYear').value,
