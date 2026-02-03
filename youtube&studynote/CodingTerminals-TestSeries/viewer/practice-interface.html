@@ -150,6 +150,14 @@
             transition: all 0.2s ease;
         }
 
+        /* Fix inline display for options with HTML content from Quill editor */
+        .option-item p,
+        .option-item span p,
+        .option-content p {
+            display: inline;
+            margin: 0;
+        }
+
         .option-item:hover {
             background-color: #f3f4f6;
         }
