@@ -21,6 +21,11 @@ let editQuestionEditor = null;
 let editOptionEditors = [];
 let editExplanationEditor = null;
 
+// Store Quill editor instances for add modal
+let addQuestionEditor = null;
+let addOptionEditors = [];
+let addExplanationEditor = null;
+
 // Quill toolbar configurations
 const fullToolbarOptions = [
     ['bold', 'italic', 'underline', 'strike'],
@@ -762,9 +767,15 @@ function getQuillHTML(editor) {
     return html;
 }
 
-// Add option field with Quill editor
-function addOptionField() {
-    const container = document.getElementById('editOptionsContainer');
+// Add option field with Quill editor (supports both 'edit' and 'add' modes)
+function addOptionField(mode = 'edit') {
+    const containerId = mode === 'add' ? 'addOptionsContainer' : 'editOptionsContainer';
+    const radioName = mode === 'add' ? 'addCorrectAnswer' : 'correctAnswer';
+    const editorPrefix = mode === 'add' ? 'addOptionEditor' : 'editOptionEditor';
+    const removeFunction = mode === 'add' ? 'removeAddOptionField' : 'removeEditOptionField';
+    const editorsArray = mode === 'add' ? addOptionEditors : editOptionEditors;
+    
+    const container = document.getElementById(containerId);
     const optionCount = container.querySelectorAll('.option-editor-container').length;
     const newIndex = optionCount;
 
@@ -774,15 +785,15 @@ function addOptionField() {
                 <div class="flex items-center gap-3">
                     <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newIndex)}.</span>
                     <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
-                        <input type="radio" name="correctAnswer" value="${newIndex}" class="w-4 h-4 text-green-600">
+                        <input type="radio" name="${radioName}" value="${newIndex}" class="w-4 h-4 text-green-600">
                         <span class="text-sm text-gray-600">Correct Answer</span>
                     </label>
                 </div>
-                <button type="button" onclick="removeEditOptionField(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                <button type="button" onclick="${removeFunction}(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
                     🗑️
                 </button>
             </div>
-            <div id="editOptionEditor${newIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
+            <div id="${editorPrefix}${newIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
         </div>
     `;
 
@@ -790,18 +801,18 @@ function addOptionField() {
 
     // Initialize Quill editor for the new option
     setTimeout(() => {
-        const newOptionEditor = new Quill(`#editOptionEditor${newIndex}`, {
+        const newOptionEditor = new Quill(`#${editorPrefix}${newIndex}`, {
             modules: {
                 toolbar: minimalToolbarOptions
             },
             theme: 'snow',
             placeholder: `Enter option ${String.fromCharCode(65 + newIndex)}...`
         });
-        editOptionEditors.push(newOptionEditor);
+        editorsArray.push(newOptionEditor);
     }, 50);
 }
 
-// Remove option field and re-index remaining options
+// Remove option field and re-index remaining options (for edit modal)
 function removeEditOptionField(button) {
     const container = document.getElementById('editOptionsContainer');
     const optionContainers = container.querySelectorAll('.option-editor-container');
@@ -843,6 +854,54 @@ function removeEditOptionField(button) {
         const editorContainer = container.querySelector('[id^="editOptionEditor"]');
         if (editorContainer) {
             editorContainer.id = `editOptionEditor${newIndex}`;
+        }
+    });
+
+    showToast('Option removed', 'info');
+}
+
+// Remove option field and re-index remaining options (for add modal)
+function removeAddOptionField(button) {
+    const container = document.getElementById('addOptionsContainer');
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Minimum 2 options required
+    if (optionContainers.length <= 2) {
+        showToast('Minimum 2 options required', 'warning');
+        return;
+    }
+
+    const optionContainer = button.closest('.option-editor-container');
+    const removedIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container
+    optionContainer.remove();
+    
+    // Remove the editor from the array
+    addOptionEditors.splice(removedIndex, 1);
+
+    // Re-index remaining options
+    const remainingContainers = container.querySelectorAll('.option-editor-container');
+    remainingContainers.forEach((container, newIndex) => {
+        // Update data attribute
+        container.dataset.optionIndex = newIndex;
+        
+        // Update option letter
+        const letterSpan = container.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = `${String.fromCharCode(65 + newIndex)}.`;
+        }
+        
+        // Update radio button value
+        const radio = container.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = newIndex;
+        }
+        
+        // Update editor container ID
+        const editorContainer = container.querySelector('[id^="addOptionEditor"]');
+        if (editorContainer) {
+            editorContainer.id = `addOptionEditor${newIndex}`;
         }
     });
 
@@ -929,10 +988,15 @@ function closeEditModal() {
         modal.classList.add('hidden');
         currentEditingQuestion = null;
         
-        // Clean up Quill editor instances
+        // Clean up edit modal Quill editor instances
         editQuestionEditor = null;
         editOptionEditors = [];
         editExplanationEditor = null;
+        
+        // Clean up add modal Quill editor instances
+        addQuestionEditor = null;
+        addOptionEditors = [];
+        addExplanationEditor = null;
     }
 }
 
@@ -1281,13 +1345,13 @@ function showAddQuestionModal(isBulk = false) {
             </form>
         `;
     } else {
-        // Single question entry form
+        // Single question entry form with Quill editors
         formHTML = `
             <form id="addQuestionForm" onsubmit="saveNewQuestion(event)">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                        <textarea id="addQuestionText" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Enter your question text here..."></textarea>
+                        <div id="addQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1333,51 +1397,24 @@ function showAddQuestionModal(isBulk = false) {
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
-                        <div id="addOptionsContainer">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">A.</span>
-                                <input type="text" 
-                                       id="addOption0" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option A">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="0" checked>
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">B.</span>
-                                <input type="text" 
-                                       id="addOption1" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option B">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="1">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">C.</span>
-                                <input type="text" 
-                                       id="addOption2" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option C">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="2">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">D.</span>
-                                <input type="text" 
-                                       id="addOption3" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option D">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="3">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
+                        <div id="addOptionsContainer" class="space-y-3">
+                            ${[0, 1, 2, 3].map(optIndex => `
+                                <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${optIndex}">
+                                    <div class="flex items-center justify-between gap-3 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + optIndex)}.</span>
+                                            <label class="flex items-center gap-2 px-3 py-1 rounded-full ${optIndex === 0 ? 'bg-green-100 border border-green-400' : 'bg-white border border-gray-300'} cursor-pointer hover:bg-green-50 transition-colors">
+                                                <input type="radio" name="addCorrectAnswer" value="${optIndex}" ${optIndex === 0 ? 'checked' : ''} class="w-4 h-4 text-green-600">
+                                                <span class="text-sm ${optIndex === 0 ? 'text-green-700 font-medium' : 'text-gray-600'}">Correct Answer</span>
+                                            </label>
+                                        </div>
+                                        <button type="button" onclick="removeAddOptionField(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                    <div id="addOptionEditor${optIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
+                                </div>
+                            `).join('')}
                         </div>
                         <button type="button" onclick="addOptionField('add')" class="mt-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600">
                             ➕ Add Option
@@ -1386,7 +1423,7 @@ function showAddQuestionModal(isBulk = false) {
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation</label>
-                        <textarea id="addExplanation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Provide explanation for the correct answer..."></textarea>
+                        <div id="addExplanationEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 100px;"></div>
                     </div>
                     
                     <div class="flex justify-between gap-3 pt-4">
@@ -1410,32 +1447,83 @@ function showAddQuestionModal(isBulk = false) {
     document.getElementById('editFormContent').innerHTML = formHTML;
     modal.classList.remove('hidden');
 
-    // Initialize search functionality after DOM update
+    // Initialize Quill editors and search functionality after DOM update
     setTimeout(() => {
+        if (!isBulk) {
+            initAddModalQuillEditors();
+        }
         initModalSearchFields();
     }, 100);
+}
+
+// Initialize Quill editors for the add modal
+function initAddModalQuillEditors() {
+    // Clear previous editor instances
+    addQuestionEditor = null;
+    addOptionEditors = [];
+    addExplanationEditor = null;
+
+    // Initialize Question Text Editor
+    const questionEditorContainer = document.getElementById('addQuestionTextEditor');
+    if (questionEditorContainer) {
+        addQuestionEditor = new Quill('#addQuestionTextEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter question text with formatting...'
+        });
+    }
+
+    // Initialize Option Editors (4 default options)
+    for (let i = 0; i < 4; i++) {
+        const optionEditorContainer = document.getElementById(`addOptionEditor${i}`);
+        if (optionEditorContainer) {
+            const optionEditor = new Quill(`#addOptionEditor${i}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + i)}...`
+            });
+            addOptionEditors.push(optionEditor);
+        }
+    }
+
+    // Initialize Explanation Editor
+    const explanationEditorContainer = document.getElementById('addExplanationEditor');
+    if (explanationEditorContainer) {
+        addExplanationEditor = new Quill('#addExplanationEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter explanation with formatting...'
+        });
+    }
 }
 
 // Save new question
 async function saveNewQuestion(event) {
     event.preventDefault();
 
-    // Get form values
+    // Get form values using Quill editors
     const questionData = {
-        question: document.getElementById('addQuestionText').value,
+        question: getQuillHTML(addQuestionEditor),
         subject: document.getElementById('addSubject').value,
         academicYear: document.getElementById('addYear').value,
         examType: document.getElementById('addExamType').value,
         difficulty: document.getElementById('addDifficulty').value,
         topic: document.getElementById('addTopic').value,
-        explanation: document.getElementById('addExplanation').value,
+        explanation: getQuillHTML(addExplanationEditor),
         options: [],
         correctAnswer: 0
     };
 
-    // Get options
-    const optionElements = document.querySelectorAll('[id^="addOption"]');
-    questionData.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
+    // Get options from Quill editors
+    questionData.options = addOptionEditors
+        .map(editor => getQuillHTML(editor))
+        .filter(val => val && val.trim() !== '');
 
     // Get correct answer
     const correctAnswerRadio = document.querySelector('input[name="addCorrectAnswer"]:checked');
