@@ -1,6 +1,9 @@
 // File: CodingTerminals-TestSeries/admin/manual-question-entry.js
 // Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, fullToolbarOptions, etc.) are loaded from shared/utils.js
 
+// Form persistence key
+const FORM_STORAGE_KEY = 'manualQuestionEntryFormData';
+
 // Global Variables
 let questionBlocks = [];
 let questionCounter = 0;
@@ -436,14 +439,7 @@ function initQuillEditorsForBlock(questionIndex) {
     }
 }
 
-// Helper function to get HTML content from Quill editor
-function getQuillHTML(editor) {
-    if (!editor) return '';
-    const html = editor.root.innerHTML;
-    // Return empty string if only contains empty paragraph
-    if (html === '<p><br></p>' || html === '<p></p>') return '';
-    return html;
-}
+// Note: getQuillHTML is loaded from shared/utils.js
 
 // Add multiple question blocks at once
 function addMultipleQuestionBlocks() {
@@ -546,8 +542,14 @@ function removeOptionField(questionIndex, buttonElement) {
 }
 
 // Remove a question block
-function removeQuestionBlock(blockId, questionIndex) {
-    if (confirm('Are you sure you want to remove this question block?')) {
+async function removeQuestionBlock(blockId, questionIndex) {
+    const confirmed = await showConfirmDialog(
+        'Are you sure you want to remove this question block?',
+        'Remove Question',
+        { confirmText: 'Remove', cancelText: 'Cancel', type: 'danger' }
+    );
+    
+    if (confirmed) {
         const block = document.getElementById(blockId);
         if (block) {
             block.remove();
@@ -555,17 +557,27 @@ function removeQuestionBlock(blockId, questionIndex) {
             if (questionEditors[questionIndex]) {
                 delete questionEditors[questionIndex];
             }
+            autoSaveFormData();
         }
     }
 }
 
 // Clear all question blocks
-function clearAll() {
-    if (confirm('Are you sure you want to clear all question blocks? This cannot be undone.')) {
+async function clearAll() {
+    const confirmed = await showConfirmDialog(
+        'Are you sure you want to clear all question blocks? This cannot be undone.',
+        'Clear All Questions',
+        { confirmText: 'Clear All', cancelText: 'Cancel', type: 'danger' }
+    );
+    
+    if (confirmed) {
         document.getElementById('questionsContainer').innerHTML = '';
         questionCounter = 0;
         // Clear all Quill editor references
         questionEditors = {};
+        // Clear saved form data
+        clearFormData(FORM_STORAGE_KEY);
+        showToast('All questions cleared.', 'info');
     }
 }
 
@@ -595,7 +607,7 @@ async function saveAllQuestions() {
     }
 
     try {
-        showToast(`Saving ${questions.length} questions...`, 'info');
+        showLoading(true, `Saving ${questions.length} questions...`);
 
         const response = await fetch(API_URLS.CREATE_BULK_QUESTIONS, {
             method: 'POST',
@@ -605,6 +617,8 @@ async function saveAllQuestions() {
             body: JSON.stringify({ questions: questions })
         });
 
+        showLoading(false);
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -613,10 +627,13 @@ async function saveAllQuestions() {
 
         if (result.success) {
             showToast(`${result.count || questions.length} questions saved successfully!`, 'success');
+            // Clear saved form data on successful save
+            clearFormData(FORM_STORAGE_KEY);
         } else {
             showToast(result.message || 'Failed to save questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error saving questions:', error);
         showToast('Error saving questions: ' + error.message, 'error');
     }
@@ -697,6 +714,177 @@ function getQuestionData(index) {
 
 // Note: showToast, logout, and animation styles are loaded from shared/utils.js
 
+// ==================== FORM PERSISTENCE ====================
+
+// Debounced auto-save function
+const autoSaveFormData = debounce(function() {
+    saveCurrentFormData();
+}, 1000);
+
+// Save current form data to localStorage
+function saveCurrentFormData() {
+    const formData = {
+        defaults: {
+            subject: document.getElementById('defaultSubject')?.value || '',
+            year: document.getElementById('defaultYear')?.value || '',
+            examType: document.getElementById('defaultExamType')?.value || '',
+            difficulty: document.getElementById('defaultDifficulty')?.value || ''
+        },
+        questions: [],
+        savedAt: new Date().toISOString()
+    };
+
+    // Get all question blocks
+    const containers = document.querySelectorAll('[id^="question-block-"]');
+    containers.forEach((container, idx) => {
+        const questionData = {
+            question: '',
+            subject: document.getElementById(`subject-${idx}`)?.value || '',
+            year: document.getElementById(`year-${idx}`)?.value || '',
+            examType: document.getElementById(`examType-${idx}`)?.value || '',
+            difficulty: document.getElementById(`difficulty-${idx}`)?.value || '',
+            topic: document.getElementById(`topic-${idx}`)?.value || '',
+            options: [],
+            correctAnswer: 0,
+            explanation: ''
+        };
+
+        // Get question text from Quill editor
+        if (questionEditors[idx] && questionEditors[idx].question) {
+            questionData.question = questionEditors[idx].question.root.innerHTML;
+        }
+
+        // Get options from Quill editors
+        if (questionEditors[idx] && questionEditors[idx].options) {
+            questionEditors[idx].options.forEach((optionEditor, optIdx) => {
+                questionData.options.push(optionEditor.root.innerHTML);
+                // Check if this is the correct answer
+                const radio = document.getElementById(`correct-${idx}-${optIdx}`);
+                if (radio && radio.checked) {
+                    questionData.correctAnswer = optIdx;
+                }
+            });
+        }
+
+        // Get explanation from Quill editor
+        if (questionEditors[idx] && questionEditors[idx].explanation) {
+            questionData.explanation = questionEditors[idx].explanation.root.innerHTML;
+        }
+
+        formData.questions.push(questionData);
+    });
+
+    saveFormData(FORM_STORAGE_KEY, formData);
+}
+
+// Restore form data from localStorage
+async function restoreFormData() {
+    const formData = loadFormData(FORM_STORAGE_KEY);
+    
+    if (!formData || !formData.questions || formData.questions.length === 0) {
+        return false;
+    }
+
+    // Check if data is not too old (24 hours)
+    const savedTime = new Date(formData.savedAt);
+    const now = new Date();
+    const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+    
+    if (hoursDiff > 24) {
+        clearFormData(FORM_STORAGE_KEY);
+        return false;
+    }
+
+    // Show confirmation to restore
+    const confirmed = await showConfirmDialog(
+        `Found ${formData.questions.length} unsaved question(s) from ${savedTime.toLocaleString()}. Would you like to restore them?`,
+        'Restore Unsaved Work?',
+        { confirmText: 'Restore', cancelText: 'Start Fresh', type: 'info' }
+    );
+
+    if (!confirmed) {
+        clearFormData(FORM_STORAGE_KEY);
+        return false;
+    }
+
+    // Restore defaults
+    if (formData.defaults) {
+        if (formData.defaults.subject) document.getElementById('defaultSubject').value = formData.defaults.subject;
+        if (formData.defaults.year) document.getElementById('defaultYear').value = formData.defaults.year;
+        if (formData.defaults.examType) document.getElementById('defaultExamType').value = formData.defaults.examType;
+        if (formData.defaults.difficulty) document.getElementById('defaultDifficulty').value = formData.defaults.difficulty;
+    }
+
+    // Create question blocks and populate data
+    for (let i = 0; i < formData.questions.length; i++) {
+        if (i > 0) {
+            addQuestionBlock();
+        }
+        
+        // Wait for Quill editors to initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const q = formData.questions[i];
+        const idx = i;
+
+        // Populate text fields
+        if (q.subject) document.getElementById(`subject-${idx}`).value = q.subject;
+        if (q.year) document.getElementById(`year-${idx}`).value = q.year;
+        if (q.examType) document.getElementById(`examType-${idx}`).value = q.examType;
+        if (q.difficulty) document.getElementById(`difficulty-${idx}`).value = q.difficulty;
+        if (q.topic) document.getElementById(`topic-${idx}`).value = q.topic;
+
+        // Populate Quill editors
+        if (questionEditors[idx]) {
+            if (questionEditors[idx].question && q.question) {
+                questionEditors[idx].question.root.innerHTML = q.question;
+            }
+            
+            if (questionEditors[idx].options && q.options) {
+                q.options.forEach((optContent, optIdx) => {
+                    if (questionEditors[idx].options[optIdx]) {
+                        questionEditors[idx].options[optIdx].root.innerHTML = optContent;
+                    }
+                });
+            }
+            
+            if (questionEditors[idx].explanation && q.explanation) {
+                questionEditors[idx].explanation.root.innerHTML = q.explanation;
+            }
+        }
+
+        // Set correct answer
+        const radio = document.getElementById(`correct-${idx}-${q.correctAnswer}`);
+        if (radio) radio.checked = true;
+    }
+
+    showToast(`Restored ${formData.questions.length} question(s) successfully!`, 'success');
+    return true;
+}
+
+// Setup auto-save listeners for form fields
+function setupAutoSave() {
+    // Listen for input changes on text fields
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('#questionsContainer') || 
+            e.target.id.startsWith('default')) {
+            autoSaveFormData();
+        }
+    });
+
+    // Listen for radio button changes
+    document.addEventListener('change', (e) => {
+        if (e.target.type === 'radio' && e.target.name.startsWith('correct-')) {
+            autoSaveFormData();
+        }
+    });
+
+    // Save before page unload
+    window.addEventListener('beforeunload', () => {
+        saveCurrentFormData();
+    });
+}
+
 // Refresh existing values from database
 async function refreshExistingValues() {
     showToast('Refreshing database values...', 'info');
@@ -726,6 +914,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialize search fields
     initSearchFields();
 
-    // Initialize with one question block
-    addQuestionBlock();
+    // Try to restore saved form data
+    const restored = await restoreFormData();
+    
+    // If no data was restored, add one empty question block
+    if (!restored) {
+        addQuestionBlock();
+    }
+
+    // Setup auto-save for form persistence
+    setupAutoSave();
 });

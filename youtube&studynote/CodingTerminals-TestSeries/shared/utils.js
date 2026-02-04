@@ -244,16 +244,101 @@ const TestSeriesUtils = (function() {
     }
 
     /**
-     * Show a confirmation dialog
+     * Show a styled confirmation dialog
      * @param {string} message - The confirmation message
      * @param {string} title - The dialog title (optional)
+     * @param {object} options - Additional options (confirmText, cancelText, type)
      * @returns {Promise<boolean>} Resolves to true if confirmed, false otherwise
      */
-    function showConfirmDialog(message, title = 'Confirm') {
+    function showConfirmDialog(message, title = 'Confirm', options = {}) {
         return new Promise((resolve) => {
-            // For now, use native confirm. Can be replaced with custom modal later.
-            const result = confirm(message);
-            resolve(result);
+            const {
+                confirmText = 'Confirm',
+                cancelText = 'Cancel',
+                type = 'warning' // 'warning', 'danger', 'info'
+            } = options;
+
+            // Remove any existing confirm modal
+            const existing = document.getElementById('confirmDialogOverlay');
+            if (existing) existing.remove();
+
+            // Color mapping for button styles
+            const buttonColors = {
+                warning: 'bg-yellow-500 hover:bg-yellow-600',
+                danger: 'bg-red-500 hover:bg-red-600',
+                info: 'bg-blue-500 hover:bg-blue-600'
+            };
+
+            const iconColors = {
+                warning: 'text-yellow-500',
+                danger: 'text-red-500',
+                info: 'text-blue-500'
+            };
+
+            const icons = {
+                warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>',
+                danger: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>',
+                info: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+            };
+
+            const overlay = document.createElement('div');
+            overlay.id = 'confirmDialogOverlay';
+            overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] animate-fadeIn';
+            overlay.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 transform transition-all animate-scaleIn">
+                    <div class="p-6">
+                        <div class="flex items-center mb-4">
+                            <div class="flex-shrink-0 ${iconColors[type]}">
+                                <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    ${icons[type]}
+                                </svg>
+                            </div>
+                            <h3 class="ml-3 text-lg font-semibold text-gray-900">${escapeHTML(title)}</h3>
+                        </div>
+                        <p class="text-gray-600 mb-6">${escapeHTML(message)}</p>
+                        <div class="flex justify-end space-x-3">
+                            <button id="confirmDialogCancel" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                                ${escapeHTML(cancelText)}
+                            </button>
+                            <button id="confirmDialogConfirm" class="${buttonColors[type]} px-4 py-2 text-white rounded-lg transition-colors">
+                                ${escapeHTML(confirmText)}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Handle confirm
+            document.getElementById('confirmDialogConfirm').onclick = () => {
+                overlay.remove();
+                resolve(true);
+            };
+
+            // Handle cancel
+            document.getElementById('confirmDialogCancel').onclick = () => {
+                overlay.remove();
+                resolve(false);
+            };
+
+            // Handle escape key
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    overlay.remove();
+                    document.removeEventListener('keydown', handleEscape);
+                    resolve(false);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+
+            // Handle click outside
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                    resolve(false);
+                }
+            });
         });
     }
 
@@ -269,22 +354,255 @@ const TestSeriesUtils = (function() {
             if (!loadingOverlay) {
                 loadingOverlay = document.createElement('div');
                 loadingOverlay.id = 'loadingOverlay';
-                loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                loadingOverlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[55]';
                 loadingOverlay.innerHTML = `
-                    <div class="bg-white rounded-lg p-6 flex flex-col items-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
-                        <p class="text-gray-700 font-medium" id="loadingMessage">${escapeHTML(message)}</p>
+                    <div class="bg-white rounded-lg p-8 flex flex-col items-center shadow-xl">
+                        <div class="relative">
+                            <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
+                            <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent absolute top-0 left-0"></div>
+                        </div>
+                        <p class="text-gray-700 font-medium mt-4" id="loadingMessage">${escapeHTML(message)}</p>
                     </div>
                 `;
                 document.body.appendChild(loadingOverlay);
             } else {
                 const msgEl = loadingOverlay.querySelector('#loadingMessage');
                 if (msgEl) msgEl.textContent = message;
+                loadingOverlay.style.display = 'flex';
                 loadingOverlay.classList.remove('hidden');
             }
         } else if (loadingOverlay) {
-            loadingOverlay.classList.add('hidden');
+            loadingOverlay.style.display = 'none';
         }
+    }
+
+    // ==================== FORM PERSISTENCE ====================
+
+    /**
+     * Save form data to localStorage
+     * @param {string} key - The storage key
+     * @param {object} data - The data to save
+     */
+    function saveFormData(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+            console.warn('Failed to save form data:', e);
+        }
+    }
+
+    /**
+     * Load form data from localStorage
+     * @param {string} key - The storage key
+     * @returns {object|null} The saved data or null
+     */
+    function loadFormData(key) {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch (e) {
+            console.warn('Failed to load form data:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Clear form data from localStorage
+     * @param {string} key - The storage key
+     */
+    function clearFormData(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.warn('Failed to clear form data:', e);
+        }
+    }
+
+    // ==================== SESSION PERSISTENCE ====================
+
+    /**
+     * Save session data
+     * @param {string} key - The storage key
+     * @param {object} data - The data to save
+     */
+    function saveSessionData(key, data) {
+        try {
+            sessionStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+            console.warn('Failed to save session data:', e);
+        }
+    }
+
+    /**
+     * Load session data
+     * @param {string} key - The storage key
+     * @returns {object|null} The saved data or null
+     */
+    function loadSessionData(key) {
+        try {
+            const data = sessionStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch (e) {
+            console.warn('Failed to load session data:', e);
+            return null;
+        }
+    }
+
+    /**
+     * Clear session data
+     * @param {string} key - The storage key
+     */
+    function clearSessionData(key) {
+        try {
+            sessionStorage.removeItem(key);
+        } catch (e) {
+            console.warn('Failed to clear session data:', e);
+        }
+    }
+
+    // ==================== PAGINATION ====================
+
+    /**
+     * Create pagination controls
+     * @param {object} options - Pagination options
+     * @returns {object} Pagination controller
+     */
+    function createPagination(options = {}) {
+        const {
+            totalItems = 0,
+            itemsPerPage = 10,
+            currentPage = 1,
+            onPageChange = () => {},
+            containerId = 'paginationContainer'
+        } = options;
+
+        let state = {
+            totalItems,
+            itemsPerPage,
+            currentPage,
+            totalPages: Math.ceil(totalItems / itemsPerPage)
+        };
+
+        function getPagedItems(allItems) {
+            const start = (state.currentPage - 1) * state.itemsPerPage;
+            const end = start + state.itemsPerPage;
+            return allItems.slice(start, end);
+        }
+
+        function render() {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (state.totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const { currentPage, totalPages } = state;
+            let buttons = [];
+
+            // Previous button
+            buttons.push(`
+                <button class="pagination-btn px-3 py-2 rounded-lg ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'} border"
+                    ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            `);
+
+            // Page numbers
+            const maxVisible = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+            
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            if (startPage > 1) {
+                buttons.push(`<button class="pagination-btn px-3 py-2 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border" data-page="1">1</button>`);
+                if (startPage > 2) {
+                    buttons.push(`<span class="px-2 py-2 text-gray-500">...</span>`);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                buttons.push(`
+                    <button class="pagination-btn px-3 py-2 rounded-lg ${isActive ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'} border"
+                        data-page="${i}">${i}</button>
+                `);
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    buttons.push(`<span class="px-2 py-2 text-gray-500">...</span>`);
+                }
+                buttons.push(`<button class="pagination-btn px-3 py-2 rounded-lg bg-white text-gray-700 hover:bg-gray-100 border" data-page="${totalPages}">${totalPages}</button>`);
+            }
+
+            // Next button
+            buttons.push(`
+                <button class="pagination-btn px-3 py-2 rounded-lg ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'} border"
+                    ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            `);
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between mt-4">
+                    <p class="text-sm text-gray-600">
+                        Showing ${((currentPage - 1) * state.itemsPerPage) + 1} to ${Math.min(currentPage * state.itemsPerPage, state.totalItems)} of ${state.totalItems}
+                    </p>
+                    <div class="flex items-center space-x-1">
+                        ${buttons.join('')}
+                    </div>
+                </div>
+            `;
+
+            // Add click handlers
+            container.querySelectorAll('.pagination-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const page = parseInt(btn.dataset.page);
+                    if (page && page !== state.currentPage && page >= 1 && page <= state.totalPages) {
+                        state.currentPage = page;
+                        render();
+                        onPageChange(state.currentPage, state);
+                    }
+                });
+            });
+        }
+
+        function update(newOptions) {
+            if (newOptions.totalItems !== undefined) {
+                state.totalItems = newOptions.totalItems;
+                state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+            }
+            if (newOptions.itemsPerPage !== undefined) {
+                state.itemsPerPage = newOptions.itemsPerPage;
+                state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+            }
+            if (newOptions.currentPage !== undefined) {
+                state.currentPage = Math.min(Math.max(1, newOptions.currentPage), state.totalPages || 1);
+            }
+            render();
+        }
+
+        function reset() {
+            state.currentPage = 1;
+            render();
+        }
+
+        return {
+            render,
+            update,
+            reset,
+            getPagedItems,
+            getState: () => ({ ...state })
+        };
     }
 
     // ==================== FORM UTILITIES ====================
@@ -466,8 +784,13 @@ const TestSeriesUtils = (function() {
      * Logout the current user
      * @param {string} redirectUrl - The URL to redirect to after logout (default: login page)
      */
-    function logout(redirectUrl = '../../auth/login.html') {
-        if (confirm('Are you sure you want to logout?')) {
+    async function logout(redirectUrl = '../../auth/login.html') {
+        const confirmed = await showConfirmDialog(
+            'Are you sure you want to logout?',
+            'Logout',
+            { confirmText: 'Logout', cancelText: 'Cancel', type: 'warning' }
+        );
+        if (confirmed) {
             sessionStorage.clear();
             localStorage.removeItem('authToken');
             window.location.href = redirectUrl;
@@ -493,8 +816,18 @@ const TestSeriesUtils = (function() {
                 from { transform: translateX(0); opacity: 1; }
                 to { transform: translateX(100%); opacity: 0; }
             }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes scaleIn {
+                from { transform: scale(0.9); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
             .toast-enter { animation: slideInRight 0.3s ease-out forwards; }
             .toast-exit { animation: slideOutRight 0.3s ease-in forwards; }
+            .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
+            .animate-scaleIn { animation: scaleIn 0.2s ease-out forwards; }
         `;
         document.head.appendChild(style);
     }
@@ -529,6 +862,7 @@ const TestSeriesUtils = (function() {
         showToast,
         showConfirmDialog,
         showLoading,
+        createPagination,
         
         // Form utilities
         setupSearchField,
@@ -537,6 +871,14 @@ const TestSeriesUtils = (function() {
         // Data utilities
         loadExistingValues,
         populateSelect,
+        
+        // Persistence utilities
+        saveFormData,
+        loadFormData,
+        clearFormData,
+        saveSessionData,
+        loadSessionData,
+        clearSessionData,
         
         // Authentication
         logout
@@ -559,8 +901,15 @@ const {
     showToast,
     showConfirmDialog,
     showLoading,
+    createPagination,
     debounce,
-    populateSelect
+    populateSelect,
+    saveFormData,
+    loadFormData,
+    clearFormData,
+    saveSessionData,
+    loadSessionData,
+    clearSessionData
 } = TestSeriesUtils;
 
 // Expose toolbar configs globally for backward compatibility

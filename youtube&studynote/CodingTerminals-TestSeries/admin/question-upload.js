@@ -12,6 +12,10 @@ let yearList = new Set();
 let difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 let confirmModalCallback = null;
 
+// Pagination settings
+let questionPagination = null;
+const QUESTIONS_PER_PAGE = 20;
+
 // New variables for search functionality in filters
 let subjects = new Set();
 let years = new Set();
@@ -288,6 +292,8 @@ function hideProgress() {
 // Load questions from API
 async function loadQuestionsFromAPI() {
     try {
+        showLoading(true, 'Loading questions from database...');
+        
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
 
         if (!response.ok) {
@@ -296,8 +302,14 @@ async function loadQuestionsFromAPI() {
 
         const result = await response.json();
 
+        showLoading(false);
+
         if (result.success) {
             databaseQuestions = result.data || [];
+            // Reset pagination when loading new data
+            if (questionPagination) {
+                questionPagination.reset();
+            }
             // Update the current view based on which tab is active
             updateQuestionsList();
             updateSubjectFilters();
@@ -307,6 +319,7 @@ async function loadQuestionsFromAPI() {
             showToast(result.message || 'Failed to load questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error loading questions:', error);
         showToast('Error loading questions: ' + error.message, 'error');
     }
@@ -453,9 +466,10 @@ function updateQuestionsList() {
         questionsToDisplay = parsedQuestions;
     }
 
-    questionCount.textContent = questionsToDisplay.length;
+    const filteredQuestions = applyFilters(questionsToDisplay);
+    questionCount.textContent = filteredQuestions.length;
 
-    if (questionsToDisplay.length === 0) {
+    if (filteredQuestions.length === 0) {
         container.innerHTML = `
             <div class="text-center py-8 text-gray-400" id="emptyState">
                 <div class="text-4xl mb-4">📚</div>
@@ -463,23 +477,65 @@ function updateQuestionsList() {
                 <p class="text-sm">${currentQuestionSet === 'database' ? 'Load questions from database' : 'Upload question papers or import questions to get started'}</p>
             </div>
         `;
+        if (questionPagination) questionPagination.update({ totalItems: 0 });
         return;
     }
 
+    // Initialize or update pagination
+    if (!questionPagination) {
+        questionPagination = createPagination({
+            totalItems: filteredQuestions.length,
+            itemsPerPage: QUESTIONS_PER_PAGE,
+            currentPage: 1,
+            containerId: 'paginationContainer',
+            onPageChange: (page) => {
+                renderPaginatedQuestions(filteredQuestions);
+                container.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    } else {
+        questionPagination.update({ totalItems: filteredQuestions.length });
+    }
+
+    renderPaginatedQuestions(filteredQuestions);
+}
+
+// Render paginated questions
+function renderPaginatedQuestions(filteredQuestions) {
+    const container = document.getElementById('questionsContainer');
+    if (!container) return;
+
     container.innerHTML = '';
 
-    const filteredQuestions = applyFilters(questionsToDisplay);
+    // Get paginated items
+    const questionsToRender = questionPagination ? 
+        questionPagination.getPagedItems(filteredQuestions) : 
+        filteredQuestions;
+    
+    if (questionPagination) {
+        questionPagination.render();
+    }
 
-    let questionsHTML = '';
-    if (filteredQuestions.length === 0) {
-        questionsHTML = '<div class="text-center py-8 text-gray-500">No questions match the current filters</div>';
-    } else {
-        questionsHTML = filteredQuestions.map((question, index) => `
+    if (questionsToRender.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-500">No questions match the current filters</div>';
+        return;
+    }
+
+    // Calculate start index for proper numbering
+    const pageState = questionPagination ? questionPagination.getState() : { currentPage: 1, itemsPerPage: filteredQuestions.length };
+    const startIndex = (pageState.currentPage - 1) * pageState.itemsPerPage;
+
+    const questionsHTML = questionsToRender.map((question, index) => {
+        const actualIndex = startIndex + index;
+        return `
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.question) || 'No question text'}</h4>
-                        <div class="flex flex-wrap gap-2 mb-2">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${actualIndex + 1}</span>
+                            <h4 class="font-semibold text-gray-800" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.question) || 'No question text'}</h4>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-2 ml-9">
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject) || 'No subject'}</span>
                             <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear) || 'No year'}</span>
                             <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${sanitizeHTML(question.examType) || 'No exam type'}</span>
@@ -488,16 +544,16 @@ function updateQuestionsList() {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="editQuestion(${index})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                        <button onclick="editQuestion(${actualIndex})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             ✏️ Edit
                         </button>
-                        <button onclick="deleteQuestion(${index})" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        <button onclick="deleteQuestion(${actualIndex})" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
                             🗑️ Delete
                         </button>
                     </div>
                 </div>
                 
-                <div class="space-y-2 mb-3">
+                <div class="space-y-2 mb-3 ml-9">
                     ${(question.options || []).map((option, optIndex) => `
                         <div class="question-option ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
                             <div class="flex items-start gap-2">
@@ -511,14 +567,14 @@ function updateQuestionsList() {
                 </div>
                 
                 ${question.explanation ? `
-                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div class="bg-blue-50 p-3 rounded-lg border border-blue-200 ml-9">
                         <div class="font-semibold text-blue-800 text-sm mb-1">Explanation:</div>
                         <div class="text-sm text-blue-700" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.explanation)}</div>
                     </div>
                 ` : ''}
             </div>
-        `).join('');
-    }
+        `;
+    }).join('');
 
     container.innerHTML = questionsHTML;
 }
@@ -1083,14 +1139,7 @@ function getQuillText(editor) {
     return editor.getText().trim();
 }
 
-// Helper function to get HTML content from Quill editor
-function getQuillHTML(editor) {
-    if (!editor) return '';
-    const html = editor.root.innerHTML;
-    // Return empty string if only contains empty paragraph
-    if (html === '<p><br></p>' || html === '<p></p>') return '';
-    return html;
-}
+// Note: getQuillHTML is loaded from shared/utils.js
 
 // Add a variable to store which question set we're editing
 let currentEditingQuestionSet = 'database';

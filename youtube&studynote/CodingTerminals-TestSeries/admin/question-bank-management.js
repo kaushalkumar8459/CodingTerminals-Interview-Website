@@ -12,6 +12,10 @@ let testQuestions = [];
 let groups = [];
 let duplicates = [];
 
+// Pagination settings
+let pagination = null;
+const QUESTIONS_PER_PAGE = 20;
+
 let subjects = new Set();
 let years = new Set();
 let examTypes = new Set();
@@ -343,6 +347,8 @@ function updatePercentage(slider, displayId) {
 // Update loadQuestions to fetch existing values
 async function loadQuestions() {
     try {
+        showLoading(true, 'Loading questions...');
+        
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
 
         if (!response.ok) {
@@ -350,6 +356,8 @@ async function loadQuestions() {
         }
 
         const result = await response.json();
+
+        showLoading(false);
 
         if (result.success) {
             allQuestions = result.data || [];
@@ -361,16 +369,36 @@ async function loadQuestions() {
             await fetchExistingValues();
 
             filteredQuestions = [...allQuestions];
-            renderQuestionsList();
+            
+            // Initialize pagination
+            initPagination();
+            
             renderFilters();
             updateStats();
         } else {
             showToast(result.message || 'Failed to load questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error loading questions:', error);
         showToast('Error loading questions: ' + error.message, 'error');
     }
+}
+
+// Initialize pagination for the question list
+function initPagination() {
+    pagination = createPagination({
+        totalItems: filteredQuestions.length,
+        itemsPerPage: QUESTIONS_PER_PAGE,
+        currentPage: 1,
+        containerId: 'paginationContainer',
+        onPageChange: (page) => {
+            renderQuestionsList();
+            // Scroll to top of questions container
+            document.getElementById('questionsContainer')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+    renderQuestionsList();
 }
 
 // Extract unique values for filters
@@ -450,6 +478,11 @@ function applyFilters() {
         return matchesSearch && matchesSubject && matchesYear && matchesDifficulty && matchesType;
     });
 
+    // Reset pagination to page 1 when filters change
+    if (pagination) {
+        pagination.update({ totalItems: filteredQuestions.length, currentPage: 1 });
+    }
+    
     renderQuestionsList();
     updateStats();
 }
@@ -477,21 +510,32 @@ function renderQuestionsList() {
     if (filteredQuestions.length === 0) {
         emptyState.style.display = 'block';
         container.innerHTML = ''; // Clear the container
+        if (pagination) pagination.update({ totalItems: 0 });
         return;
     }
 
     emptyState.style.display = 'none';
 
+    // Get paginated questions
+    let questionsToRender = filteredQuestions;
+    if (pagination) {
+        questionsToRender = pagination.getPagedItems(filteredQuestions);
+        pagination.render();
+    }
+
     // Clear the container first to ensure proper refresh
     container.innerHTML = '';
 
-    // Build HTML for all questions and insert at once for better performance
-    const questionsHTML = filteredQuestions.map((question, index) => {
+    // Build HTML for paginated questions and insert at once for better performance
+    const questionsHTML = questionsToRender.map((question, index) => {
         // Use _id if available, otherwise id, fallback to questionId
         const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
-        // Use stored question number if available, otherwise use index + 1
-        const displayNumber = question.questionNumber || (index + 1);
+        // Calculate actual index for display (considering pagination)
+        const pageState = pagination ? pagination.getState() : { currentPage: 1, itemsPerPage: filteredQuestions.length };
+        const actualIndex = (pageState.currentPage - 1) * pageState.itemsPerPage + index;
+        // Use stored question number if available, otherwise use calculated index + 1
+        const displayNumber = question.questionNumber || (actualIndex + 1);
 
         return `
             <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
@@ -766,14 +810,7 @@ function initEditModalQuillEditors(question) {
     }
 }
 
-// Helper function to get HTML content from Quill editor
-function getQuillHTML(editor) {
-    if (!editor) return '';
-    const html = editor.root.innerHTML;
-    // Return empty string if only contains empty paragraph
-    if (html === '<p><br></p>' || html === '<p></p>') return '';
-    return html;
-}
+// Note: getQuillHTML is loaded from shared/utils.js
 
 // Add option field with Quill editor (supports both 'edit' and 'add' modes)
 function addOptionField(mode = 'edit') {

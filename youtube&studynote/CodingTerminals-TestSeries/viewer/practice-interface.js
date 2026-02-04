@@ -1,6 +1,10 @@
 // File: CodingTerminals-TestSeries/viewer/practice-interface.js
 // Note: Common utilities (sanitizeHTML, showToast, etc.) are loaded from shared/utils.js
 
+// Session storage keys
+const TEST_SESSION_KEY = 'practiceTestSession';
+const RESULTS_SESSION_KEY = 'practiceTestResults';
+
 // Global variables
 let allQuestions = [];
 let filteredQuestions = [];
@@ -48,9 +52,12 @@ const API_URLS = {
 };
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function () {
-    loadQuestions();
+document.addEventListener('DOMContentLoaded', async function () {
+    await loadQuestions();
     loadExistingValues(); // Load existing values from database
+
+    // Check for saved test session or results
+    await checkForSavedSession();
 
     // Add event listeners for configuration changes to update calculated values
     document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
@@ -64,6 +71,152 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize calculated values
     updateCalculatedValues();
 });
+
+// ==================== SESSION PERSISTENCE ====================
+
+// Check for saved test session or results on page load
+async function checkForSavedSession() {
+    // First check if there are saved results to display
+    const savedResults = loadSessionData(RESULTS_SESSION_KEY);
+    if (savedResults) {
+        const confirmed = await showConfirmDialog(
+            'You have previous test results available. Would you like to view them?',
+            'View Previous Results?',
+            { confirmText: 'View Results', cancelText: 'Start New Test', type: 'info' }
+        );
+        
+        if (confirmed) {
+            displaySavedResults(savedResults);
+            return;
+        } else {
+            clearSessionData(RESULTS_SESSION_KEY);
+        }
+    }
+
+    // Then check for in-progress test
+    const savedSession = loadSessionData(TEST_SESSION_KEY);
+    if (savedSession && savedSession.testStarted) {
+        const sessionAge = (Date.now() - savedSession.savedAt) / 1000; // in seconds
+        
+        // Only restore if session is less than 2 hours old
+        if (sessionAge < 7200) {
+            const confirmed = await showConfirmDialog(
+                `You have an unfinished test with ${savedSession.filteredQuestions?.length || 0} questions. Would you like to continue?`,
+                'Resume Test?',
+                { confirmText: 'Continue', cancelText: 'Start Fresh', type: 'info' }
+            );
+            
+            if (confirmed) {
+                restoreTestSession(savedSession);
+                return;
+            }
+        }
+        clearSessionData(TEST_SESSION_KEY);
+    }
+}
+
+// Save current test session
+function saveTestSession() {
+    if (!testStarted) return;
+
+    const sessionData = {
+        filteredQuestions: filteredQuestions,
+        currentQuestionIndex: currentQuestionIndex,
+        userAnswers: userAnswers,
+        markedForReview: Array.from(markedForReview),
+        questionStatus: questionStatus,
+        timeRemaining: timeRemaining,
+        totalTimeInSeconds: totalTimeInSeconds,
+        startTime: startTime ? startTime.getTime() : null,
+        testStarted: testStarted,
+        savedAt: Date.now()
+    };
+
+    saveSessionData(TEST_SESSION_KEY, sessionData);
+}
+
+// Restore test session from saved data
+function restoreTestSession(savedSession) {
+    filteredQuestions = savedSession.filteredQuestions || [];
+    currentQuestionIndex = savedSession.currentQuestionIndex || 0;
+    userAnswers = savedSession.userAnswers || {};
+    markedForReview = new Set(savedSession.markedForReview || []);
+    questionStatus = savedSession.questionStatus || {};
+    totalTimeInSeconds = savedSession.totalTimeInSeconds || 0;
+    
+    // Calculate remaining time (account for time passed since save)
+    const timeSinceSave = Math.floor((Date.now() - savedSession.savedAt) / 1000);
+    timeRemaining = Math.max(0, (savedSession.timeRemaining || 0) - timeSinceSave);
+    
+    if (savedSession.startTime) {
+        startTime = new Date(savedSession.startTime);
+    }
+
+    // Show test interface
+    document.getElementById('testConfigSection').classList.add('hidden');
+    document.getElementById('questionSection').classList.remove('hidden');
+    document.getElementById('testHeaderInfo').classList.remove('hidden');
+
+    // Update UI
+    document.getElementById('totalCount').textContent = filteredQuestions.length;
+    displayCurrentQuestion();
+    updateAnsweredCount();
+    updateQuestionGrid();
+
+    // Start timer if time remains
+    if (timeRemaining > 0) {
+        testStarted = true;
+        startTimer();
+        showToast('Test session restored!', 'success');
+    } else {
+        // Time expired, submit automatically
+        testStarted = true;
+        submitTest();
+    }
+}
+
+// Save test results for later viewing
+function saveTestResults(results) {
+    saveSessionData(RESULTS_SESSION_KEY, {
+        ...results,
+        savedAt: Date.now()
+    });
+}
+
+// Display saved results
+function displaySavedResults(savedResults) {
+    // Show results modal with saved data
+    const resultTotal = document.getElementById('resultTotal');
+    const resultAnswered = document.getElementById('resultAnswered');
+    const resultMarked = document.getElementById('resultMarked');
+    const resultUnanswered = document.getElementById('resultUnanswered');
+    const timeTakenEl = document.getElementById('timeTaken');
+
+    if (resultTotal) resultTotal.textContent = savedResults.totalQuestions || 0;
+    if (resultAnswered) resultAnswered.textContent = savedResults.answeredQuestions || 0;
+    if (resultMarked) resultMarked.textContent = savedResults.markedQuestions || 0;
+    if (resultUnanswered) resultUnanswered.textContent = savedResults.unansweredQuestions || 0;
+    if (timeTakenEl) timeTakenEl.textContent = savedResults.timeString || '00:00:00';
+
+    // Restore data needed for review
+    if (savedResults.filteredQuestions) {
+        filteredQuestions = savedResults.filteredQuestions;
+    }
+    if (savedResults.userAnswers) {
+        userAnswers = savedResults.userAnswers;
+    }
+    if (savedResults.markedForReview) {
+        markedForReview = new Set(savedResults.markedForReview);
+    }
+
+    // Show results modal
+    const resultsModal = document.getElementById('resultsModal');
+    if (resultsModal) {
+        resultsModal.classList.remove('hidden');
+    }
+
+    showToast('Previous results loaded!', 'info');
+}
 
 
 // Load existing values from database for dropdowns
@@ -228,6 +381,9 @@ function startTest() {
     timeRemaining = totalTimeInSeconds;
     startTime = new Date();
 
+    // Clear any previous results
+    clearSessionData(RESULTS_SESSION_KEY);
+
     // Hide config section and show question section
     document.getElementById('testConfigSection').classList.add('hidden');
     document.getElementById('questionSection').classList.remove('hidden');
@@ -244,6 +400,9 @@ function startTest() {
     // Update total count display
     document.getElementById('totalCount').textContent = filteredQuestions.length;
     updateAnsweredCount();
+
+    // Save initial session
+    saveTestSession();
 
     // Show confirmation
     showToast(`Test started with ${filteredQuestions.length} questions!`, 'success');
@@ -398,6 +557,9 @@ function selectOption(questionId, optionIndex) {
     displayCurrentQuestion();
     updateQuestionNavigator();
     updateAnsweredCount();
+    
+    // Save session after answer change
+    saveTestSession();
 }
 
 // Toggle mark for review
@@ -491,18 +653,39 @@ function updateNavigationButtons() {
 }
 
 
-// Update pagination dots
+// Update pagination dots - show only 3 dots (previous, current, next)
 function updatePaginationDots() {
     const dotsContainer = document.getElementById('paginationDots');
     dotsContainer.innerHTML = '';
 
-    // Show dots for each question
-    for (let i = 0; i < filteredQuestions.length; i++) {
+    if (filteredQuestions.length === 0) return;
+
+    // Show only 3 dots: previous, current, next
+    const total = filteredQuestions.length;
+    const current = currentQuestionIndex;
+
+    // Calculate which 3 indices to show
+    let indices = [];
+    if (total <= 3) {
+        // If 3 or fewer questions, show all
+        indices = Array.from({ length: total }, (_, i) => i);
+    } else if (current === 0) {
+        // At start: show first 3
+        indices = [0, 1, 2];
+    } else if (current === total - 1) {
+        // At end: show last 3
+        indices = [total - 3, total - 2, total - 1];
+    } else {
+        // In middle: show prev, current, next
+        indices = [current - 1, current, current + 1];
+    }
+
+    indices.forEach(i => {
         const dot = document.createElement('div');
         dot.className = `dot ${i === currentQuestionIndex ? 'active' : ''}`;
         dot.onclick = () => goToQuestion(i);
         dotsContainer.appendChild(dot);
-    }
+    });
 }
 
 // Update question navigator sidebar
@@ -613,6 +796,29 @@ function submitTest() {
     const maxScore = totalQuestions;
     const accuracy = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
+    // Format time string
+    const hours = Math.floor(timeTaken / 3600);
+    const minutes = Math.floor((timeTaken % 3600) / 60);
+    const seconds = timeTaken % 60;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    // Clear in-progress session and save results
+    clearSessionData(TEST_SESSION_KEY);
+    saveTestResults({
+        totalQuestions,
+        answeredQuestions,
+        markedQuestions,
+        unansweredQuestions,
+        score,
+        maxScore,
+        accuracy,
+        timeTaken,
+        timeString,
+        filteredQuestions,
+        userAnswers,
+        markedForReview: Array.from(markedForReview)
+    });
+
     // Display results - with safety checks
     const resultTotal = document.getElementById('resultTotal');
     const resultAnswered = document.getElementById('resultAnswered');
@@ -627,10 +833,6 @@ function submitTest() {
     // Only update elements that exist in the current modal
     const timeTakenEl = document.getElementById('timeTaken');
     if (timeTakenEl) {
-        const hours = Math.floor(timeTaken / 3600);
-        const minutes = Math.floor((timeTaken % 3600) / 60);
-        const seconds = timeTaken % 60;
-        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         timeTakenEl.textContent = timeString;
     }
 
@@ -729,9 +931,10 @@ function generateReviewContent() {
 
                 return `
                     <div class="${optionClass}">
-                        <label class="flex items-center">
-                            <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} class="mr-3">
-                            <span class="font-medium">${String.fromCharCode(65 + optIndex)}. ${sanitizeHTML(option)}</span>
+                        <label style="display: flex; align-items: flex-start; gap: 8px;">
+                            <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} style="margin-top: 4px; flex-shrink: 0;">
+                            <span style="font-weight: 600; color: #2563eb; flex-shrink: 0;">${String.fromCharCode(65 + optIndex)}.</span>
+                            <span style="display: inline;">${sanitizeHTML(option)}</span>
                         </label>
                     </div>
                     `;
@@ -740,10 +943,16 @@ function generateReviewContent() {
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div>
-                    <p class="text-sm font-semibold text-blue-800">Your Answer: <span class="${isAnswered ? (isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-600'}">${userAnswerText}</span></p>
+                    <p class="text-sm font-semibold text-blue-800" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <span>Your Answer:</span>
+                        <span style="display: inline-flex; align-items: baseline; gap: 4px;" class="${isAnswered ? (isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-600'}">${userAnswerText}</span>
+                    </p>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-blue-800">Correct Answer: <span class="text-green-600 font-bold">${correctAnswerText}</span></p>
+                    <p class="text-sm font-semibold text-blue-800" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <span>Correct Answer:</span>
+                        <span style="display: inline-flex; align-items: baseline; gap: 4px;" class="text-green-600 font-bold">${correctAnswerText}</span>
+                    </p>
                 </div>
             </div>
             
@@ -793,6 +1002,10 @@ function restartTest() {
 
     clearInterval(timerInterval);
 
+    // Clear saved session data
+    clearSessionData(TEST_SESSION_KEY);
+    clearSessionData(RESULTS_SESSION_KEY);
+
     // Reset UI
     document.getElementById('testConfigSection').classList.remove('hidden');
     document.getElementById('questionSection').classList.add('hidden');
@@ -815,10 +1028,12 @@ function closeResults() {
     document.getElementById('resultsModal').classList.add('hidden');
 }
 
-// Handle window before unload
+// Handle window before unload - save session instead of just warning
 window.addEventListener('beforeunload', function (e) {
     if (testStarted) {
+        // Save current session before leaving
+        saveTestSession();
         e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
+        e.returnValue = 'Your test progress has been saved. You can continue when you return.';
     }
 });
