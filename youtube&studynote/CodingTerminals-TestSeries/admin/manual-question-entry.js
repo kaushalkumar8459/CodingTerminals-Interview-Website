@@ -1,3 +1,35 @@
+// File: CodingTerminals-TestSeries/admin/manual-question-entry.js
+
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(html) {
+    if (!html) return '';
+    // Use DOMPurify if available, otherwise strip all HTML tags
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
+        });
+    }
+    // Fallback: basic HTML entity encoding
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+// Destroy Quill editor instance properly
+function destroyQuillEditor(editor) {
+    if (editor && editor.container) {
+        // Remove event listeners
+        editor.off('text-change');
+        editor.off('selection-change');
+        // Clear the container
+        if (editor.container.parentNode) {
+            editor.container.innerHTML = '';
+        }
+    }
+    return null;
+}
+
 // Global Variables
 let questionBlocks = [];
 let questionCounter = 0;
@@ -6,6 +38,27 @@ let years = new Set();
 let examTypes = new Set();
 let difficulties = new Set();
 let hasInitialized = false;
+
+// Store Quill editor instances for each question block
+let questionEditors = {}; // {questionIndex: {question: Quill, explanation: Quill, options: [Quill, ...]}}
+
+// Quill toolbar configurations
+const fullToolbarOptions = [
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'script': 'sub' }, { 'script': 'super' }],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['code-block'],
+    ['link', 'image'],
+    ['clean']
+];
+
+const minimalToolbarOptions = [
+    ['bold', 'italic', 'underline'],
+    [{ 'script': 'sub' }, { 'script': 'super' }],
+    ['code-block'],
+    ['clean']
+];
 
 // API Endpoints Configuration
 const API_CONFIG = {
@@ -211,7 +264,7 @@ function addQuestionBlock() {
         <div id="${blockId}" class="question-input bg-white rounded-2xl shadow-xl p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-blue-600">Question #${currentQuestionIndex + 1}</h3>
-                <button type="button" onclick="removeQuestionBlock('${blockId}')" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
+                <button type="button" onclick="removeQuestionBlock('${blockId}', ${currentQuestionIndex})" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
                     🗑️ Remove
                 </button>
             </div>
@@ -219,7 +272,7 @@ function addQuestionBlock() {
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text *</label>
-                    <textarea id="question-${currentQuestionIndex}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Enter your question text here..."></textarea>
+                    <div id="question-editor-${currentQuestionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 100px;"></div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -271,50 +324,66 @@ function addQuestionBlock() {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
-                    <div id="options-${currentQuestionIndex}">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">A.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-0" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option A">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                    <div id="options-${currentQuestionIndex}" class="space-y-3">
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="0">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">A.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-0" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">B.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-1" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option B">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="1">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">B.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-1" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">C.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-2" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option C">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="2">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">C.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-2" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">D.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-3" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option D">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="3">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">D.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-3" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
                     </div>
                     <button type="button" onclick="addOptionField(${currentQuestionIndex})" class="mt-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600">
@@ -324,7 +393,7 @@ function addQuestionBlock() {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation</label>
-                    <textarea id="explanation-${currentQuestionIndex}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Provide explanation for the correct answer..."></textarea>
+                    <div id="explanation-editor-${currentQuestionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 80px;"></div>
                 </div>
             </div>
         </div>
@@ -332,7 +401,7 @@ function addQuestionBlock() {
 
     container.insertAdjacentHTML('beforeend', blockHTML);
 
-    // Initialize search functionality after DOM update
+    // Initialize Quill editors and search functionality after DOM update
     requestAnimationFrame(() => {
         let attempts = 0;
         const maxAttempts = 15;
@@ -340,6 +409,8 @@ function addQuestionBlock() {
         function tryInit() {
             attempts++;
 
+            const questionEditorEl = document.getElementById(`question-editor-${currentQuestionIndex}`);
+            const explanationEditorEl = document.getElementById(`explanation-editor-${currentQuestionIndex}`);
             const subjectInput = document.getElementById(`subject-${currentQuestionIndex}`);
             const subjectSuggestions = document.getElementById(`subjectSuggestions-${currentQuestionIndex}`);
             const examTypeInput = document.getElementById(`examType-${currentQuestionIndex}`);
@@ -347,7 +418,10 @@ function addQuestionBlock() {
             const difficultyInput = document.getElementById(`difficulty-${currentQuestionIndex}`);
             const difficultySuggestions = document.getElementById(`difficultySuggestions-${currentQuestionIndex}`);
 
-            if (subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
+            if (questionEditorEl && explanationEditorEl && subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
+                // Initialize Quill editors for this question block
+                initQuillEditorsForBlock(currentQuestionIndex);
+                // Initialize search fields
                 initIndividualQuestionSearchFields(currentQuestionIndex);
             } else if (attempts < maxAttempts) {
                 setTimeout(tryInit, attempts * 150);
@@ -358,6 +432,64 @@ function addQuestionBlock() {
     });
 
     questionCounter++;
+}
+
+// Initialize Quill editors for a question block
+function initQuillEditorsForBlock(questionIndex) {
+    // Initialize editors object for this question
+    questionEditors[questionIndex] = {
+        question: null,
+        explanation: null,
+        options: []
+    };
+
+    // Initialize Question Text Editor
+    const questionEditorEl = document.getElementById(`question-editor-${questionIndex}`);
+    if (questionEditorEl) {
+        questionEditors[questionIndex].question = new Quill(`#question-editor-${questionIndex}`, {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter your question text here...'
+        });
+    }
+
+    // Initialize Option Editors (4 default options)
+    for (let i = 0; i < 4; i++) {
+        const optionEditorEl = document.getElementById(`option-editor-${questionIndex}-${i}`);
+        if (optionEditorEl) {
+            const optionEditor = new Quill(`#option-editor-${questionIndex}-${i}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + i)}...`
+            });
+            questionEditors[questionIndex].options.push(optionEditor);
+        }
+    }
+
+    // Initialize Explanation Editor
+    const explanationEditorEl = document.getElementById(`explanation-editor-${questionIndex}`);
+    if (explanationEditorEl) {
+        questionEditors[questionIndex].explanation = new Quill(`#explanation-editor-${questionIndex}`, {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Provide explanation for the correct answer...'
+        });
+    }
+}
+
+// Helper function to get HTML content from Quill editor
+function getQuillHTML(editor) {
+    if (!editor) return '';
+    const html = editor.root.innerHTML;
+    // Return empty string if only contains empty paragraph
+    if (html === '<p><br></p>' || html === '<p></p>') return '';
+    return html;
 }
 
 // Add multiple question blocks at once
@@ -377,28 +509,99 @@ function addOptionField(questionIndex) {
     const newOptionIndex = optionCount;
 
     const optionHTML = `
-        <div class="flex items-center gap-2 mb-2">
-            <span class="text-sm font-medium w-8">${String.fromCharCode(65 + newOptionIndex)}.</span>
-            <input type="text" 
-                   id="option-${questionIndex}-${newOptionIndex}" 
-                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                   placeholder="Option ${String.fromCharCode(65 + newOptionIndex)}">
-            <label class="flex items-center gap-1">
-                <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}">
-                <span class="text-sm">Correct</span>
-            </label>
+        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${newOptionIndex}">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newOptionIndex)}.</span>
+                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                        <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}" class="w-4 h-4 text-green-600">
+                        <span class="text-sm text-gray-600">Correct Answer</span>
+                    </label>
+                </div>
+                <button type="button" onclick="removeOptionField(${questionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                    🗑️
+                </button>
+            </div>
+            <div id="option-editor-${questionIndex}-${newOptionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
         </div>
     `;
 
     container.insertAdjacentHTML('beforeend', optionHTML);
+
+    // Initialize Quill editor for the new option after DOM update
+    setTimeout(() => {
+        const optionEditorEl = document.getElementById(`option-editor-${questionIndex}-${newOptionIndex}`);
+        if (optionEditorEl) {
+            const optionEditor = new Quill(`#option-editor-${questionIndex}-${newOptionIndex}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + newOptionIndex)}...`
+            });
+            if (questionEditors[questionIndex]) {
+                questionEditors[questionIndex].options.push(optionEditor);
+            }
+        }
+    }, 100);
+}
+
+// Remove option field from a specific question
+function removeOptionField(questionIndex, buttonElement) {
+    const container = document.getElementById(`options-${questionIndex}`);
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Ensure at least 2 options remain
+    if (optionContainers.length <= 2) {
+        showToast('A question must have at least 2 options.', 'warning');
+        return;
+    }
+    
+    // Find the option container to remove
+    const optionContainer = buttonElement.closest('.option-editor-container');
+    const optionIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container from DOM
+    optionContainer.remove();
+    
+    // Remove the corresponding Quill editor from the array
+    if (questionEditors[questionIndex] && questionEditors[questionIndex].options[optionIndex]) {
+        questionEditors[questionIndex].options.splice(optionIndex, 1);
+    }
+    
+    // Re-index remaining options (update letters A, B, C, etc.)
+    const remainingOptions = container.querySelectorAll('.option-editor-container');
+    remainingOptions.forEach((opt, idx) => {
+        // Update data-option-index
+        opt.dataset.optionIndex = idx;
+        
+        // Update option letter
+        const letterSpan = opt.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = String.fromCharCode(65 + idx) + '.';
+        }
+        
+        // Update radio button value
+        const radio = opt.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = idx;
+            radio.id = `correct-${questionIndex}-${idx}`;
+        }
+    });
+    
+    showToast('Option removed successfully.', 'info');
 }
 
 // Remove a question block
-function removeQuestionBlock(blockId) {
+function removeQuestionBlock(blockId, questionIndex) {
     if (confirm('Are you sure you want to remove this question block?')) {
         const block = document.getElementById(blockId);
         if (block) {
             block.remove();
+            // Clean up Quill editor references
+            if (questionEditors[questionIndex]) {
+                delete questionEditors[questionIndex];
+            }
         }
     }
 }
@@ -408,6 +611,8 @@ function clearAll() {
     if (confirm('Are you sure you want to clear all question blocks? This cannot be undone.')) {
         document.getElementById('questionsContainer').innerHTML = '';
         questionCounter = 0;
+        // Clear all Quill editor references
+        questionEditors = {};
     }
 }
 
@@ -464,9 +669,13 @@ async function saveAllQuestions() {
     }
 }
 
-// Get question data from form
+// Get question data from form - Updated to use Quill editors
 function getQuestionData(index) {
-    const question = document.getElementById(`question-${index}`).value.trim();
+    // Get question text from Quill editor
+    let question = '';
+    if (questionEditors[index] && questionEditors[index].question) {
+        question = getQuillHTML(questionEditors[index].question);
+    }
 
     if (!question) {
         return null;
@@ -484,16 +693,15 @@ function getQuestionData(index) {
     const examType = document.getElementById(`examType-${index}`).value || defaultExamType;
     const difficulty = document.getElementById(`difficulty-${index}`).value || defaultDifficulty;
 
-    // Get options
+    // Get options from Quill editors
     const options = [];
-    let optionIndex = 0;
-    let optionElement;
-    while ((optionElement = document.getElementById(`option-${index}-${optionIndex}`)) !== null) {
-        const optionValue = optionElement.value.trim();
-        if (optionValue) {
-            options.push(optionValue);
-        }
-        optionIndex++;
+    if (questionEditors[index] && questionEditors[index].options) {
+        questionEditors[index].options.forEach(optionEditor => {
+            const optionValue = getQuillHTML(optionEditor);
+            if (optionValue) {
+                options.push(optionValue);
+            }
+        });
     }
 
     // Get correct answer
@@ -506,9 +714,14 @@ function getQuestionData(index) {
         }
     }
 
+    // Get explanation from Quill editor
+    let explanation = '';
+    if (questionEditors[index] && questionEditors[index].explanation) {
+        explanation = getQuillHTML(questionEditors[index].explanation);
+    }
+
     // Get other fields
     const topic = document.getElementById(`topic-${index}`).value;
-    const explanation = document.getElementById(`explanation-${index}`).value;
 
     // Validate required fields
     if (options.length < 2) {
