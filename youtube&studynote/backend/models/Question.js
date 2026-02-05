@@ -55,6 +55,11 @@ const questionSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    questionNumber: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     duplicateOf: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Question',

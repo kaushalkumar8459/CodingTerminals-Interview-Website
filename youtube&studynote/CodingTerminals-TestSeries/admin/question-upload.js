@@ -527,12 +527,13 @@ function renderPaginatedQuestions(filteredQuestions) {
 
     const questionsHTML = questionsToRender.map((question, index) => {
         const actualIndex = startIndex + index;
+        const displayNumber = question.questionNumber || '';
         return `
             <div class="question-preview">
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${actualIndex + 1}</span>
+                            ${displayNumber ? `<span class="flex-shrink-0 w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${displayNumber}</span>` : ''}
                             <h4 class="font-semibold text-gray-800" style="white-space: pre-wrap; font-family: Arial, sans-serif;">${sanitizeHTML(question.question) || 'No question text'}</h4>
                         </div>
                         <div class="flex flex-wrap gap-2 mb-2 ml-9">
@@ -958,7 +959,13 @@ function showEditModal(question, index) {
         <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
                 <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-xl font-bold text-gray-800">Edit Question</h3>
+                    <div class="flex items-center gap-4">
+                        <h3 class="text-xl font-bold text-gray-800">Edit Question</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm font-semibold text-gray-600">Q. No.</label>
+                            <input type="text" id="editQuestionNumber" value="${escapeHtml(question.questionNumber || '')}" class="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center text-sm" placeholder="#">
+                        </div>
+                    </div>
                     <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold leading-none">
                         ×
                     </button>
@@ -1360,6 +1367,7 @@ async function saveEditedQuestion(index) {
     const updatedQuestion = {
         id: question.id,
         _id: question._id,  // Include _id as well to handle both properties
+        questionNumber: document.getElementById('editQuestionNumber').value.trim() || '',
         question: getQuillHTML(editQuestionEditor),  // Get HTML from Quill editor
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,

@@ -219,7 +219,12 @@ function addQuestionBlock() {
     const blockHTML = `
         <div id="${blockId}" class="question-input bg-white rounded-2xl shadow-xl p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-blue-600">Question #${currentQuestionIndex + 1}</h3>
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-bold text-blue-600">Question No:-</h3>
+                    <div class="flex items-center gap-1">
+                        <input type="text" id="questionNumber-${currentQuestionIndex}" class="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center text-sm" placeholder="#">
+                    </div>
+                </div>
                 <button type="button" onclick="removeQuestionBlock('${blockId}', ${currentQuestionIndex})" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
                     🗑️ Remove
                 </button>
@@ -695,11 +700,15 @@ function getQuestionData(index) {
 
     // Validate required fields
     if (options.length < 2) {
-        showToast(`Question #${index + 1} needs at least 2 options.`, 'error');
+        showToast(`Question needs at least 2 options.`, 'error');
         return null;
     }
 
+    // Get question number
+    const questionNumber = document.getElementById(`questionNumber-${index}`)?.value.trim() || '';
+
     return {
+        questionNumber: questionNumber,
         question: question,
         options: options,
         correctAnswer: correctAnswer,

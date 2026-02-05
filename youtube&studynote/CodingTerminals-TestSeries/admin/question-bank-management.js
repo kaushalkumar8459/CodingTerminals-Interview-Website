@@ -531,26 +531,21 @@ function renderQuestionsList() {
         // Use _id if available, otherwise id, fallback to questionId
         const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
-        // Calculate actual index for display (considering pagination)
-        const pageState = pagination ? pagination.getState() : { currentPage: 1, itemsPerPage: filteredQuestions.length };
-        const actualIndex = (pageState.currentPage - 1) * pageState.itemsPerPage + index;
-        // Use stored question number if available, otherwise use calculated index + 1
-        const displayNumber = question.questionNumber || (actualIndex + 1);
+        // Use stored question number if available, otherwise leave empty
+        const displayNumber = question.questionNumber || '';
 
         return `
             <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
                 <div class="flex gap-3">
                     <!-- Question Number Badge -->
-                    <div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">
-                        ${displayNumber}
-                    </div>
+                    ${displayNumber ? `<div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${displayNumber}</div>` : ''}
                     
                     <!-- Question Content -->
                     <div class="flex-1">
                         <!-- Header with question and actions -->
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex-1">
-                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question.substring(0, 100))}${question.question.length > 100 ? '...' : ''}</h4>
+                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question)}</h4>
                                 <div class="flex flex-wrap gap-2 mb-2">
                                     <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject)}</span>
                                     <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear)}</span>
@@ -586,7 +581,7 @@ function renderQuestionsList() {
                         
                         ${question.explanation ? `
                             <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation.substring(0, 100))}${question.explanation.length > 100 ? '...' : ''}</div>
+                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation)}</div>
                             </div>
                         ` : ''}
                         
@@ -648,7 +643,7 @@ function showEditModal(question) {
                 <div class="flex gap-3 items-start">
                     <div class="w-20 flex-shrink-0">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
-                        <input type="number" id="editQuestionNumber" value="${question.questionNumber || ''}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                        <input type="text" id="editQuestionNumber" value="${question.questionNumber || ''}" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
@@ -973,7 +968,7 @@ async function saveEditedQuestion(event) {
     const updatedQuestion = {
         id: question.id || question._id,
         _id: question._id || question.id,
-        questionNumber: parseInt(document.getElementById('editQuestionNumber').value) || question.questionNumber,
+        questionNumber: document.getElementById('editQuestionNumber').value.trim() || '',
         question: getQuillHTML(editQuestionEditor),
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
@@ -1012,8 +1007,10 @@ async function saveEditedQuestion(event) {
         const result = await response.json();
 
         if (result.success) {
-            // Update local data
-            Object.assign(question, updatedQuestion);
+            // Update local data with response from server (includes all saved fields)
+            const savedData = result.data || updatedQuestion;
+            Object.assign(question, savedData);
+            console.log('Question saved with questionNumber:', savedData.questionNumber);
 
             closeEditModal();
             renderQuestionsList();
@@ -1413,7 +1410,7 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="flex gap-3 items-start">
                         <div class="w-20 flex-shrink-0">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
-                            <input type="number" id="addQuestionNumber" value="${allQuestions.length + 1}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                            <input type="text" id="addQuestionNumber" value="" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
                         </div>
                         <div class="flex-1">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
@@ -1594,7 +1591,7 @@ async function saveNewQuestion(event) {
 
     // Get form values using Quill editors
     const questionData = {
-        questionNumber: parseInt(document.getElementById('addQuestionNumber').value) || (allQuestions.length + 1),
+        questionNumber: document.getElementById('addQuestionNumber').value.trim() || '',
         question: getQuillHTML(addQuestionEditor),
         subject: document.getElementById('addSubject').value,
         academicYear: document.getElementById('addYear').value,
@@ -1896,12 +1893,12 @@ function previewTest() {
                 <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">${document.getElementById('testTitle')?.value || 'Untitled Test'}</h1>
                 
                 <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${testQuestions.map((question, index) => `
+                    ${testQuestions.map((question, index) => {
+                        const displayNumber = question.questionNumber || '';
+                        return `
                         <div class="question-card">
                             <div class="flex items-start gap-3 mb-4">
-                                <span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                                    ${index + 1}
-                                </span>
+                                ${displayNumber ? `<span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">${displayNumber}</span>` : ''}
                                 <div class="flex-1">
                                     <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
                                     
@@ -1929,7 +1926,7 @@ function previewTest() {
                                 Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
                             </div>
                         </div>
-                    `).join('')}
+                    `;}).join('')}
                 </div>
             </div>
         </body>
