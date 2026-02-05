@@ -278,38 +278,38 @@
 
                     <!-- Bulk Import Wizard -->
                     <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 class="font-semibold text-blue-800 mb-2">🔄 Bulk Import Wizard</h3>
+                        <h3 class="font-semibold text-blue-800 mb-2">🔄 Bulk Import Wizard ⏫</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <button onclick="importFromCSV()"
                                 class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
-                                📄 Import from CSV
+                                📄 Import from CSV ⏫
                             </button>
                             <button onclick="importFromExcel()"
                                 class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
-                                📊 Import from Excel
+                                📊 Import from Excel ⏫
                             </button>
                             <button onclick="importFromText()"
                                 class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
-                                📝 Import from Text
+                                📝 Import from Text ⏫
                             </button>
                         </div>
                     </div>
 
                     <!-- Download Sample Files -->
                     <div class="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                        <h3 class="font-semibold text-purple-800 mb-2">💾 Download Sample Files</h3>
+                        <h3 class="font-semibold text-purple-800 mb-2">💾 Download Sample Files ⏬</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <a href="#" onclick="downloadSampleCSV(); return false;"
                                 class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
-                                📄 CSV Sample
+                                📄 CSV Sample ⏬
                             </a>
                             <a href="#" onclick="downloadSampleExcel(); return false;"
                                 class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
-                                📊 Excel Sample
+                                📊 Excel Sample ⏬
                             </a>
                             <a href="#" onclick="downloadSampleTXT(); return false;"
                                 class="flex items-center justify-center px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm">
-                                📝 Text Sample
+                                📝 Text Sample ⏬
                             </a>
                         </div>
                     </div>
@@ -381,6 +381,9 @@
                         </div>
                         <!-- Questions will be rendered here -->
                     </div>
+                    
+                    <!-- Pagination Container -->
+                    <div id="paginationContainer" class="mt-4"></div>
                     <!-- ... existing code ... -->
 
                 </div>
@@ -425,7 +428,9 @@
         onchange="handleFileImport(event)">
 
     <!-- Scripts -->
+    <!-- Scripts -->
     <script src="../../config/app.config.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="../../auth/auth.js"></script>
     <script src="question-upload.js"></script>
 

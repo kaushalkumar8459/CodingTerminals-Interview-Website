@@ -1,34 +1,5 @@
 // File: CodingTerminals-TestSeries/admin/question-bank-management.js
-
-// Sanitize HTML to prevent XSS attacks
-function sanitizeHTML(html) {
-    if (!html) return '';
-    // Use DOMPurify if available, otherwise strip all HTML tags
-    if (typeof DOMPurify !== 'undefined') {
-        return DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['b', 'i', 'u', 's', 'em', 'strong', 'sub', 'sup', 'br', 'p', 'span', 'code', 'pre', 'ul', 'ol', 'li', 'a', 'img'],
-            ALLOWED_ATTR: ['href', 'src', 'alt', 'class', 'style', 'target']
-        });
-    }
-    // Fallback: basic HTML entity encoding
-    const div = document.createElement('div');
-    div.textContent = html;
-    return div.innerHTML;
-}
-
-// Destroy Quill editor instance properly
-function destroyQuillEditor(editor) {
-    if (editor && editor.container) {
-        // Remove event listeners
-        editor.off('text-change');
-        editor.off('selection-change');
-        // Clear the container
-        if (editor.container.parentNode) {
-            editor.container.innerHTML = '';
-        }
-    }
-    return null;
-}
+// Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, etc.) are loaded from shared/utils.js
 
 // Global Variables
 let allQuestions = [];
@@ -40,6 +11,10 @@ let currentCreationMethod = 'manual';
 let testQuestions = [];
 let groups = [];
 let duplicates = [];
+
+// Pagination settings
+let pagination = null;
+const QUESTIONS_PER_PAGE = 20;
 
 let subjects = new Set();
 let years = new Set();
@@ -59,23 +34,7 @@ let addExplanationEditor = null;
 // Store Quill editor instance for bulk add modal
 let bulkQuestionsEditor = null;
 
-// Quill toolbar configurations
-const fullToolbarOptions = [
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'script': 'sub' }, { 'script': 'super' }],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    ['code-block'],
-    ['link', 'image'],
-    ['clean']
-];
-
-const minimalToolbarOptions = [
-    ['bold', 'italic', 'underline'],
-    [{ 'script': 'sub' }, { 'script': 'super' }],
-    ['code-block'],
-    ['clean']
-];
+// Note: fullToolbarOptions and minimalToolbarOptions are loaded from shared/utils.js
 
 // Fetch existing values from the database for search suggestions
 async function fetchExistingValues() {
@@ -388,6 +347,8 @@ function updatePercentage(slider, displayId) {
 // Update loadQuestions to fetch existing values
 async function loadQuestions() {
     try {
+        showLoading(true, 'Loading questions...');
+        
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
 
         if (!response.ok) {
@@ -395,6 +356,8 @@ async function loadQuestions() {
         }
 
         const result = await response.json();
+
+        showLoading(false);
 
         if (result.success) {
             allQuestions = result.data || [];
@@ -406,16 +369,36 @@ async function loadQuestions() {
             await fetchExistingValues();
 
             filteredQuestions = [...allQuestions];
-            renderQuestionsList();
+            
+            // Initialize pagination
+            initPagination();
+            
             renderFilters();
             updateStats();
         } else {
             showToast(result.message || 'Failed to load questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error loading questions:', error);
         showToast('Error loading questions: ' + error.message, 'error');
     }
+}
+
+// Initialize pagination for the question list
+function initPagination() {
+    pagination = createPagination({
+        totalItems: filteredQuestions.length,
+        itemsPerPage: QUESTIONS_PER_PAGE,
+        currentPage: 1,
+        containerId: 'paginationContainer',
+        onPageChange: (page) => {
+            renderQuestionsList();
+            // Scroll to top of questions container
+            document.getElementById('questionsContainer')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+    renderQuestionsList();
 }
 
 // Extract unique values for filters
@@ -495,6 +478,11 @@ function applyFilters() {
         return matchesSearch && matchesSubject && matchesYear && matchesDifficulty && matchesType;
     });
 
+    // Reset pagination to page 1 when filters change
+    if (pagination) {
+        pagination.update({ totalItems: filteredQuestions.length, currentPage: 1 });
+    }
+    
     renderQuestionsList();
     updateStats();
 }
@@ -522,36 +510,42 @@ function renderQuestionsList() {
     if (filteredQuestions.length === 0) {
         emptyState.style.display = 'block';
         container.innerHTML = ''; // Clear the container
+        if (pagination) pagination.update({ totalItems: 0 });
         return;
     }
 
     emptyState.style.display = 'none';
 
+    // Get paginated questions
+    let questionsToRender = filteredQuestions;
+    if (pagination) {
+        questionsToRender = pagination.getPagedItems(filteredQuestions);
+        pagination.render();
+    }
+
     // Clear the container first to ensure proper refresh
     container.innerHTML = '';
 
-    // Build HTML for all questions and insert at once for better performance
-    const questionsHTML = filteredQuestions.map((question, index) => {
+    // Build HTML for paginated questions and insert at once for better performance
+    const questionsHTML = questionsToRender.map((question, index) => {
         // Use _id if available, otherwise id, fallback to questionId
         const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
-        // Use stored question number if available, otherwise use index + 1
-        const displayNumber = question.questionNumber || (index + 1);
+        // Use stored question number if available, otherwise leave empty
+        const displayNumber = question.questionNumber || '';
 
         return `
             <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
                 <div class="flex gap-3">
                     <!-- Question Number Badge -->
-                    <div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">
-                        ${displayNumber}
-                    </div>
+                    ${displayNumber ? `<div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${displayNumber}</div>` : ''}
                     
                     <!-- Question Content -->
                     <div class="flex-1">
                         <!-- Header with question and actions -->
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex-1">
-                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question.substring(0, 100))}${question.question.length > 100 ? '...' : ''}</h4>
+                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question)}</h4>
                                 <div class="flex flex-wrap gap-2 mb-2">
                                     <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject)}</span>
                                     <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear)}</span>
@@ -587,7 +581,7 @@ function renderQuestionsList() {
                         
                         ${question.explanation ? `
                             <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation.substring(0, 100))}${question.explanation.length > 100 ? '...' : ''}</div>
+                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation)}</div>
                             </div>
                         ` : ''}
                         
@@ -649,7 +643,7 @@ function showEditModal(question) {
                 <div class="flex gap-3 items-start">
                     <div class="w-20 flex-shrink-0">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
-                        <input type="number" id="editQuestionNumber" value="${question.questionNumber || ''}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                        <input type="text" id="editQuestionNumber" value="${question.questionNumber || ''}" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
                     </div>
                     <div class="flex-1">
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
@@ -811,14 +805,7 @@ function initEditModalQuillEditors(question) {
     }
 }
 
-// Helper function to get HTML content from Quill editor
-function getQuillHTML(editor) {
-    if (!editor) return '';
-    const html = editor.root.innerHTML;
-    // Return empty string if only contains empty paragraph
-    if (html === '<p><br></p>' || html === '<p></p>') return '';
-    return html;
-}
+// Note: getQuillHTML is loaded from shared/utils.js
 
 // Add option field with Quill editor (supports both 'edit' and 'add' modes)
 function addOptionField(mode = 'edit') {
@@ -981,7 +968,7 @@ async function saveEditedQuestion(event) {
     const updatedQuestion = {
         id: question.id || question._id,
         _id: question._id || question.id,
-        questionNumber: parseInt(document.getElementById('editQuestionNumber').value) || question.questionNumber,
+        questionNumber: document.getElementById('editQuestionNumber').value.trim() || '',
         question: getQuillHTML(editQuestionEditor),
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
@@ -1020,8 +1007,10 @@ async function saveEditedQuestion(event) {
         const result = await response.json();
 
         if (result.success) {
-            // Update local data
-            Object.assign(question, updatedQuestion);
+            // Update local data with response from server (includes all saved fields)
+            const savedData = result.data || updatedQuestion;
+            Object.assign(question, savedData);
+            console.log('Question saved with questionNumber:', savedData.questionNumber);
 
             closeEditModal();
             renderQuestionsList();
@@ -1421,7 +1410,7 @@ function showAddQuestionModal(isBulk = false) {
                     <div class="flex gap-3 items-start">
                         <div class="w-20 flex-shrink-0">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
-                            <input type="number" id="addQuestionNumber" value="${allQuestions.length + 1}" min="1" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                            <input type="text" id="addQuestionNumber" value="" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
                         </div>
                         <div class="flex-1">
                             <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
@@ -1602,7 +1591,7 @@ async function saveNewQuestion(event) {
 
     // Get form values using Quill editors
     const questionData = {
-        questionNumber: parseInt(document.getElementById('addQuestionNumber').value) || (allQuestions.length + 1),
+        questionNumber: document.getElementById('addQuestionNumber').value.trim() || '',
         question: getQuillHTML(addQuestionEditor),
         subject: document.getElementById('addSubject').value,
         academicYear: document.getElementById('addYear').value,
@@ -1904,12 +1893,12 @@ function previewTest() {
                 <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">${document.getElementById('testTitle')?.value || 'Untitled Test'}</h1>
                 
                 <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${testQuestions.map((question, index) => `
+                    ${testQuestions.map((question, index) => {
+                        const displayNumber = question.questionNumber || '';
+                        return `
                         <div class="question-card">
                             <div class="flex items-start gap-3 mb-4">
-                                <span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                                    ${index + 1}
-                                </span>
+                                ${displayNumber ? `<span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">${displayNumber}</span>` : ''}
                                 <div class="flex-1">
                                     <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
                                     
@@ -1937,7 +1926,7 @@ function previewTest() {
                                 Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
                             </div>
                         </div>
-                    `).join('')}
+                    `;}).join('')}
                 </div>
             </div>
         </body>
@@ -2078,78 +2067,4 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeFilter) typeFilter.addEventListener('change', applyFilters);
 });
 
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-
-    // Only show toast if container exists
-    if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`); // Fallback to console
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
-
-
-// ==================== AUTHENTICATION ====================
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.clear();
-        window.location.href = '../../auth/login.html';
-    }
-}
-
-// ==================== ANIMATION STYLES ====================
-// Add CSS animations dynamically if they don't exist
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
-    `;
-    document.head.appendChild(style);
-}
+// Note: showToast, logout, and animation styles are loaded from shared/utils.js
