@@ -18,13 +18,11 @@ const questionGroupSchema = new mongoose.Schema({
     }],
     subject: {
         type: String,
-        trim: true,
-        index: true
+        trim: true
     },
     academicYear: {
         type: String,
-        trim: true,
-        index: true
+        trim: true
     },
     difficulty: {
         type: String,

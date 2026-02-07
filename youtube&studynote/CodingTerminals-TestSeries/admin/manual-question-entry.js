@@ -590,19 +590,28 @@ async function clearAll() {
 async function saveAllQuestions() {
     const containers = document.querySelectorAll('[id^="question-block-"]');
     const questions = [];
-    let hasErrors = false;
+    let errorBlocks = [];
 
     for (let i = 0; i < containers.length; i++) {
-        const questionData = getQuestionData(i);
+        // Extract the actual question index from the block ID (e.g., "question-block-5" -> 5)
+        const blockId = containers[i].id;
+        const actualIndex = parseInt(blockId.replace('question-block-', ''), 10);
+        
+        const questionData = getQuestionData(actualIndex);
         if (questionData) {
             questions.push(questionData);
         } else {
-            hasErrors = true;
+            errorBlocks.push(i + 1); // Human-readable block number (1-based)
+            // Highlight the block with error
+            containers[i].classList.add('border-2', 'border-red-500');
+            setTimeout(() => {
+                containers[i].classList.remove('border-2', 'border-red-500');
+            }, 5000);
         }
     }
 
-    if (hasErrors) {
-        showToast('Some questions have errors. Please review them.', 'error');
+    if (errorBlocks.length > 0) {
+        showToast(`Question block(s) ${errorBlocks.join(', ')} have errors. Please fill in question text and at least 2 options.`, 'error');
         return;
     }
 
@@ -652,7 +661,10 @@ function getQuestionData(index) {
         question = getQuillHTML(questionEditors[index].question);
     }
 
-    if (!question) {
+    // Check if question text is empty or just whitespace/empty HTML
+    const strippedQuestion = question.replace(/<[^>]*>/g, '').trim();
+    if (!strippedQuestion) {
+        console.log(`Question ${index}: Question text is empty`);
         return null;
     }
 
@@ -696,11 +708,11 @@ function getQuestionData(index) {
     }
 
     // Get other fields
-    const topic = document.getElementById(`topic-${index}`).value;
+    const topic = document.getElementById(`topic-${index}`)?.value || '';
 
     // Validate required fields
     if (options.length < 2) {
-        showToast(`Question needs at least 2 options.`, 'error');
+        console.log(`Question ${index}: Only ${options.length} option(s) provided, need at least 2`);
         return null;
     }
 
