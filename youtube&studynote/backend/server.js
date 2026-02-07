@@ -35,7 +35,9 @@ const corsOptions = {
             process.env.FRONTEND_URL || 'https://your-app.netlify.app',
             /\.netlify\.app$/, // Allow all Netlify preview URLs
             /\.render\.com$/, // Allow Render URLs
-            /\.ngrok\.io$/ // Allow ngrok URLs for local testing
+            /\.ngrok\.io$/, // Allow ngrok URLs for local testing
+            /^http:\/\/localhost:\d+$/, // Allow ANY localhost port
+            /^http:\/\/127\.0\.0\.1:\d+$/ // Allow ANY 127.0.0.1 port
         ];
 
         // In production, also allow the current origin
