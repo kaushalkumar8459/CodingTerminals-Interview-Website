@@ -7,7 +7,7 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger.config');
 const connectDB = require('./config/database');
-const { authRoutes, videoRoutes, noteRoutes, backupRoutes } = require('./routes');
+const { authRoutes, videoRoutes, noteRoutes, backupRoutes, testRoutes, userProgressRoutes } = require('./routes');
 const interviewQuestionRoutes = require('./routes/interviewQuestion.routes');
 const questionRoutes = require('./routes/question.routes');
 // const questionUploadRoutes = require('./routes/questionUpload.routes'); // REMOVED
@@ -35,7 +35,9 @@ const corsOptions = {
             process.env.FRONTEND_URL || 'https://your-app.netlify.app',
             /\.netlify\.app$/, // Allow all Netlify preview URLs
             /\.render\.com$/, // Allow Render URLs
-            /\.ngrok\.io$/ // Allow ngrok URLs for local testing
+            /\.ngrok\.io$/, // Allow ngrok URLs for local testing
+            /^http:\/\/localhost:\d+$/, // Allow ANY localhost port
+            /^http:\/\/127\.0\.0\.1:\d+$/ // Allow ANY 127.0.0.1 port
         ];
 
         // In production, also allow the current origin
@@ -108,6 +110,12 @@ app.use('/testseries/viewer', express.static(path.join(__dirname, '../CodingTerm
 
 // Individual question documents API
 app.use('/api/questions', questionRoutes);
+
+// Tests management API
+app.use('/api/tests', testRoutes);
+
+// User Progress tracking API
+app.use('/api/user-progress', userProgressRoutes);
 
 
 // Question upload/import API

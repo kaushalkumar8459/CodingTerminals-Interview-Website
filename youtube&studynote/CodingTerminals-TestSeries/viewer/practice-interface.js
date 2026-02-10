@@ -1,4 +1,9 @@
 // File: CodingTerminals-TestSeries/viewer/practice-interface.js
+// Note: Common utilities (sanitizeHTML, showToast, etc.) are loaded from shared/utils.js
+
+// Session storage keys
+const TEST_SESSION_KEY = 'practiceTestSession';
+const RESULTS_SESSION_KEY = 'practiceTestResults';
 
 // Global variables
 let allQuestions = [];
@@ -43,26 +48,360 @@ function determineBaseUrl() {
 }
 
 const API_URLS = {
-    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS
+    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS,
+    GET_TEST_BY_ID: API_CONFIG.BASE_URL + '/api/tests',
+    SUBMIT_PROGRESS: API_CONFIG.BASE_URL + '/api/user-progress/submit-test',
+    GET_USER_STATS: API_CONFIG.BASE_URL + '/api/user-progress/stats'
 };
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function () {
-    loadQuestions();
-    loadExistingValues(); // Load existing values from database
+document.addEventListener('DOMContentLoaded', async function () {
+    // Check if a specific test ID is provided in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const testId = urlParams.get('testId');
 
-    // Add event listeners for configuration changes to update calculated values
-    document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('difficultySelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('examTypeSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
-    document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
+    if (testId) {
+        // Load and start the specific test
+        await loadSpecificTest(testId);
+    } else {
+        // Normal flow - load questions for configuration
+        await loadQuestions();
+        loadExistingValues(); // Load existing values from database
 
-    // Initialize calculated values
-    updateCalculatedValues();
+        // Check for saved test session or results
+        await checkForSavedSession();
+
+        // Add event listeners for configuration changes to update calculated values
+        document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('difficultySelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('examTypeSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
+        document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
+
+        // Initialize calculated values
+        updateCalculatedValues();
+    }
 });
+
+// Load a specific test by ID (from test catalog)
+async function loadSpecificTest(testId) {
+    try {
+        showLoading(true, 'Loading test...');
+
+        const response = await fetch(`${API_URLS.GET_TEST_BY_ID}/${testId}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load test: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            throw new Error('Test not found');
+        }
+
+        const test = result.data;
+        
+        // Store the test ID for saving results later
+        currentTestId = testId;
+
+        // Set up test data
+        filteredQuestions = test.questions || [];
+        
+        if (filteredQuestions.length === 0) {
+            showToast('This test has no questions', 'error');
+            window.location.href = 'test-catalog.html';
+            return;
+        }
+
+        // Initialize question status
+        filteredQuestions.forEach(q => {
+            questionStatus[q._id] = 'not-visited';
+        });
+
+        // Set timer based on test duration
+        totalTimeInSeconds = (test.duration || 60) * 60;
+        timeRemaining = totalTimeInSeconds;
+
+        // Update UI
+        document.getElementById('testConfigSection').classList.add('hidden');
+        document.getElementById('questionSection').classList.remove('hidden');
+        document.getElementById('testHeaderInfo').classList.remove('hidden');
+
+        // Update header with test info
+        const headerTitle = document.querySelector('header h1');
+        if (headerTitle) {
+            headerTitle.innerHTML = `📝 ${sanitizeHTML(test.title || 'Practice Test')}`;
+        }
+
+        document.getElementById('totalCount').textContent = filteredQuestions.length;
+
+        // Mark first question as visited
+        if (filteredQuestions.length > 0) {
+            questionStatus[filteredQuestions[0]._id] = 'not-answered';
+        }
+
+        // Start the test
+        testStarted = true;
+        startTime = new Date();
+        currentQuestionIndex = 0;
+
+        displayCurrentQuestion();
+        updateQuestionNavigator();
+        startTimer();
+
+        showLoading(false);
+        showToast(`Test started: ${test.title}`, 'success');
+
+    } catch (error) {
+        console.error('Error loading test:', error);
+        showLoading(false);
+        showToast(error.message || 'Failed to load test', 'error');
+        
+        // Redirect back to catalog after delay
+        setTimeout(() => {
+            window.location.href = 'test-catalog.html';
+        }, 2000);
+    }
+}
+
+// Note: showLoading is loaded from shared/utils.js
+
+// ==================== USER PROGRESS API ====================
+
+// Current test ID (set when loading a specific test)
+let currentTestId = null;
+
+/**
+ * Save test results to backend API
+ * @param {Array} results - Array of question results
+ * @param {number} totalTimeTaken - Total time in seconds
+ */
+async function saveResultsToAPI(results, totalTimeTaken) {
+    if (!results || results.length === 0) {
+        console.log('No results to save to API');
+        return;
+    }
+
+    try {
+        // Get testId from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const testId = urlParams.get('testId') || currentTestId;
+
+        // Get userId from localStorage or use anonymous
+        const userId = localStorage.getItem('userId') || null;
+
+        const payload = {
+            testId: testId,
+            userId: userId,
+            sessionType: testId ? 'test' : 'practice',
+            results: results
+        };
+
+        console.log('Saving results to API:', {
+            testId,
+            resultsCount: results.length,
+            correctCount: results.filter(r => r.isCorrect).length
+        });
+
+        const response = await fetch(API_URLS.SUBMIT_PROGRESS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('✅ Results saved to database:', result.data);
+            // Optionally show a subtle indicator that results were saved
+            showToast('📊 Progress saved', 'success', 2000);
+        } else {
+            console.error('❌ Failed to save results:', result.error);
+        }
+
+    } catch (error) {
+        // Non-blocking error - results are already saved locally
+        console.error('❌ Error saving results to API:', error);
+        // Don't show error to user - local results are already saved
+    }
+}
+
+/**
+ * Load user's stats from API
+ * @returns {Object|null} User statistics or null if error
+ */
+async function loadUserStats() {
+    try {
+        const userId = localStorage.getItem('userId') || '';
+        const response = await fetch(`${API_URLS.GET_USER_STATS}/${userId}`);
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.success ? result.data : null;
+
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        return null;
+    }
+}
+
+// ==================== SESSION PERSISTENCE ====================
+
+// Check for saved test session or results on page load
+async function checkForSavedSession() {
+    // First check if there are saved results to display
+    const savedResults = loadSessionData(RESULTS_SESSION_KEY);
+    if (savedResults) {
+        const confirmed = await showConfirmDialog(
+            'You have previous test results available. Would you like to view them?',
+            'View Previous Results?',
+            { confirmText: 'View Results', cancelText: 'Start New Test', type: 'info' }
+        );
+        
+        if (confirmed) {
+            displaySavedResults(savedResults);
+            return;
+        } else {
+            clearSessionData(RESULTS_SESSION_KEY);
+        }
+    }
+
+    // Then check for in-progress test
+    const savedSession = loadSessionData(TEST_SESSION_KEY);
+    if (savedSession && savedSession.testStarted) {
+        const sessionAge = (Date.now() - savedSession.savedAt) / 1000; // in seconds
+        
+        // Only restore if session is less than 2 hours old
+        if (sessionAge < 7200) {
+            const confirmed = await showConfirmDialog(
+                `You have an unfinished test with ${savedSession.filteredQuestions?.length || 0} questions. Would you like to continue?`,
+                'Resume Test?',
+                { confirmText: 'Continue', cancelText: 'Start Fresh', type: 'info' }
+            );
+            
+            if (confirmed) {
+                restoreTestSession(savedSession);
+                return;
+            }
+        }
+        clearSessionData(TEST_SESSION_KEY);
+    }
+}
+
+// Save current test session
+function saveTestSession() {
+    if (!testStarted) return;
+
+    const sessionData = {
+        filteredQuestions: filteredQuestions,
+        currentQuestionIndex: currentQuestionIndex,
+        userAnswers: userAnswers,
+        markedForReview: Array.from(markedForReview),
+        questionStatus: questionStatus,
+        timeRemaining: timeRemaining,
+        totalTimeInSeconds: totalTimeInSeconds,
+        startTime: startTime ? startTime.getTime() : null,
+        testStarted: testStarted,
+        savedAt: Date.now()
+    };
+
+    saveSessionData(TEST_SESSION_KEY, sessionData);
+}
+
+// Restore test session from saved data
+function restoreTestSession(savedSession) {
+    filteredQuestions = savedSession.filteredQuestions || [];
+    currentQuestionIndex = savedSession.currentQuestionIndex || 0;
+    userAnswers = savedSession.userAnswers || {};
+    markedForReview = new Set(savedSession.markedForReview || []);
+    questionStatus = savedSession.questionStatus || {};
+    totalTimeInSeconds = savedSession.totalTimeInSeconds || 0;
+    
+    // Calculate remaining time (account for time passed since save)
+    const timeSinceSave = Math.floor((Date.now() - savedSession.savedAt) / 1000);
+    timeRemaining = Math.max(0, (savedSession.timeRemaining || 0) - timeSinceSave);
+    
+    if (savedSession.startTime) {
+        startTime = new Date(savedSession.startTime);
+    }
+
+    // Show test interface
+    document.getElementById('testConfigSection').classList.add('hidden');
+    document.getElementById('questionSection').classList.remove('hidden');
+    document.getElementById('testHeaderInfo').classList.remove('hidden');
+
+    // Update UI
+    document.getElementById('totalCount').textContent = filteredQuestions.length;
+    displayCurrentQuestion();
+    updateAnsweredCount();
+    updateQuestionNavigator();
+
+    // Start timer if time remains
+    if (timeRemaining > 0) {
+        testStarted = true;
+        startTimer();
+        showToast('Test session restored!', 'success');
+    } else {
+        // Time expired, submit automatically
+        testStarted = true;
+        submitTest();
+    }
+}
+
+// Save test results for later viewing
+function saveTestResults(results) {
+    saveSessionData(RESULTS_SESSION_KEY, {
+        ...results,
+        savedAt: Date.now()
+    });
+}
+
+// Display saved results
+function displaySavedResults(savedResults) {
+    // Show results modal with saved data
+    const resultTotal = document.getElementById('resultTotal');
+    const resultAnswered = document.getElementById('resultAnswered');
+    const resultMarked = document.getElementById('resultMarked');
+    const resultUnanswered = document.getElementById('resultUnanswered');
+    const timeTakenEl = document.getElementById('timeTaken');
+
+    if (resultTotal) resultTotal.textContent = savedResults.totalQuestions || 0;
+    if (resultAnswered) resultAnswered.textContent = savedResults.answeredQuestions || 0;
+    if (resultMarked) resultMarked.textContent = savedResults.markedQuestions || 0;
+    if (resultUnanswered) resultUnanswered.textContent = savedResults.unansweredQuestions || 0;
+    if (timeTakenEl) timeTakenEl.textContent = savedResults.timeString || '00:00:00';
+
+    // Restore data needed for review
+    if (savedResults.filteredQuestions) {
+        filteredQuestions = savedResults.filteredQuestions;
+    }
+    if (savedResults.userAnswers) {
+        userAnswers = savedResults.userAnswers;
+    }
+    if (savedResults.markedForReview) {
+        markedForReview = new Set(savedResults.markedForReview);
+    }
+
+    // Show results modal
+    const resultsModal = document.getElementById('resultsModal');
+    if (resultsModal) {
+        resultsModal.classList.remove('hidden');
+    }
+
+    showToast('Previous results loaded!', 'info');
+}
 
 
 // Load existing values from database for dropdowns
@@ -227,6 +566,9 @@ function startTest() {
     timeRemaining = totalTimeInSeconds;
     startTime = new Date();
 
+    // Clear any previous results
+    clearSessionData(RESULTS_SESSION_KEY);
+
     // Hide config section and show question section
     document.getElementById('testConfigSection').classList.add('hidden');
     document.getElementById('questionSection').classList.remove('hidden');
@@ -243,6 +585,9 @@ function startTest() {
     // Update total count display
     document.getElementById('totalCount').textContent = filteredQuestions.length;
     updateAnsweredCount();
+
+    // Save initial session
+    saveTestSession();
 
     // Show confirmation
     showToast(`Test started with ${filteredQuestions.length} questions!`, 'success');
@@ -267,41 +612,7 @@ function shuffleArray(array) {
     return newArray;
 }
 
-// Enhanced toast notification function
-function showToast(message, type = 'info') {
-    // Create toast container if it doesn't exist
-    let toastContainer = document.getElementById('toastContainer');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toastContainer';
-        toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
-        document.body.appendChild(toastContainer);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
-
-    // Animate in
-    setTimeout(() => {
-        toast.classList.remove('translate-x-full');
-    }, 10);
-
-    // Remove after delay
-    setTimeout(() => {
-        toast.classList.add('translate-x-full');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
+// Note: showToast is loaded from shared/utils.js
 
 // Display current question
 async function displayCurrentQuestion() {
@@ -319,7 +630,7 @@ async function displayCurrentQuestion() {
     // Update question content
     const questionContent = `
         <div class="mb-6">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">${question.question}</h3>
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">${sanitizeHTML(question.question)}</h3>
             
             <div class="space-y-3">
                 ${question.options.map((option, index) => `
@@ -329,7 +640,7 @@ async function displayCurrentQuestion() {
                             <input type="radio" name="question_${questionId}" value="${index}" 
                                    ${userAnswers[questionId] === index ? 'checked' : ''}
                                    class="mr-3">
-                            <span class="font-medium">${String.fromCharCode(65 + index)}. ${option}</span>
+                            <span class="font-medium">${String.fromCharCode(65 + index)}. ${sanitizeHTML(option)}</span>
                         </label>
                     </div>
                 `).join('')}
@@ -431,6 +742,9 @@ function selectOption(questionId, optionIndex) {
     displayCurrentQuestion();
     updateQuestionNavigator();
     updateAnsweredCount();
+    
+    // Save session after answer change
+    saveTestSession();
 }
 
 // Toggle mark for review
@@ -524,18 +838,39 @@ function updateNavigationButtons() {
 }
 
 
-// Update pagination dots
+// Update pagination dots - show only 3 dots (previous, current, next)
 function updatePaginationDots() {
     const dotsContainer = document.getElementById('paginationDots');
     dotsContainer.innerHTML = '';
 
-    // Show dots for each question
-    for (let i = 0; i < filteredQuestions.length; i++) {
+    if (filteredQuestions.length === 0) return;
+
+    // Show only 3 dots: previous, current, next
+    const total = filteredQuestions.length;
+    const current = currentQuestionIndex;
+
+    // Calculate which 3 indices to show
+    let indices = [];
+    if (total <= 3) {
+        // If 3 or fewer questions, show all
+        indices = Array.from({ length: total }, (_, i) => i);
+    } else if (current === 0) {
+        // At start: show first 3
+        indices = [0, 1, 2];
+    } else if (current === total - 1) {
+        // At end: show last 3
+        indices = [total - 3, total - 2, total - 1];
+    } else {
+        // In middle: show prev, current, next
+        indices = [current - 1, current, current + 1];
+    }
+
+    indices.forEach(i => {
         const dot = document.createElement('div');
         dot.className = `dot ${i === currentQuestionIndex ? 'active' : ''}`;
         dot.onclick = () => goToQuestion(i);
         dotsContainer.appendChild(dot);
-    }
+    });
 }
 
 // Update question navigator sidebar
@@ -633,18 +968,56 @@ function submitTest() {
     ).length;
     const unansweredQuestions = totalQuestions - answeredQuestions;
 
-    // Calculate score (assuming 1 mark per correct answer)
+    // Calculate score and prepare results for API
     let score = 0;
+    const resultsForAPI = [];
+    
     filteredQuestions.forEach(question => {
         const questionId = question._id || question.id;
         const userAnswer = userAnswers[questionId];
-        if (userAnswer != null && question.correctAnswer != null && userAnswer === question.correctAnswer) {
-            score++;
+        const isCorrect = userAnswer != null && question.correctAnswer != null && userAnswer === question.correctAnswer;
+        
+        if (isCorrect) score++;
+        
+        // Only include answered questions in API results
+        if (userAnswer != null) {
+            resultsForAPI.push({
+                questionId: questionId,
+                answerGiven: userAnswer,
+                isCorrect: isCorrect,
+                timeTaken: 0 // Per-question time not tracked currently
+            });
         }
     });
 
     const maxScore = totalQuestions;
     const accuracy = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+
+    // Format time string
+    const hours = Math.floor(timeTaken / 3600);
+    const minutes = Math.floor((timeTaken % 3600) / 60);
+    const seconds = timeTaken % 60;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+    // Clear in-progress session and save results locally
+    clearSessionData(TEST_SESSION_KEY);
+    saveTestResults({
+        totalQuestions,
+        answeredQuestions,
+        markedQuestions,
+        unansweredQuestions,
+        score,
+        maxScore,
+        accuracy,
+        timeTaken,
+        timeString,
+        filteredQuestions,
+        userAnswers,
+        markedForReview: Array.from(markedForReview)
+    });
+
+    // Save results to backend API (async, non-blocking)
+    saveResultsToAPI(resultsForAPI, timeTaken);
 
     // Display results - with safety checks
     const resultTotal = document.getElementById('resultTotal');
@@ -660,10 +1033,6 @@ function submitTest() {
     // Only update elements that exist in the current modal
     const timeTakenEl = document.getElementById('timeTaken');
     if (timeTakenEl) {
-        const hours = Math.floor(timeTaken / 3600);
-        const minutes = Math.floor((timeTaken % 3600) / 60);
-        const seconds = timeTaken % 60;
-        const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         timeTakenEl.textContent = timeString;
     }
 
@@ -722,11 +1091,11 @@ function generateReviewContent() {
         const isAnswered = userAnswerIndex != null;
 
         const userAnswerText = isAnswered ?
-            `${String.fromCharCode(65 + userAnswerIndex)}. ${question.options[userAnswerIndex]}` :
+            `${String.fromCharCode(65 + userAnswerIndex)}. ${sanitizeHTML(question.options[userAnswerIndex])}` :
             'Not answered';
 
         const correctAnswerText = question.correctAnswer != null ?
-            `${String.fromCharCode(65 + question.correctAnswer)}. ${question.options[question.correctAnswer]}` :
+            `${String.fromCharCode(65 + question.correctAnswer)}. ${sanitizeHTML(question.options[question.correctAnswer])}` :
             'No correct answer provided';
 
         content += `
@@ -741,7 +1110,7 @@ function generateReviewContent() {
                 </span>
             </div>
             
-            <p class="text-gray-700 mb-4">${question.question}</p>
+            <p class="text-gray-700 mb-4">${sanitizeHTML(question.question)}</p>
             
             <div class="space-y-3 mb-4">
                 ${question.options.map((option, optIndex) => {
@@ -762,9 +1131,10 @@ function generateReviewContent() {
 
                 return `
                     <div class="${optionClass}">
-                        <label class="flex items-center">
-                            <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} class="mr-3">
-                            <span class="font-medium">${String.fromCharCode(65 + optIndex)}. ${option}</span>
+                        <label style="display: flex; align-items: flex-start; gap: 8px;">
+                            <input type="radio" disabled ${userAnswerIndex === optIndex ? 'checked' : ''} style="margin-top: 4px; flex-shrink: 0;">
+                            <span style="font-weight: 600; color: #2563eb; flex-shrink: 0;">${String.fromCharCode(65 + optIndex)}.</span>
+                            <span style="display: inline;">${sanitizeHTML(option)}</span>
                         </label>
                     </div>
                     `;
@@ -773,17 +1143,23 @@ function generateReviewContent() {
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div>
-                    <p class="text-sm font-semibold text-blue-800">Your Answer: <span class="${isAnswered ? (isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-600'}">${userAnswerText}</span></p>
+                    <p class="text-sm font-semibold text-blue-800" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <span>Your Answer:</span>
+                        <span style="display: inline-flex; align-items: baseline; gap: 4px;" class="${isAnswered ? (isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold') : 'text-gray-600'}">${userAnswerText}</span>
+                    </p>
                 </div>
                 <div>
-                    <p class="text-sm font-semibold text-blue-800">Correct Answer: <span class="text-green-600 font-bold">${correctAnswerText}</span></p>
+                    <p class="text-sm font-semibold text-blue-800" style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <span>Correct Answer:</span>
+                        <span style="display: inline-flex; align-items: baseline; gap: 4px;" class="text-green-600 font-bold">${correctAnswerText}</span>
+                    </p>
                 </div>
             </div>
             
             ${question.explanation ? `
             <div class="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
                 <p class="text-sm font-semibold text-green-800">Explanation:</p>
-                <p class="text-gray-700">${question.explanation}</p>
+                <p class="text-gray-700">${sanitizeHTML(question.explanation)}</p>
             </div>
             ` : ''}
         </div>
@@ -826,6 +1202,10 @@ function restartTest() {
 
     clearInterval(timerInterval);
 
+    // Clear saved session data
+    clearSessionData(TEST_SESSION_KEY);
+    clearSessionData(RESULTS_SESSION_KEY);
+
     // Reset UI
     document.getElementById('testConfigSection').classList.remove('hidden');
     document.getElementById('questionSection').classList.add('hidden');
@@ -848,10 +1228,12 @@ function closeResults() {
     document.getElementById('resultsModal').classList.add('hidden');
 }
 
-// Handle window before unload
+// Handle window before unload - save session instead of just warning
 window.addEventListener('beforeunload', function (e) {
     if (testStarted) {
+        // Save current session before leaving
+        saveTestSession();
         e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
+        e.returnValue = 'Your test progress has been saved. You can continue when you return.';
     }
 });

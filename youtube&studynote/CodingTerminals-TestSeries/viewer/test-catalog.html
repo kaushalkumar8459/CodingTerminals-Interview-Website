@@ -1,0 +1,292 @@
+<!-- File: CodingTerminals-TestSeries/viewer/test-catalog.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Catalog - Coding Terminals</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+    <!-- Custom Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .test-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .test-card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .difficulty-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .difficulty-beginner { background-color: #d1fae5; color: #059669; }
+        .difficulty-intermediate { background-color: #fef3c7; color: #d97706; }
+        .difficulty-advanced { background-color: #fee2e2; color: #dc2626; }
+        .difficulty-expert { background-color: #ede9fe; color: #7c3aed; }
+
+        .subject-tag {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            background-color: #eff6ff;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .filter-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .filter-chip:hover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .filter-chip.active {
+            border-color: #3b82f6;
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .skeleton {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            background-color: #e5e7eb;
+            border-radius: 0.5rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .stats-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <a href="../../index.html" class="text-2xl">🏠</a>
+                    <h1 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                        📝 Test Catalog
+                    </h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="userInfo" class="text-sm text-gray-600"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        
+        <!-- Hero Section -->
+        <section class="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl p-8 mb-8 text-white">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
+                    <h2 class="text-3xl font-bold mb-2">Welcome to Test Series</h2>
+                    <p class="text-blue-100 mb-4">Choose from our collection of practice tests and boost your preparation</p>
+                    <a href="practice-interface.html" 
+                       class="inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-lg">
+                        🎯 Quick Practice
+                        <span class="text-sm font-normal text-gray-500">Configure your own test</span>
+                    </a>
+                </div>
+                <div class="flex gap-4">
+                    <div class="text-center bg-white/20 rounded-xl px-6 py-4">
+                        <div class="text-3xl font-bold" id="totalTestsCount">0</div>
+                        <div class="text-sm text-blue-100">Available Tests</div>
+                    </div>
+                    <div class="text-center bg-white/20 rounded-xl px-6 py-4">
+                        <div class="text-3xl font-bold" id="totalQuestionsCount">0</div>
+                        <div class="text-sm text-blue-100">Total Questions</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <!-- Search -->
+                <div class="relative w-full lg:w-96">
+                    <input type="text" id="searchInput" placeholder="Search tests by title or subject..."
+                        class="w-full px-4 py-3 pl-12 border border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="flex flex-wrap gap-2">
+                    <select id="subjectFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <option value="all">All Subjects</option>
+                    </select>
+                    <select id="yearFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <option value="all">All Years</option>
+                    </select>
+                    <select id="difficultyFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <option value="all">All Difficulties</option>
+                        <option value="Beginner">Beginner</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                        <option value="Expert">Expert</option>
+                    </select>
+                    <select id="sortBy" class="px-4 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="questions-high">Most Questions</option>
+                        <option value="questions-low">Least Questions</option>
+                        <option value="duration-high">Longest Duration</option>
+                        <option value="duration-low">Shortest Duration</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Quick Filter Chips -->
+            <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                <button class="filter-chip active" data-filter="all" onclick="setQuickFilter('all')">All Tests</button>
+                <button class="filter-chip" data-filter="recent" onclick="setQuickFilter('recent')">🆕 Recently Added</button>
+                <button class="filter-chip" data-filter="popular" onclick="setQuickFilter('popular')">🔥 Popular</button>
+                <button class="filter-chip" data-filter="short" onclick="setQuickFilter('short')">⚡ Quick Tests (≤20 Qs)</button>
+                <button class="filter-chip" data-filter="long" onclick="setQuickFilter('long')">📚 Comprehensive (50+ Qs)</button>
+            </div>
+        </section>
+
+        <!-- Tests Grid -->
+        <section id="testsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading Skeleton -->
+            <div class="test-card skeleton-card">
+                <div class="skeleton h-6 w-3/4 mb-4"></div>
+                <div class="skeleton h-4 w-full mb-2"></div>
+                <div class="skeleton h-4 w-2/3 mb-4"></div>
+                <div class="flex gap-2 mb-4">
+                    <div class="skeleton h-6 w-20"></div>
+                    <div class="skeleton h-6 w-16"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+            </div>
+            <div class="test-card skeleton-card">
+                <div class="skeleton h-6 w-3/4 mb-4"></div>
+                <div class="skeleton h-4 w-full mb-2"></div>
+                <div class="skeleton h-4 w-2/3 mb-4"></div>
+                <div class="flex gap-2 mb-4">
+                    <div class="skeleton h-6 w-20"></div>
+                    <div class="skeleton h-6 w-16"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+            </div>
+            <div class="test-card skeleton-card">
+                <div class="skeleton h-6 w-3/4 mb-4"></div>
+                <div class="skeleton h-4 w-full mb-2"></div>
+                <div class="skeleton h-4 w-2/3 mb-4"></div>
+                <div class="flex gap-2 mb-4">
+                    <div class="skeleton h-6 w-20"></div>
+                    <div class="skeleton h-6 w-16"></div>
+                </div>
+                <div class="skeleton h-10 w-full"></div>
+            </div>
+        </section>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-16">
+            <div class="text-6xl mb-4">📭</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">No tests found</h3>
+            <p class="text-gray-500 mb-6">Try adjusting your filters or search query</p>
+            <button onclick="clearFilters()" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                Clear All Filters
+            </button>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationContainer" class="flex justify-center items-center gap-2 mt-8"></div>
+
+    </main>
+
+    <!-- Test Details Modal -->
+    <div id="testDetailsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-2xl font-bold text-gray-800" id="modalTestTitle">Test Title</h3>
+                    <button onclick="closeTestDetailsModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">×</button>
+                </div>
+
+                <div id="modalTestContent">
+                    <!-- Content will be populated dynamically -->
+                </div>
+
+                <div class="flex gap-3 mt-6 pt-4 border-t">
+                    <button onclick="startTest()" id="startTestBtn"
+                        class="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all">
+                        🚀 Start Test
+                    </button>
+                    <button onclick="closeTestDetailsModal()"
+                        class="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Scripts -->
+    <script src="../../config/app.config.js"></script>
+    <script src="../shared/utils.js"></script>
+    <script src="test-catalog.js"></script>
+
+</body>
+
+</html>

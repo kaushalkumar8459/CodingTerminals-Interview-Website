@@ -1,4 +1,5 @@
 // File: CodingTerminals-TestSeries/admin/question-bank-management.js
+// Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, etc.) are loaded from shared/utils.js
 
 // Global Variables
 let allQuestions = [];
@@ -6,15 +7,32 @@ let filteredQuestions = [];
 let selectedQuestions = new Set();
 let currentEditingQuestion = null;
 let currentTab = 'question-bank';
-let currentCreationMethod = 'manual';
-let testQuestions = [];
 let groups = [];
 let duplicates = [];
+
+// Pagination settings
+let pagination = null;
+const QUESTIONS_PER_PAGE = 20;
 
 let subjects = new Set();
 let years = new Set();
 let examTypes = new Set();
 let difficulties = new Set();
+
+// Store Quill editor instances for edit modal
+let editQuestionEditor = null;
+let editOptionEditors = [];
+let editExplanationEditor = null;
+
+// Store Quill editor instances for add modal
+let addQuestionEditor = null;
+let addOptionEditors = [];
+let addExplanationEditor = null;
+
+// Store Quill editor instance for bulk add modal
+let bulkQuestionsEditor = null;
+
+// Note: fullToolbarOptions and minimalToolbarOptions are loaded from shared/utils.js
 
 // Fetch existing values from the database for search suggestions
 async function fetchExistingValues() {
@@ -273,8 +291,6 @@ function switchTab(tabName) {
     // Load data based on tab
     if (tabName === 'question-bank') {
         loadQuestions();
-    } else if (tabName === 'test-creator') {
-        loadTestCreatorData();
     } else if (tabName === 'analytics') {
         loadAnalytics();
     }
@@ -327,6 +343,8 @@ function updatePercentage(slider, displayId) {
 // Update loadQuestions to fetch existing values
 async function loadQuestions() {
     try {
+        showLoading(true, 'Loading questions...');
+        
         const response = await fetch(API_URLS.GET_ALL_QUESTIONS);
 
         if (!response.ok) {
@@ -334,6 +352,8 @@ async function loadQuestions() {
         }
 
         const result = await response.json();
+
+        showLoading(false);
 
         if (result.success) {
             allQuestions = result.data || [];
@@ -345,16 +365,36 @@ async function loadQuestions() {
             await fetchExistingValues();
 
             filteredQuestions = [...allQuestions];
-            renderQuestionsList();
+            
+            // Initialize pagination
+            initPagination();
+            
             renderFilters();
             updateStats();
         } else {
             showToast(result.message || 'Failed to load questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error loading questions:', error);
         showToast('Error loading questions: ' + error.message, 'error');
     }
+}
+
+// Initialize pagination for the question list
+function initPagination() {
+    pagination = createPagination({
+        totalItems: filteredQuestions.length,
+        itemsPerPage: QUESTIONS_PER_PAGE,
+        currentPage: 1,
+        containerId: 'paginationContainer',
+        onPageChange: (page) => {
+            renderQuestionsList();
+            // Scroll to top of questions container
+            document.getElementById('questionsContainer')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+    renderQuestionsList();
 }
 
 // Extract unique values for filters
@@ -434,6 +474,11 @@ function applyFilters() {
         return matchesSearch && matchesSubject && matchesYear && matchesDifficulty && matchesType;
     });
 
+    // Reset pagination to page 1 when filters change
+    if (pagination) {
+        pagination.update({ totalItems: filteredQuestions.length, currentPage: 1 });
+    }
+    
     renderQuestionsList();
     updateStats();
 }
@@ -461,67 +506,88 @@ function renderQuestionsList() {
     if (filteredQuestions.length === 0) {
         emptyState.style.display = 'block';
         container.innerHTML = ''; // Clear the container
+        if (pagination) pagination.update({ totalItems: 0 });
         return;
     }
 
     emptyState.style.display = 'none';
 
+    // Get paginated questions
+    let questionsToRender = filteredQuestions;
+    if (pagination) {
+        questionsToRender = pagination.getPagedItems(filteredQuestions);
+        pagination.render();
+    }
+
     // Clear the container first to ensure proper refresh
     container.innerHTML = '';
 
-    // Build HTML for all questions and insert at once for better performance
-    const questionsHTML = filteredQuestions.map((question, index) => {
+    // Build HTML for paginated questions and insert at once for better performance
+    const questionsHTML = questionsToRender.map((question, index) => {
         // Use _id if available, otherwise id, fallback to questionId
         const questionId = question._id || question.id || question.questionId;
         const isSelected = selectedQuestions.has(questionId);
+        // Use stored question number if available, otherwise leave empty
+        const displayNumber = question.questionNumber || '';
 
         return `
             <div class="question-card ${isSelected ? 'selected-question' : ''}" onclick="toggleQuestionSelection('${questionId}')">
-                <div class="flex justify-between items-start mb-3">
+                <div class="flex gap-3">
+                    <!-- Question Number Badge -->
+                    ${displayNumber ? `<div class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md">${displayNumber}</div>` : ''}
+                    
+                    <!-- Question Content -->
                     <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800 mb-2">${question.question.substring(0, 100)}${question.question.length > 100 ? '...' : ''}</h4>
-                        <div class="flex flex-wrap gap-2 mb-2">
-                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${question.subject}</span>
-                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${question.academicYear}</span>
-                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${question.examType}</span>
-                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${question.difficulty}</span>
-                            ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${question.group}</span>` : ''}
+                        <!-- Header with question and actions -->
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-gray-800 mb-2">${sanitizeHTML(question.question)}</h4>
+                                <div class="flex flex-wrap gap-2 mb-2">
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">${sanitizeHTML(question.subject)}</span>
+                                    <span class="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">${sanitizeHTML(question.academicYear)}</span>
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">${sanitizeHTML(question.examType)}</span>
+                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">${sanitizeHTML(question.difficulty)}</span>
+                                    ${question.group ? `<span class="px-2 py-1 bg-cyan-100 text-cyan-800 text-xs rounded-full">${sanitizeHTML(question.group)}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex gap-2 ml-2">
+                                <button onclick="event.stopPropagation(); editQuestion('${questionId}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                                    ✏️ Edit
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteQuestion('${questionId}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                                    🗑️ Delete
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="event.stopPropagation(); editQuestion('${questionId}')" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
-                            ✏️ Edit
-                        </button>
-                        <button onclick="event.stopPropagation(); deleteQuestion('${questionId}')" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
-                            🗑️ Delete
-                        </button>
+                        
+                        <!-- Options -->
+                        <div class="space-y-2 mb-3">
+                            ${question.options?.slice(0, 4).map((option, optIndex) => `
+                                <div class="option-item ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
+                                    <div class="flex items-start gap-2">
+                                        <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''} class="mt-1">
+                                        <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
+                                        <div class="flex-1 option-content">${sanitizeHTML(option)}</div>
+                                        ${optIndex === question.correctAnswer ? '<span class="text-green-600 text-xs font-medium whitespace-nowrap">✓ Correct</span>' : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${question.options?.length > 4 ? `<div class="text-xs text-gray-500">+ ${question.options.length - 4} more options</div>` : ''}
+                        </div>
+                        
+                        ${question.explanation ? `
+                            <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
+                                <div class="text-xs text-blue-700">${sanitizeHTML(question.explanation)}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${question.duplicateOf ? `
+                            <div class="duplicate-indicator">
+                                ⚠️ Duplicate of question: ${question.duplicateOf}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
-                
-                <div class="space-y-2 mb-3">
-                    ${question.options?.slice(0, 4).map((option, optIndex) => `
-                        <div class="option-item ${optIndex === question.correctAnswer ? 'correct-answer' : ''}">
-                            <label class="flex items-center">
-                                <input type="radio" disabled ${optIndex === question.correctAnswer ? 'checked' : ''}>
-                                <span class="ml-2">${String.fromCharCode(65 + optIndex)}. ${option.substring(0, 50)}${option.length > 50 ? '...' : ''}</span>
-                                ${optIndex === question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
-                            </label>
-                        </div>
-                    `).join('')}
-                    ${question.options?.length > 4 ? `<div class="text-xs text-gray-500">+ ${question.options.length - 4} more options</div>` : ''}
-                </div>
-                
-                ${question.explanation ? `
-                    <div class="bg-blue-50 p-2 rounded-lg border border-blue-200">
-                        <div class="text-xs text-blue-700">${question.explanation.substring(0, 100)}${question.explanation.length > 100 ? '...' : ''}</div>
-                    </div>
-                ` : ''}
-                
-                ${question.duplicateOf ? `
-                    <div class="duplicate-indicator">
-                        ⚠️ Duplicate of question: ${question.duplicateOf}
-                    </div>
-                ` : ''}
             </div>
         `;
     }).join('');
@@ -552,24 +618,40 @@ function editQuestion(questionId) {
     currentEditingQuestion = questionId;
     showEditModal(question);
 }
-// Show edit modal
+// Show edit modal with Quill rich text editors
 function showEditModal(question) {
     const modal = document.getElementById('editModal');
     if (!modal) return;
 
+    // Escape HTML for safe display in input fields
+    const escapeHtml = (text) => {
+        if (!text) return '';
+        return text.replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;')
+                   .replace(/"/g, '&quot;')
+                   .replace(/'/g, '&#039;');
+    };
+
     const formHTML = `
         <form id="editQuestionForm" onsubmit="saveEditedQuestion(event)">
             <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                    <textarea id="editQuestionText" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3">${question.question}</textarea>
+                <div class="flex gap-3 items-start">
+                    <div class="w-20 flex-shrink-0">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
+                        <input type="text" id="editQuestionNumber" value="${question.questionNumber || ''}" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
+                        <div id="editQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Subject</label>
                         <div class="relative">
-                            <input type="text" id="editSubject" value="${question.subject || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
+                            <input type="text" id="editSubject" value="${escapeHtml(question.subject || '')}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter subject..." autocomplete="off">
                             <div id="editSubjectSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                         </div>
                     </div>
@@ -577,7 +659,7 @@ function showEditModal(question) {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Academic Year</label>
                         <div class="relative">
-                            <input type="text" id="editYear" value="${question.academicYear || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
+                            <input type="text" id="editYear" value="${escapeHtml(question.academicYear || '')}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter year..." autocomplete="off">
                             <div id="editYearSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                         </div>
                     </div>
@@ -587,7 +669,7 @@ function showEditModal(question) {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Exam Type</label>
                         <div class="relative">
-                            <input type="text" id="editExamType" value="${question.examType || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
+                            <input type="text" id="editExamType" value="${escapeHtml(question.examType || '')}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter exam type..." autocomplete="off">
                             <div id="editExamTypeSuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                         </div>
                     </div>
@@ -595,7 +677,7 @@ function showEditModal(question) {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Difficulty Level</label>
                         <div class="relative">
-                            <input type="text" id="editDifficulty" value="${question.difficulty || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
+                            <input type="text" id="editDifficulty" value="${escapeHtml(question.difficulty || '')}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Type to search or enter difficulty..." autocomplete="off">
                             <div id="editDifficultySuggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                         </div>
                     </div>
@@ -603,23 +685,27 @@ function showEditModal(question) {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Topic/Subtopic</label>
-                    <input type="text" id="editTopic" value="${question.topic || ''}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="e.g., Calculus, Thermodynamics, Shakespeare">
+                    <input type="text" id="editTopic" value="${escapeHtml(question.topic || '')}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="e.g., Calculus, Thermodynamics, Shakespeare">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
-                    <div id="editOptionsContainer">
+                    <div id="editOptionsContainer" class="space-y-3">
                         ${question.options?.map((option, optIndex) => `
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">${String.fromCharCode(65 + optIndex)}.</span>
-                                <input type="text" 
-                                       value="${option}" 
-                                       id="editOption${optIndex}" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="correctAnswer" value="${optIndex}" ${optIndex === question.correctAnswer ? 'checked' : ''}>
-                                    <span class="text-sm">Correct</span>
-                                </label>
+                            <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${optIndex}">
+                                <div class="flex items-center justify-between gap-3 mb-2">
+                                    <div class="flex items-center gap-3">
+                                        <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + optIndex)}.</span>
+                                        <label class="flex items-center gap-2 px-3 py-1 rounded-full ${optIndex === question.correctAnswer ? 'bg-green-100 border border-green-400' : 'bg-white border border-gray-300'} cursor-pointer hover:bg-green-50 transition-colors">
+                                            <input type="radio" name="correctAnswer" value="${optIndex}" ${optIndex === question.correctAnswer ? 'checked' : ''} class="w-4 h-4 text-green-600">
+                                            <span class="text-sm ${optIndex === question.correctAnswer ? 'text-green-700 font-medium' : 'text-gray-600'}">Correct Answer</span>
+                                        </label>
+                                    </div>
+                                    <button type="button" onclick="removeEditOptionField(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                        🗑️
+                                    </button>
+                                </div>
+                                <div id="editOptionEditor${optIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                             </div>
                         `).join('') || ''}
                     </div>
@@ -630,7 +716,7 @@ function showEditModal(question) {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation</label>
-                    <textarea id="editExplanation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3">${question.explanation || ''}</textarea>
+                    <div id="editExplanationEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 100px;"></div>
                 </div>
                 
                 <div class="flex justify-end gap-3 pt-4">
@@ -648,33 +734,214 @@ function showEditModal(question) {
     document.getElementById('editFormContent').innerHTML = formHTML;
     modal.classList.remove('hidden');
 
-    // Initialize search functionality after DOM update
+    // Initialize Quill editors and search functionality after DOM update
     setTimeout(() => {
+        initEditModalQuillEditors(question);
         initModalSearchFields();
     }, 100);
 }
 
-// Add option field
-function addOptionField() {
-    const container = document.getElementById('editOptionsContainer');
-    const optionCount = container.children.length;
+// Initialize Quill editors for the edit modal
+function initEditModalQuillEditors(question) {
+    // Clear previous editor instances
+    editQuestionEditor = null;
+    editOptionEditors = [];
+    editExplanationEditor = null;
+
+    // Initialize Question Text Editor
+    const questionEditorContainer = document.getElementById('editQuestionTextEditor');
+    if (questionEditorContainer) {
+        editQuestionEditor = new Quill('#editQuestionTextEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter question text with formatting...'
+        });
+        // Set initial content
+        if (question.question) {
+            editQuestionEditor.root.innerHTML = question.question;
+        }
+    }
+
+    // Initialize Option Editors
+    const options = question.options || [];
+    options.forEach((option, optIndex) => {
+        const optionEditorContainer = document.getElementById(`editOptionEditor${optIndex}`);
+        if (optionEditorContainer) {
+            const optionEditor = new Quill(`#editOptionEditor${optIndex}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + optIndex)}...`
+            });
+            // Set initial content
+            if (option) {
+                optionEditor.root.innerHTML = option;
+            }
+            editOptionEditors.push(optionEditor);
+        }
+    });
+
+    // Initialize Explanation Editor
+    const explanationEditorContainer = document.getElementById('editExplanationEditor');
+    if (explanationEditorContainer) {
+        editExplanationEditor = new Quill('#editExplanationEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter explanation with formatting...'
+        });
+        // Set initial content
+        if (question.explanation) {
+            editExplanationEditor.root.innerHTML = question.explanation;
+        }
+    }
+}
+
+// Note: getQuillHTML is loaded from shared/utils.js
+
+// Add option field with Quill editor (supports both 'edit' and 'add' modes)
+function addOptionField(mode = 'edit') {
+    const containerId = mode === 'add' ? 'addOptionsContainer' : 'editOptionsContainer';
+    const radioName = mode === 'add' ? 'addCorrectAnswer' : 'correctAnswer';
+    const editorPrefix = mode === 'add' ? 'addOptionEditor' : 'editOptionEditor';
+    const removeFunction = mode === 'add' ? 'removeAddOptionField' : 'removeEditOptionField';
+    const editorsArray = mode === 'add' ? addOptionEditors : editOptionEditors;
+    
+    const container = document.getElementById(containerId);
+    const optionCount = container.querySelectorAll('.option-editor-container').length;
     const newIndex = optionCount;
 
     const optionHTML = `
-        <div class="flex items-center gap-2 mb-2">
-            <span class="text-sm font-medium">${String.fromCharCode(65 + newIndex)}.</span>
-            <input type="text" 
-                   id="editOption${newIndex}" 
-                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                   placeholder="Option ${String.fromCharCode(65 + newIndex)}">
-            <label class="flex items-center gap-1">
-                <input type="radio" name="correctAnswer" value="${newIndex}">
-                <span class="text-sm">Correct</span>
-            </label>
+        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${newIndex}">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newIndex)}.</span>
+                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                        <input type="radio" name="${radioName}" value="${newIndex}" class="w-4 h-4 text-green-600">
+                        <span class="text-sm text-gray-600">Correct Answer</span>
+                    </label>
+                </div>
+                <button type="button" onclick="${removeFunction}(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                    🗑️
+                </button>
+            </div>
+            <div id="${editorPrefix}${newIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
         </div>
     `;
 
     container.insertAdjacentHTML('beforeend', optionHTML);
+
+    // Initialize Quill editor for the new option
+    setTimeout(() => {
+        const newOptionEditor = new Quill(`#${editorPrefix}${newIndex}`, {
+            modules: {
+                toolbar: minimalToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: `Enter option ${String.fromCharCode(65 + newIndex)}...`
+        });
+        editorsArray.push(newOptionEditor);
+    }, 50);
+}
+
+// Remove option field and re-index remaining options (for edit modal)
+function removeEditOptionField(button) {
+    const container = document.getElementById('editOptionsContainer');
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Minimum 2 options required
+    if (optionContainers.length <= 2) {
+        showToast('Minimum 2 options required', 'warning');
+        return;
+    }
+
+    const optionContainer = button.closest('.option-editor-container');
+    const removedIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container
+    optionContainer.remove();
+    
+    // Remove the editor from the array
+    editOptionEditors.splice(removedIndex, 1);
+
+    // Re-index remaining options
+    const remainingContainers = container.querySelectorAll('.option-editor-container');
+    remainingContainers.forEach((container, newIndex) => {
+        // Update data attribute
+        container.dataset.optionIndex = newIndex;
+        
+        // Update option letter
+        const letterSpan = container.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = `${String.fromCharCode(65 + newIndex)}.`;
+        }
+        
+        // Update radio button value
+        const radio = container.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = newIndex;
+        }
+        
+        // Update editor container ID
+        const editorContainer = container.querySelector('[id^="editOptionEditor"]');
+        if (editorContainer) {
+            editorContainer.id = `editOptionEditor${newIndex}`;
+        }
+    });
+
+    showToast('Option removed', 'info');
+}
+
+// Remove option field and re-index remaining options (for add modal)
+function removeAddOptionField(button) {
+    const container = document.getElementById('addOptionsContainer');
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Minimum 2 options required
+    if (optionContainers.length <= 2) {
+        showToast('Minimum 2 options required', 'warning');
+        return;
+    }
+
+    const optionContainer = button.closest('.option-editor-container');
+    const removedIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container
+    optionContainer.remove();
+    
+    // Remove the editor from the array
+    addOptionEditors.splice(removedIndex, 1);
+
+    // Re-index remaining options
+    const remainingContainers = container.querySelectorAll('.option-editor-container');
+    remainingContainers.forEach((container, newIndex) => {
+        // Update data attribute
+        container.dataset.optionIndex = newIndex;
+        
+        // Update option letter
+        const letterSpan = container.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = `${String.fromCharCode(65 + newIndex)}.`;
+        }
+        
+        // Update radio button value
+        const radio = container.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = newIndex;
+        }
+        
+        // Update editor container ID
+        const editorContainer = container.querySelector('[id^="addOptionEditor"]');
+        if (editorContainer) {
+            editorContainer.id = `addOptionEditor${newIndex}`;
+        }
+    });
+
+    showToast('Option removed', 'info');
 }
 
 
@@ -693,24 +960,26 @@ async function saveEditedQuestion(event) {
         return;
     }
 
-    // Get updated values
+    // Get updated values using Quill editors
     const updatedQuestion = {
         id: question.id || question._id,
         _id: question._id || question.id,
-        question: document.getElementById('editQuestionText').value,
+        questionNumber: document.getElementById('editQuestionNumber').value.trim() || '',
+        question: getQuillHTML(editQuestionEditor),
         subject: document.getElementById('editSubject').value,
         academicYear: document.getElementById('editYear').value,
         examType: document.getElementById('editExamType').value,
         difficulty: document.getElementById('editDifficulty').value,
         topic: document.getElementById('editTopic').value,
-        explanation: document.getElementById('editExplanation').value,
+        explanation: getQuillHTML(editExplanationEditor),
         options: [],
         correctAnswer: 0
     };
 
-    // Get options
-    const optionElements = document.querySelectorAll('[id^="editOption"]');
-    updatedQuestion.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
+    // Get options from Quill editors
+    updatedQuestion.options = editOptionEditors
+        .map(editor => getQuillHTML(editor))
+        .filter(val => val && val.trim() !== '');
 
     // Get correct answer
     const correctAnswerRadio = document.querySelector('input[name="correctAnswer"]:checked');
@@ -734,8 +1003,10 @@ async function saveEditedQuestion(event) {
         const result = await response.json();
 
         if (result.success) {
-            // Update local data
-            Object.assign(question, updatedQuestion);
+            // Update local data with response from server (includes all saved fields)
+            const savedData = result.data || updatedQuestion;
+            Object.assign(question, savedData);
+            console.log('Question saved with questionNumber:', savedData.questionNumber);
 
             closeEditModal();
             renderQuestionsList();
@@ -749,12 +1020,27 @@ async function saveEditedQuestion(event) {
     }
 }
 
-// Close edit modal
+// Close edit modal and clean up Quill editors
 function closeEditModal() {
     const modal = document.getElementById('editModal');
     if (modal) {
         modal.classList.add('hidden');
         currentEditingQuestion = null;
+        
+        // Properly destroy edit modal Quill editor instances
+        editQuestionEditor = destroyQuillEditor(editQuestionEditor);
+        editOptionEditors.forEach(editor => destroyQuillEditor(editor));
+        editOptionEditors = [];
+        editExplanationEditor = destroyQuillEditor(editExplanationEditor);
+        
+        // Properly destroy add modal Quill editor instances
+        addQuestionEditor = destroyQuillEditor(addQuestionEditor);
+        addOptionEditors.forEach(editor => destroyQuillEditor(editor));
+        addOptionEditors = [];
+        addExplanationEditor = destroyQuillEditor(addExplanationEditor);
+        
+        // Properly destroy bulk add Quill editor instance
+        bulkQuestionsEditor = destroyQuillEditor(bulkQuestionsEditor);
     }
 }
 
@@ -1036,23 +1322,33 @@ function showAddQuestionModal(isBulk = false) {
 
     let formHTML;
     if (isBulk) {
-        // Bulk question entry form
+        // Bulk question entry form with Quill editor
         formHTML = `
             <form id="bulkAddQuestionForm" onsubmit="saveBulkQuestions(event)">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Bulk Question Entry</label>
-                        <p class="text-xs text-gray-500 mb-3">Enter questions in the following format:<br>
-                        Q: Question text<br>
-                        A: Option A<br>
-                        B: Option B<br>
-                        C: Option C<br>
-                        D: Option D<br>
-                        Correct: A<br>
-                        Explanation: Explanation text<br><br>
-                        
-                        Separate multiple questions with blank lines.</p>
-                        <textarea id="bulkQuestionsInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="15" placeholder="Paste your questions here in the format described above..."></textarea>
+                        <div class="flex items-center gap-2 mb-1">
+                            <label class="block text-sm font-semibold text-gray-700">Bulk Question Entry</label>
+                            <div class="relative group">
+                                <span class="cursor-help text-blue-500 hover:text-blue-700 text-lg" title="Format Instructions">ℹ️</span>
+                                <div class="absolute left-0 top-6 z-50 hidden group-hover:block w-80 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-xl">
+                                    <p class="font-semibold mb-2">📝 Format Instructions:</p>
+                                    <div class="bg-gray-700 p-2 rounded font-mono text-xs mb-2">
+                                        Q.No: 1<br>
+                                        Q: Question text<br>
+                                        A: Option A<br>
+                                        B: Option B<br>
+                                        C: Option C<br>
+                                        D: Option D<br>
+                                        Correct: A<br>
+                                        Explanation: Explanation text
+                                    </div>
+                                    <p class="text-gray-300">💡 Separate multiple questions with blank lines.</p>
+                                    <div class="absolute -top-2 left-2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="bulkQuestionsEditor" class="bg-white border border-gray-300 rounded-lg overflow-auto" style="height: 400px;"></div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1103,13 +1399,19 @@ function showAddQuestionModal(isBulk = false) {
             </form>
         `;
     } else {
-        // Single question entry form
+        // Single question entry form with Quill editors
         formHTML = `
             <form id="addQuestionForm" onsubmit="saveNewQuestion(event)">
                 <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                        <textarea id="addQuestionText" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Enter your question text here..."></textarea>
+                    <div class="flex gap-3 items-start">
+                        <div class="w-20 flex-shrink-0">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Q. No.</label>
+                            <input type="text" id="addQuestionNumber" value="" class="w-full px-2 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center" placeholder="#">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
+                            <div id="addQuestionTextEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 120px;"></div>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1155,51 +1457,24 @@ function showAddQuestionModal(isBulk = false) {
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
-                        <div id="addOptionsContainer">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">A.</span>
-                                <input type="text" 
-                                       id="addOption0" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option A">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="0" checked>
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">B.</span>
-                                <input type="text" 
-                                       id="addOption1" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option B">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="1">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">C.</span>
-                                <input type="text" 
-                                       id="addOption2" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option C">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="2">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-medium">D.</span>
-                                <input type="text" 
-                                       id="addOption3" 
-                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                       placeholder="Option D">
-                                <label class="flex items-center gap-1">
-                                    <input type="radio" name="addCorrectAnswer" value="3">
-                                    <span class="text-sm">Correct</span>
-                                </label>
-                            </div>
+                        <div id="addOptionsContainer" class="space-y-3">
+                            ${[0, 1, 2, 3].map(optIndex => `
+                                <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${optIndex}">
+                                    <div class="flex items-center justify-between gap-3 mb-2">
+                                        <div class="flex items-center gap-3">
+                                            <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + optIndex)}.</span>
+                                            <label class="flex items-center gap-2 px-3 py-1 rounded-full ${optIndex === 0 ? 'bg-green-100 border border-green-400' : 'bg-white border border-gray-300'} cursor-pointer hover:bg-green-50 transition-colors">
+                                                <input type="radio" name="addCorrectAnswer" value="${optIndex}" ${optIndex === 0 ? 'checked' : ''} class="w-4 h-4 text-green-600">
+                                                <span class="text-sm ${optIndex === 0 ? 'text-green-700 font-medium' : 'text-gray-600'}">Correct Answer</span>
+                                            </label>
+                                        </div>
+                                        <button type="button" onclick="removeAddOptionField(this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                    <div id="addOptionEditor${optIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
+                                </div>
+                            `).join('')}
                         </div>
                         <button type="button" onclick="addOptionField('add')" class="mt-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600">
                             ➕ Add Option
@@ -1208,7 +1483,7 @@ function showAddQuestionModal(isBulk = false) {
                     
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation</label>
-                        <textarea id="addExplanation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Provide explanation for the correct answer..."></textarea>
+                        <div id="addExplanationEditor" class="bg-white border border-gray-300 rounded-lg" style="min-height: 100px;"></div>
                     </div>
                     
                     <div class="flex justify-between gap-3 pt-4">
@@ -1232,32 +1507,102 @@ function showAddQuestionModal(isBulk = false) {
     document.getElementById('editFormContent').innerHTML = formHTML;
     modal.classList.remove('hidden');
 
-    // Initialize search functionality after DOM update
+    // Initialize Quill editors and search functionality after DOM update
     setTimeout(() => {
+        if (isBulk) {
+            initBulkQuillEditor();
+        } else {
+            initAddModalQuillEditors();
+        }
         initModalSearchFields();
     }, 100);
+}
+
+// Initialize Quill editor for bulk add modal
+function initBulkQuillEditor() {
+    bulkQuestionsEditor = null;
+    
+    const editorContainer = document.getElementById('bulkQuestionsEditor');
+    if (editorContainer) {
+        bulkQuestionsEditor = new Quill('#bulkQuestionsEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter questions in the format: Q: Question, A: Option A, B: Option B, C: Option C, D: Option D, Correct: A, Explanation: ...'    
+        });
+    }
+}
+
+// Initialize Quill editors for the add modal
+function initAddModalQuillEditors() {
+    // Clear previous editor instances
+    addQuestionEditor = null;
+    addOptionEditors = [];
+    addExplanationEditor = null;
+
+    // Initialize Question Text Editor
+    const questionEditorContainer = document.getElementById('addQuestionTextEditor');
+    if (questionEditorContainer) {
+        addQuestionEditor = new Quill('#addQuestionTextEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter question text with formatting...'
+        });
+    }
+
+    // Initialize Option Editors (4 default options)
+    for (let i = 0; i < 4; i++) {
+        const optionEditorContainer = document.getElementById(`addOptionEditor${i}`);
+        if (optionEditorContainer) {
+            const optionEditor = new Quill(`#addOptionEditor${i}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + i)}...`
+            });
+            addOptionEditors.push(optionEditor);
+        }
+    }
+
+    // Initialize Explanation Editor
+    const explanationEditorContainer = document.getElementById('addExplanationEditor');
+    if (explanationEditorContainer) {
+        addExplanationEditor = new Quill('#addExplanationEditor', {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter explanation with formatting...'
+        });
+    }
 }
 
 // Save new question
 async function saveNewQuestion(event) {
     event.preventDefault();
 
-    // Get form values
+    // Get form values using Quill editors
     const questionData = {
-        question: document.getElementById('addQuestionText').value,
+        questionNumber: document.getElementById('addQuestionNumber').value.trim() || '',
+        question: getQuillHTML(addQuestionEditor),
         subject: document.getElementById('addSubject').value,
         academicYear: document.getElementById('addYear').value,
         examType: document.getElementById('addExamType').value,
         difficulty: document.getElementById('addDifficulty').value,
         topic: document.getElementById('addTopic').value,
-        explanation: document.getElementById('addExplanation').value,
+        explanation: getQuillHTML(addExplanationEditor),
         options: [],
         correctAnswer: 0
     };
 
-    // Get options
-    const optionElements = document.querySelectorAll('[id^="addOption"]');
-    questionData.options = Array.from(optionElements).map(el => el.value).filter(val => val && val.trim() !== '');
+    // Get options from Quill editors
+    questionData.options = addOptionEditors
+        .map(editor => getQuillHTML(editor))
+        .filter(val => val && val.trim() !== '');
 
     // Get correct answer
     const correctAnswerRadio = document.querySelector('input[name="addCorrectAnswer"]:checked');
@@ -1308,7 +1653,8 @@ async function saveNewQuestion(event) {
 async function saveBulkQuestions(event) {
     event.preventDefault();
 
-    const bulkText = document.getElementById('bulkQuestionsInput').value;
+    // Get text content from Quill editor (strip HTML for parsing)
+    const bulkText = bulkQuestionsEditor ? bulkQuestionsEditor.getText() : '';
     const defaultSubject = document.getElementById('bulkSubject').value;
     const defaultYear = document.getElementById('bulkYear').value;
     const defaultExamType = document.getElementById('bulkExamType').value;
@@ -1319,11 +1665,16 @@ async function saveBulkQuestions(event) {
         return;
     }
 
-    // Parse bulk questions
+    // Parse bulk questions (Q.No: is parsed from text)
     const questions = parseBulkQuestions(bulkText, defaultSubject, defaultYear, defaultExamType, defaultDifficulty);
 
     if (questions.length === 0) {
-        showToast('No valid questions found in the input', 'error');
+        showToast('No valid questions found. Please use the format: Q: Question, A: Option A, B: Option B, etc.', 'error');
+        return;
+    }
+
+    // Confirm before saving
+    if (!confirm(`${questions.length} question(s) will be saved. Continue?`)) {
         return;
     }
 
@@ -1344,14 +1695,16 @@ async function saveBulkQuestions(event) {
         const result = await response.json();
 
         if (result.success) {
-            // Add to local data
-            allQuestions.unshift(...result.data);
+            // Add to local data - handle both array and single object responses
+            const addedQuestions = Array.isArray(result.data) ? result.data : 
+                                   (result.data ? [result.data] : questions);
+            allQuestions.unshift(...addedQuestions);
             filteredQuestions = [...allQuestions];
 
             closeEditModal();
             renderQuestionsList();
             updateStats();
-            showToast(`${result.count || questions.length} questions added successfully!`, 'success');
+            showToast(`${result.count || addedQuestions.length} questions added successfully!`, 'success');
         } else {
             showToast(result.message || 'Failed to add questions', 'error');
         }
@@ -1363,20 +1716,33 @@ async function saveBulkQuestions(event) {
 
 // Parse bulk questions from text
 function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, defaultDifficulty) {
-    const questionBlocks = text.split(/\n\s*\n/).filter(block => block.trim() !== '');
+    // Normalize line endings and clean up extra blank lines
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+    
+    // Split by double newlines to get question blocks
+    const questionBlocks = normalizedText.split(/\n\n+/).filter(block => block.trim() !== '');
     const questions = [];
+
+    console.log('Parsing bulk questions:', questionBlocks.length, 'blocks found');
 
     for (const block of questionBlocks) {
         const lines = block.split('\n').map(line => line.trim()).filter(line => line !== '');
 
+        let questionNumber = null;
         let question = '';
         const options = [];
         let correctAnswer = 0;
         let explanation = '';
+        let hasValidContent = false;
 
         for (const line of lines) {
-            if (line.toLowerCase().startsWith('q:')) {
+            if (line.toLowerCase().startsWith('q.no:') || line.toLowerCase().startsWith('qno:')) {
+                // Parse Q.No: 15 or QNo: 15
+                const numStr = line.replace(/q\.?no:/i, '').trim();
+                questionNumber = parseInt(numStr) || null;
+            } else if (line.toLowerCase().startsWith('q:')) {
                 question = line.substring(2).trim();
+                hasValidContent = true;
             } else if (/^[A-D]:/i.test(line)) {
                 const optionLetter = line.charAt(0).toUpperCase();
                 const optionText = line.substring(2).trim();
@@ -1384,6 +1750,7 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
                 // Map A->0, B->1, C->2, D->3
                 const optionIndex = optionLetter.charCodeAt(0) - 'A'.charCodeAt(0);
                 options[optionIndex] = optionText;
+                hasValidContent = true;
             } else if (line.toLowerCase().startsWith('correct:')) {
                 const correctLetter = line.substring(8).trim().charAt(0).toUpperCase();
                 correctAnswer = correctLetter.charCodeAt(0) - 'A'.charCodeAt(0);
@@ -1392,12 +1759,14 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
             }
         }
 
-        // Only add if we have a question and at least 2 options
-        if (question && options.filter(opt => opt !== undefined).length >= 2) {
+        // Only add if we have a question with Q: prefix and at least 2 options
+        const validOptions = options.filter(opt => opt !== undefined);
+        if (hasValidContent && question && validOptions.length >= 2) {
             questions.push({
+                questionNumber: questionNumber, // Will be null if not specified
                 question: question,
-                options: options.filter(opt => opt !== undefined),
-                correctAnswer: correctAnswer,
+                options: validOptions,
+                correctAnswer: Math.min(correctAnswer, validOptions.length - 1), // Ensure correctAnswer is valid
                 subject: defaultSubject,
                 academicYear: defaultYear,
                 examType: defaultExamType,
@@ -1405,165 +1774,17 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
                 topic: '',
                 explanation: explanation
             });
+            console.log('Added question' + (questionNumber ? ' #' + questionNumber : '') + ':', question.substring(0, 50));
         }
     }
 
+    console.log('Total questions parsed:', questions.length);
     return questions;
 }
 
 // Refresh questions
 function refreshQuestions() {
     loadQuestions();
-}
-
-// Load test creator data
-function loadTestCreatorData() {
-    // Load subjects for test creation
-    const subjectSelect = document.getElementById('testSubject');
-    if (subjectSelect) {
-        subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-
-        const uniqueSubjects = new Set(allQuestions.map(q => q.subject));
-        uniqueSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject;
-            option.textContent = subject;
-            subjectSelect.appendChild(option);
-        });
-    }
-
-    // Load topics for selection
-    const topicSelect = document.getElementById('topicSelection');
-    if (topicSelect) {
-        topicSelect.innerHTML = '<option value="all">All Topics</option>';
-
-        const uniqueTopics = new Set(allQuestions.map(q => q.topic).filter(topic => topic));
-        uniqueTopics.forEach(topic => {
-            const option = document.createElement('option');
-            option.value = topic;
-            option.textContent = topic;
-            topicSelect.appendChild(option);
-        });
-    }
-}
-
-// Create test
-function createTest() {
-    const testTitle = document.getElementById('testTitle')?.value?.trim() || '';
-    const testSubject = document.getElementById('testSubject')?.value?.trim() || '';
-    const testYear = document.getElementById('testYear')?.value?.trim() || '';
-    const testDuration = document.getElementById('testDuration')?.value?.trim() || '';
-    const totalQuestions = document.getElementById('totalQuestions')?.value?.trim() || '';
-
-    if (!testTitle || !testSubject || !testYear) {
-        showToast('Please fill in required fields (Title, Subject, Year)', 'error');
-        return;
-    }
-
-    if (currentCreationMethod === 'manual') {
-        if (testQuestions.length === 0) {
-            showToast('Please add questions to the test', 'error');
-            return;
-        }
-    } else if (currentCreationMethod === 'auto') {
-        // For auto generation, we'll use the criteria to select questions
-        const easyPercent = parseInt(document.getElementById('easyPercent')?.textContent || '30');
-        const mediumPercent = parseInt(document.getElementById('mediumPercent')?.textContent || '50');
-        const hardPercent = parseInt(document.getElementById('hardPercent')?.textContent || '20');
-
-        if (easyPercent + mediumPercent + hardPercent !== 100) {
-            showToast('Difficulty percentages must sum to 100%', 'error');
-            return;
-        }
-    }
-
-    // In real implementation, this would call an API to create the test
-    showToast(`Creating test: ${testTitle}`, 'info');
-
-    // Simulate test creation
-    setTimeout(() => {
-        showToast(`Test "${testTitle}" created successfully!`, 'success');
-    }, 1000);
-}
-
-
-// Preview test
-function previewTest() {
-    if (testQuestions.length === 0) {
-        showToast('No questions in test to preview', 'warning');
-        return;
-    }
-
-    // Open preview in new window
-    const previewWindow = window.open('', '_blank');
-
-    previewWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Test Preview - ${document.getElementById('testTitle')?.value || 'Untitled Test'}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-                body { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
-                .question-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1rem; }
-                .option-item { padding: 0.75rem; margin: 0.5rem 0; border: 1px solid #e5e7eb; border-radius: 0.375rem; }
-            </style>
-        </head>
-        <body class="min-h-screen p-8">
-            <div class="max-w-4xl mx-auto">
-                <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">${document.getElementById('testTitle')?.value || 'Untitled Test'}</h1>
-                
-                <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${testQuestions.map((question, index) => `
-                        <div class="question-card">
-                            <div class="flex items-start gap-3 mb-4">
-                                <span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                                    ${index + 1}
-                                </span>
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
-                                    
-                                    <div class="space-y-2 mb-4">
-                                        ${question.options.map((option, optIndex) => `
-                                            <div class="option-item">
-                                                <label class="flex items-center">
-                                                    <input type="radio" disabled ${optIndex == question.correctAnswer ? 'checked' : ''}>
-                                                    <span class="ml-2">${String.fromCharCode(65 + optIndex)}. ${option}</span>
-                                                    ${optIndex == question.correctAnswer ? '<span class="ml-2 text-green-600 text-xs">✓ Correct</span>' : ''}
-                                                </label>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    
-                                    <div class="bg-blue-50 p-3 rounded-lg">
-                                        <div class="font-semibold text-blue-800 mb-1">Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}</div>
-                                        <div class="text-sm text-blue-700">${question.explanation || 'No explanation provided.'}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="text-sm text-gray-500">
-                                Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-
-    previewWindow.document.close();
-}
-// Save test template
-function saveTestTemplate() {
-    const templateName = prompt('Enter template name:');
-    if (!templateName) return;
-
-    // In real implementation, this would save the template to the database
-    showToast(`Template "${templateName}" saved successfully!`, 'success');
 }
 
 // Load analytics
@@ -1689,78 +1910,4 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeFilter) typeFilter.addEventListener('change', applyFilters);
 });
 
-// ==================== TOAST NOTIFICATIONS ====================
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
-
-    // Only show toast if container exists
-    if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`); // Fallback to console
-        return;
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-    toast.textContent = message;
-
-    toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
-}
-
-
-// ==================== AUTHENTICATION ====================
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.clear();
-        window.location.href = '../../auth/login.html';
-    }
-}
-
-// ==================== ANIMATION STYLES ====================
-// Add CSS animations dynamically if they don't exist
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
-    `;
-    document.head.appendChild(style);
-}
+// Note: showToast, logout, and animation styles are loaded from shared/utils.js

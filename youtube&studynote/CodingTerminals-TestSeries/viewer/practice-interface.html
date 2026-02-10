@@ -13,6 +13,9 @@
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
     <!-- Custom Tailwind Config -->
     <script>
         tailwind.config = {
@@ -150,6 +153,14 @@
             transition: all 0.2s ease;
         }
 
+        /* Fix inline display for options with HTML content from Quill editor */
+        .option-item p,
+        .option-item span p,
+        .option-content p {
+            display: inline;
+            margin: 0;
+        }
+
         .option-item:hover {
             background-color: #f3f4f6;
         }
@@ -204,10 +215,13 @@
     <header class="bg-white shadow-lg sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
-                <h1
-                    class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
-                    📚 Real-Time Test Series
-                </h1>
+                <div class="flex items-center gap-4">
+                    <a href="test-catalog.html" class="text-2xl hover:scale-110 transition-transform" title="Browse Tests">📋</a>
+                    <h1
+                        class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
+                        📚 Real-Time Test Series
+                    </h1>
+                </div>
                 <div id="testHeaderInfo" class="flex items-center gap-6 hidden">
                     <div class="flex items-center gap-2">
                         <span class="text-gray-600 font-semibold">⏱️ Time:</span>
@@ -554,6 +568,7 @@
 
     <!-- Configuration -->
     <script src="../../config/app.config.js"></script>
+    <script src="../shared/utils.js"></script>
     <script src="practice-interface.js"></script>
 </body>
 

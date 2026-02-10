@@ -1,3 +1,9 @@
+// File: CodingTerminals-TestSeries/admin/manual-question-entry.js
+// Note: Common utilities (sanitizeHTML, destroyQuillEditor, showToast, fullToolbarOptions, etc.) are loaded from shared/utils.js
+
+// Form persistence key
+const FORM_STORAGE_KEY = 'manualQuestionEntryFormData';
+
 // Global Variables
 let questionBlocks = [];
 let questionCounter = 0;
@@ -6,6 +12,9 @@ let years = new Set();
 let examTypes = new Set();
 let difficulties = new Set();
 let hasInitialized = false;
+
+// Store Quill editor instances for each question block
+let questionEditors = {}; // {questionIndex: {question: Quill, explanation: Quill, options: [Quill, ...]}}
 
 // API Endpoints Configuration
 const API_CONFIG = {
@@ -210,8 +219,13 @@ function addQuestionBlock() {
     const blockHTML = `
         <div id="${blockId}" class="question-input bg-white rounded-2xl shadow-xl p-6">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-blue-600">Question #${currentQuestionIndex + 1}</h3>
-                <button type="button" onclick="removeQuestionBlock('${blockId}')" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-bold text-blue-600">Question No:-</h3>
+                    <div class="flex items-center gap-1">
+                        <input type="text" id="questionNumber-${currentQuestionIndex}" class="w-16 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-center text-sm" placeholder="#">
+                    </div>
+                </div>
+                <button type="button" onclick="removeQuestionBlock('${blockId}', ${currentQuestionIndex})" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm">
                     🗑️ Remove
                 </button>
             </div>
@@ -219,7 +233,7 @@ function addQuestionBlock() {
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Text *</label>
-                    <textarea id="question-${currentQuestionIndex}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Enter your question text here..."></textarea>
+                    <div id="question-editor-${currentQuestionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 100px;"></div>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -271,50 +285,66 @@ function addQuestionBlock() {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Question Options</label>
-                    <div id="options-${currentQuestionIndex}">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">A.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-0" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option A">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                    <div id="options-${currentQuestionIndex}" class="space-y-3">
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="0">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">A.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-0" value="0" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-0" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">B.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-1" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option B">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="1">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">B.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-1" value="1" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-1" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">C.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-2" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option C">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="2">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">C.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-2" value="2" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-2" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-sm font-medium w-8">D.</span>
-                            <input type="text" 
-                                   id="option-${currentQuestionIndex}-3" 
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                                   placeholder="Option D">
-                            <label class="flex items-center gap-1">
-                                <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3">
-                                <span class="text-sm">Correct</span>
-                            </label>
+                        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="3">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="flex items-center gap-3">
+                                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">D.</span>
+                                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                                        <input type="radio" name="correct-${currentQuestionIndex}" id="correct-${currentQuestionIndex}-3" value="3" class="w-4 h-4 text-green-600">
+                                        <span class="text-sm text-gray-600">Correct Answer</span>
+                                    </label>
+                                </div>
+                                <button type="button" onclick="removeOptionField(${currentQuestionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                                    🗑️
+                                </button>
+                            </div>
+                            <div id="option-editor-${currentQuestionIndex}-3" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
                         </div>
                     </div>
                     <button type="button" onclick="addOptionField(${currentQuestionIndex})" class="mt-2 px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600">
@@ -324,7 +354,7 @@ function addQuestionBlock() {
                 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Explanation</label>
-                    <textarea id="explanation-${currentQuestionIndex}" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none" rows="3" placeholder="Provide explanation for the correct answer..."></textarea>
+                    <div id="explanation-editor-${currentQuestionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 80px;"></div>
                 </div>
             </div>
         </div>
@@ -332,7 +362,7 @@ function addQuestionBlock() {
 
     container.insertAdjacentHTML('beforeend', blockHTML);
 
-    // Initialize search functionality after DOM update
+    // Initialize Quill editors and search functionality after DOM update
     requestAnimationFrame(() => {
         let attempts = 0;
         const maxAttempts = 15;
@@ -340,6 +370,8 @@ function addQuestionBlock() {
         function tryInit() {
             attempts++;
 
+            const questionEditorEl = document.getElementById(`question-editor-${currentQuestionIndex}`);
+            const explanationEditorEl = document.getElementById(`explanation-editor-${currentQuestionIndex}`);
             const subjectInput = document.getElementById(`subject-${currentQuestionIndex}`);
             const subjectSuggestions = document.getElementById(`subjectSuggestions-${currentQuestionIndex}`);
             const examTypeInput = document.getElementById(`examType-${currentQuestionIndex}`);
@@ -347,7 +379,10 @@ function addQuestionBlock() {
             const difficultyInput = document.getElementById(`difficulty-${currentQuestionIndex}`);
             const difficultySuggestions = document.getElementById(`difficultySuggestions-${currentQuestionIndex}`);
 
-            if (subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
+            if (questionEditorEl && explanationEditorEl && subjectInput && subjectSuggestions && examTypeInput && examTypeSuggestions && difficultyInput && difficultySuggestions) {
+                // Initialize Quill editors for this question block
+                initQuillEditorsForBlock(currentQuestionIndex);
+                // Initialize search fields
                 initIndividualQuestionSearchFields(currentQuestionIndex);
             } else if (attempts < maxAttempts) {
                 setTimeout(tryInit, attempts * 150);
@@ -359,6 +394,57 @@ function addQuestionBlock() {
 
     questionCounter++;
 }
+
+// Initialize Quill editors for a question block
+function initQuillEditorsForBlock(questionIndex) {
+    // Initialize editors object for this question
+    questionEditors[questionIndex] = {
+        question: null,
+        explanation: null,
+        options: []
+    };
+
+    // Initialize Question Text Editor
+    const questionEditorEl = document.getElementById(`question-editor-${questionIndex}`);
+    if (questionEditorEl) {
+        questionEditors[questionIndex].question = new Quill(`#question-editor-${questionIndex}`, {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Enter your question text here...'
+        });
+    }
+
+    // Initialize Option Editors (4 default options)
+    for (let i = 0; i < 4; i++) {
+        const optionEditorEl = document.getElementById(`option-editor-${questionIndex}-${i}`);
+        if (optionEditorEl) {
+            const optionEditor = new Quill(`#option-editor-${questionIndex}-${i}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + i)}...`
+            });
+            questionEditors[questionIndex].options.push(optionEditor);
+        }
+    }
+
+    // Initialize Explanation Editor
+    const explanationEditorEl = document.getElementById(`explanation-editor-${questionIndex}`);
+    if (explanationEditorEl) {
+        questionEditors[questionIndex].explanation = new Quill(`#explanation-editor-${questionIndex}`, {
+            modules: {
+                toolbar: fullToolbarOptions
+            },
+            theme: 'snow',
+            placeholder: 'Provide explanation for the correct answer...'
+        });
+    }
+}
+
+// Note: getQuillHTML is loaded from shared/utils.js
 
 // Add multiple question blocks at once
 function addMultipleQuestionBlocks() {
@@ -377,37 +463,126 @@ function addOptionField(questionIndex) {
     const newOptionIndex = optionCount;
 
     const optionHTML = `
-        <div class="flex items-center gap-2 mb-2">
-            <span class="text-sm font-medium w-8">${String.fromCharCode(65 + newOptionIndex)}.</span>
-            <input type="text" 
-                   id="option-${questionIndex}-${newOptionIndex}" 
-                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                   placeholder="Option ${String.fromCharCode(65 + newOptionIndex)}">
-            <label class="flex items-center gap-1">
-                <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}">
-                <span class="text-sm">Correct</span>
-            </label>
+        <div class="option-editor-container p-3 bg-gray-50 rounded-lg" data-option-index="${newOptionIndex}">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="option-letter text-lg font-bold text-blue-600 min-w-[24px]">${String.fromCharCode(65 + newOptionIndex)}.</span>
+                    <label class="flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-gray-300 cursor-pointer hover:bg-green-50 transition-colors">
+                        <input type="radio" name="correct-${questionIndex}" id="correct-${questionIndex}-${newOptionIndex}" value="${newOptionIndex}" class="w-4 h-4 text-green-600">
+                        <span class="text-sm text-gray-600">Correct Answer</span>
+                    </label>
+                </div>
+                <button type="button" onclick="removeOptionField(${questionIndex}, this)" class="px-2 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200 transition-colors" title="Remove option">
+                    🗑️
+                </button>
+            </div>
+            <div id="option-editor-${questionIndex}-${newOptionIndex}" class="bg-white border border-gray-300 rounded-lg" style="min-height: 50px;"></div>
         </div>
     `;
 
     container.insertAdjacentHTML('beforeend', optionHTML);
+
+    // Initialize Quill editor for the new option after DOM update
+    setTimeout(() => {
+        const optionEditorEl = document.getElementById(`option-editor-${questionIndex}-${newOptionIndex}`);
+        if (optionEditorEl) {
+            const optionEditor = new Quill(`#option-editor-${questionIndex}-${newOptionIndex}`, {
+                modules: {
+                    toolbar: minimalToolbarOptions
+                },
+                theme: 'snow',
+                placeholder: `Enter option ${String.fromCharCode(65 + newOptionIndex)}...`
+            });
+            if (questionEditors[questionIndex]) {
+                questionEditors[questionIndex].options.push(optionEditor);
+            }
+        }
+    }, 100);
+}
+
+// Remove option field from a specific question
+function removeOptionField(questionIndex, buttonElement) {
+    const container = document.getElementById(`options-${questionIndex}`);
+    const optionContainers = container.querySelectorAll('.option-editor-container');
+    
+    // Ensure at least 2 options remain
+    if (optionContainers.length <= 2) {
+        showToast('A question must have at least 2 options.', 'warning');
+        return;
+    }
+    
+    // Find the option container to remove
+    const optionContainer = buttonElement.closest('.option-editor-container');
+    const optionIndex = parseInt(optionContainer.dataset.optionIndex);
+    
+    // Remove the option container from DOM
+    optionContainer.remove();
+    
+    // Remove the corresponding Quill editor from the array
+    if (questionEditors[questionIndex] && questionEditors[questionIndex].options[optionIndex]) {
+        questionEditors[questionIndex].options.splice(optionIndex, 1);
+    }
+    
+    // Re-index remaining options (update letters A, B, C, etc.)
+    const remainingOptions = container.querySelectorAll('.option-editor-container');
+    remainingOptions.forEach((opt, idx) => {
+        // Update data-option-index
+        opt.dataset.optionIndex = idx;
+        
+        // Update option letter
+        const letterSpan = opt.querySelector('.option-letter');
+        if (letterSpan) {
+            letterSpan.textContent = String.fromCharCode(65 + idx) + '.';
+        }
+        
+        // Update radio button value
+        const radio = opt.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = idx;
+            radio.id = `correct-${questionIndex}-${idx}`;
+        }
+    });
+    
+    showToast('Option removed successfully.', 'info');
 }
 
 // Remove a question block
-function removeQuestionBlock(blockId) {
-    if (confirm('Are you sure you want to remove this question block?')) {
+async function removeQuestionBlock(blockId, questionIndex) {
+    const confirmed = await showConfirmDialog(
+        'Are you sure you want to remove this question block?',
+        'Remove Question',
+        { confirmText: 'Remove', cancelText: 'Cancel', type: 'danger' }
+    );
+    
+    if (confirmed) {
         const block = document.getElementById(blockId);
         if (block) {
             block.remove();
+            // Clean up Quill editor references
+            if (questionEditors[questionIndex]) {
+                delete questionEditors[questionIndex];
+            }
+            autoSaveFormData();
         }
     }
 }
 
 // Clear all question blocks
-function clearAll() {
-    if (confirm('Are you sure you want to clear all question blocks? This cannot be undone.')) {
+async function clearAll() {
+    const confirmed = await showConfirmDialog(
+        'Are you sure you want to clear all question blocks? This cannot be undone.',
+        'Clear All Questions',
+        { confirmText: 'Clear All', cancelText: 'Cancel', type: 'danger' }
+    );
+    
+    if (confirmed) {
         document.getElementById('questionsContainer').innerHTML = '';
         questionCounter = 0;
+        // Clear all Quill editor references
+        questionEditors = {};
+        // Clear saved form data
+        clearFormData(FORM_STORAGE_KEY);
+        showToast('All questions cleared.', 'info');
     }
 }
 
@@ -415,19 +590,28 @@ function clearAll() {
 async function saveAllQuestions() {
     const containers = document.querySelectorAll('[id^="question-block-"]');
     const questions = [];
-    let hasErrors = false;
+    let errorBlocks = [];
 
     for (let i = 0; i < containers.length; i++) {
-        const questionData = getQuestionData(i);
+        // Extract the actual question index from the block ID (e.g., "question-block-5" -> 5)
+        const blockId = containers[i].id;
+        const actualIndex = parseInt(blockId.replace('question-block-', ''), 10);
+        
+        const questionData = getQuestionData(actualIndex);
         if (questionData) {
             questions.push(questionData);
         } else {
-            hasErrors = true;
+            errorBlocks.push(i + 1); // Human-readable block number (1-based)
+            // Highlight the block with error
+            containers[i].classList.add('border-2', 'border-red-500');
+            setTimeout(() => {
+                containers[i].classList.remove('border-2', 'border-red-500');
+            }, 5000);
         }
     }
 
-    if (hasErrors) {
-        showToast('Some questions have errors. Please review them.', 'error');
+    if (errorBlocks.length > 0) {
+        showToast(`Question block(s) ${errorBlocks.join(', ')} have errors. Please fill in question text and at least 2 options.`, 'error');
         return;
     }
 
@@ -437,7 +621,7 @@ async function saveAllQuestions() {
     }
 
     try {
-        showToast(`Saving ${questions.length} questions...`, 'info');
+        showLoading(true, `Saving ${questions.length} questions...`);
 
         const response = await fetch(API_URLS.CREATE_BULK_QUESTIONS, {
             method: 'POST',
@@ -447,6 +631,8 @@ async function saveAllQuestions() {
             body: JSON.stringify({ questions: questions })
         });
 
+        showLoading(false);
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -455,20 +641,30 @@ async function saveAllQuestions() {
 
         if (result.success) {
             showToast(`${result.count || questions.length} questions saved successfully!`, 'success');
+            // Clear saved form data on successful save
+            clearFormData(FORM_STORAGE_KEY);
         } else {
             showToast(result.message || 'Failed to save questions', 'error');
         }
     } catch (error) {
+        showLoading(false);
         console.error('Error saving questions:', error);
         showToast('Error saving questions: ' + error.message, 'error');
     }
 }
 
-// Get question data from form
+// Get question data from form - Updated to use Quill editors
 function getQuestionData(index) {
-    const question = document.getElementById(`question-${index}`).value.trim();
+    // Get question text from Quill editor
+    let question = '';
+    if (questionEditors[index] && questionEditors[index].question) {
+        question = getQuillHTML(questionEditors[index].question);
+    }
 
-    if (!question) {
+    // Check if question text is empty or just whitespace/empty HTML
+    const strippedQuestion = question.replace(/<[^>]*>/g, '').trim();
+    if (!strippedQuestion) {
+        console.log(`Question ${index}: Question text is empty`);
         return null;
     }
 
@@ -484,16 +680,15 @@ function getQuestionData(index) {
     const examType = document.getElementById(`examType-${index}`).value || defaultExamType;
     const difficulty = document.getElementById(`difficulty-${index}`).value || defaultDifficulty;
 
-    // Get options
+    // Get options from Quill editors
     const options = [];
-    let optionIndex = 0;
-    let optionElement;
-    while ((optionElement = document.getElementById(`option-${index}-${optionIndex}`)) !== null) {
-        const optionValue = optionElement.value.trim();
-        if (optionValue) {
-            options.push(optionValue);
-        }
-        optionIndex++;
+    if (questionEditors[index] && questionEditors[index].options) {
+        questionEditors[index].options.forEach(optionEditor => {
+            const optionValue = getQuillHTML(optionEditor);
+            if (optionValue) {
+                options.push(optionValue);
+            }
+        });
     }
 
     // Get correct answer
@@ -506,17 +701,26 @@ function getQuestionData(index) {
         }
     }
 
+    // Get explanation from Quill editor
+    let explanation = '';
+    if (questionEditors[index] && questionEditors[index].explanation) {
+        explanation = getQuillHTML(questionEditors[index].explanation);
+    }
+
     // Get other fields
-    const topic = document.getElementById(`topic-${index}`).value;
-    const explanation = document.getElementById(`explanation-${index}`).value;
+    const topic = document.getElementById(`topic-${index}`)?.value || '';
 
     // Validate required fields
     if (options.length < 2) {
-        showToast(`Question #${index + 1} needs at least 2 options.`, 'error');
+        console.log(`Question ${index}: Only ${options.length} option(s) provided, need at least 2`);
         return null;
     }
 
+    // Get question number
+    const questionNumber = document.getElementById(`questionNumber-${index}`)?.value.trim() || '';
+
     return {
+        questionNumber: questionNumber,
         question: question,
         options: options,
         correctAnswer: correctAnswer,
@@ -529,77 +733,177 @@ function getQuestionData(index) {
     };
 }
 
-// Show toast notification
-function showToast(message, type = 'info') {
-    const toastContainer = document.getElementById('toastContainer');
+// Note: showToast, logout, and animation styles are loaded from shared/utils.js
 
-    if (!toastContainer) {
-        console.log(`${type.toUpperCase()}: ${message}`);
-        return;
-    }
+// ==================== FORM PERSISTENCE ====================
 
-    const toast = document.createElement('div');
-    toast.className = `toast-enter p-4 rounded-lg shadow-lg text-white ${type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-            type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-        }`;
-    toast.textContent = message;
+// Debounced auto-save function
+const autoSaveFormData = debounce(function() {
+    saveCurrentFormData();
+}, 1000);
 
-    toastContainer.appendChild(toast);
+// Save current form data to localStorage
+function saveCurrentFormData() {
+    const formData = {
+        defaults: {
+            subject: document.getElementById('defaultSubject')?.value || '',
+            year: document.getElementById('defaultYear')?.value || '',
+            examType: document.getElementById('defaultExamType')?.value || '',
+            difficulty: document.getElementById('defaultDifficulty')?.value || ''
+        },
+        questions: [],
+        savedAt: new Date().toISOString()
+    };
 
-    setTimeout(() => {
-        toast.classList.add('toast-exit');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 300);
-    }, 3000);
+    // Get all question blocks
+    const containers = document.querySelectorAll('[id^="question-block-"]');
+    containers.forEach((container, idx) => {
+        const questionData = {
+            question: '',
+            subject: document.getElementById(`subject-${idx}`)?.value || '',
+            year: document.getElementById(`year-${idx}`)?.value || '',
+            examType: document.getElementById(`examType-${idx}`)?.value || '',
+            difficulty: document.getElementById(`difficulty-${idx}`)?.value || '',
+            topic: document.getElementById(`topic-${idx}`)?.value || '',
+            options: [],
+            correctAnswer: 0,
+            explanation: ''
+        };
+
+        // Get question text from Quill editor
+        if (questionEditors[idx] && questionEditors[idx].question) {
+            questionData.question = questionEditors[idx].question.root.innerHTML;
+        }
+
+        // Get options from Quill editors
+        if (questionEditors[idx] && questionEditors[idx].options) {
+            questionEditors[idx].options.forEach((optionEditor, optIdx) => {
+                questionData.options.push(optionEditor.root.innerHTML);
+                // Check if this is the correct answer
+                const radio = document.getElementById(`correct-${idx}-${optIdx}`);
+                if (radio && radio.checked) {
+                    questionData.correctAnswer = optIdx;
+                }
+            });
+        }
+
+        // Get explanation from Quill editor
+        if (questionEditors[idx] && questionEditors[idx].explanation) {
+            questionData.explanation = questionEditors[idx].explanation.root.innerHTML;
+        }
+
+        formData.questions.push(questionData);
+    });
+
+    saveFormData(FORM_STORAGE_KEY, formData);
 }
 
-// Add CSS animations for toasts
-if (!document.querySelector('#toast-animation-styles')) {
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
+// Restore form data from localStorage
+async function restoreFormData() {
+    const formData = loadFormData(FORM_STORAGE_KEY);
+    
+    if (!formData || !formData.questions || formData.questions.length === 0) {
+        return false;
+    }
+
+    // Check if data is not too old (24 hours)
+    const savedTime = new Date(formData.savedAt);
+    const now = new Date();
+    const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+    
+    if (hoursDiff > 24) {
+        clearFormData(FORM_STORAGE_KEY);
+        return false;
+    }
+
+    // Show confirmation to restore
+    const confirmed = await showConfirmDialog(
+        `Found ${formData.questions.length} unsaved question(s) from ${savedTime.toLocaleString()}. Would you like to restore them?`,
+        'Restore Unsaved Work?',
+        { confirmText: 'Restore', cancelText: 'Start Fresh', type: 'info' }
+    );
+
+    if (!confirmed) {
+        clearFormData(FORM_STORAGE_KEY);
+        return false;
+    }
+
+    // Restore defaults
+    if (formData.defaults) {
+        if (formData.defaults.subject) document.getElementById('defaultSubject').value = formData.defaults.subject;
+        if (formData.defaults.year) document.getElementById('defaultYear').value = formData.defaults.year;
+        if (formData.defaults.examType) document.getElementById('defaultExamType').value = formData.defaults.examType;
+        if (formData.defaults.difficulty) document.getElementById('defaultDifficulty').value = formData.defaults.difficulty;
+    }
+
+    // Create question blocks and populate data
+    for (let i = 0; i < formData.questions.length; i++) {
+        if (i > 0) {
+            addQuestionBlock();
+        }
+        
+        // Wait for Quill editors to initialize
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const q = formData.questions[i];
+        const idx = i;
+
+        // Populate text fields
+        if (q.subject) document.getElementById(`subject-${idx}`).value = q.subject;
+        if (q.year) document.getElementById(`year-${idx}`).value = q.year;
+        if (q.examType) document.getElementById(`examType-${idx}`).value = q.examType;
+        if (q.difficulty) document.getElementById(`difficulty-${idx}`).value = q.difficulty;
+        if (q.topic) document.getElementById(`topic-${idx}`).value = q.topic;
+
+        // Populate Quill editors
+        if (questionEditors[idx]) {
+            if (questionEditors[idx].question && q.question) {
+                questionEditors[idx].question.root.innerHTML = q.question;
             }
-            to {
-                transform: translateX(0);
-                opacity: 1;
+            
+            if (questionEditors[idx].options && q.options) {
+                q.options.forEach((optContent, optIdx) => {
+                    if (questionEditors[idx].options[optIdx]) {
+                        questionEditors[idx].options[optIdx].root.innerHTML = optContent;
+                    }
+                });
+            }
+            
+            if (questionEditors[idx].explanation && q.explanation) {
+                questionEditors[idx].explanation.root.innerHTML = q.explanation;
             }
         }
 
-        @keyframes slideOutRight {
-            from {
-                transform: translateX(0);
-                opacity: 1;
-            }
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
+        // Set correct answer
+        const radio = document.getElementById(`correct-${idx}-${q.correctAnswer}`);
+        if (radio) radio.checked = true;
+    }
 
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        .toast-exit {
-            animation: slideOutRight 0.3s ease-in;
-        }
-    `;
-    document.head.appendChild(style);
+    showToast(`Restored ${formData.questions.length} question(s) successfully!`, 'success');
+    return true;
 }
 
-// Logout function
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        sessionStorage.clear();
-        window.location.href = '../../auth/login.html';
-    }
+// Setup auto-save listeners for form fields
+function setupAutoSave() {
+    // Listen for input changes on text fields
+    document.addEventListener('input', (e) => {
+        if (e.target.closest('#questionsContainer') || 
+            e.target.id.startsWith('default')) {
+            autoSaveFormData();
+        }
+    });
+
+    // Listen for radio button changes
+    document.addEventListener('change', (e) => {
+        if (e.target.type === 'radio' && e.target.name.startsWith('correct-')) {
+            autoSaveFormData();
+        }
+    });
+
+    // Save before page unload
+    window.addEventListener('beforeunload', () => {
+        saveCurrentFormData();
+    });
 }
 
 // Refresh existing values from database
@@ -631,6 +935,14 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialize search fields
     initSearchFields();
 
-    // Initialize with one question block
-    addQuestionBlock();
+    // Try to restore saved form data
+    const restored = await restoreFormData();
+    
+    // If no data was restored, add one empty question block
+    if (!restored) {
+        addQuestionBlock();
+    }
+
+    // Setup auto-save for form persistence
+    setupAutoSave();
 });
