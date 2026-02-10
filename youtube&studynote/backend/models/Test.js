@@ -14,14 +14,12 @@ const testSchema = new mongoose.Schema({
     subject: {
         type: String,
         required: true,
-        trim: true,
-        index: true
+        trim: true
     },
     academicYear: {
         type: String,
         required: true,
-        trim: true,
-        index: true
+        trim: true
     },
     duration: {
         type: Number,

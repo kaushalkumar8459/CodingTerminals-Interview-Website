@@ -24,4 +24,7 @@ router.delete('/:id', testController.deleteTest);
 // PUT - Publish test
 router.put('/:id/publish', testController.publishTest);
 
+// PUT - Unpublish test (move to draft)
+router.put('/:id/unpublish', testController.unpublishTest);
+
 module.exports = router;

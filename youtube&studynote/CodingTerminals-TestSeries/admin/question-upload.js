@@ -14,7 +14,13 @@ let confirmModalCallback = null;
 
 // Pagination settings
 let questionPagination = null;
-const QUESTIONS_PER_PAGE = 20;
+let questionsPerPage = 20; // Now variable instead of const
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 150];
+let currentFilteredQuestions = []; // Store current filtered questions for pagination callback
+
+// Sorting settings
+let currentSortOrder = 'asc'; // 'asc' or 'desc'
+let sortByField = 'questionNumber'; // Field to sort by
 
 // New variables for search functionality in filters
 let subjects = new Set();
@@ -466,7 +472,15 @@ function updateQuestionsList() {
         questionsToDisplay = parsedQuestions;
     }
 
-    const filteredQuestions = applyFilters(questionsToDisplay);
+    // Apply filters and store original indices
+    let filteredQuestions = applyFiltersWithIndex(questionsToDisplay);
+    
+    // Apply sorting
+    filteredQuestions = sortQuestions(filteredQuestions);
+    
+    // Store globally for pagination callback
+    currentFilteredQuestions = filteredQuestions;
+    
     questionCount.textContent = filteredQuestions.length;
 
     if (filteredQuestions.length === 0) {
@@ -477,27 +491,71 @@ function updateQuestionsList() {
                 <p class="text-sm">${currentQuestionSet === 'database' ? 'Load questions from database' : 'Upload question papers or import questions to get started'}</p>
             </div>
         `;
+        const paginationContainer = document.getElementById('paginationContainer');
+        if (paginationContainer) paginationContainer.innerHTML = '';
         if (questionPagination) questionPagination.update({ totalItems: 0 });
         return;
     }
 
-    // Initialize or update pagination
-    if (!questionPagination) {
-        questionPagination = createPagination({
-            totalItems: filteredQuestions.length,
-            itemsPerPage: QUESTIONS_PER_PAGE,
-            currentPage: 1,
-            containerId: 'paginationContainer',
-            onPageChange: (page) => {
-                renderPaginatedQuestions(filteredQuestions);
-                container.scrollIntoView({ behavior: 'smooth' });
-            }
-        });
-    } else {
-        questionPagination.update({ totalItems: filteredQuestions.length });
-    }
+    // Always recreate pagination to ensure correct callbacks and state
+    questionPagination = createPagination({
+        totalItems: filteredQuestions.length,
+        itemsPerPage: questionsPerPage,
+        currentPage: 1,
+        containerId: 'paginationContainer',
+        onPageChange: (page) => {
+            renderPaginatedQuestions(currentFilteredQuestions);
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
 
     renderPaginatedQuestions(filteredQuestions);
+}
+
+// Sort questions by questionNumber
+function sortQuestions(questions) {
+    return [...questions].sort((a, b) => {
+        const aNum = parseQuestionNumber(a.questionNumber);
+        const bNum = parseQuestionNumber(b.questionNumber);
+        
+        if (currentSortOrder === 'asc') {
+            return aNum - bNum;
+        } else {
+            return bNum - aNum;
+        }
+    });
+}
+
+// Parse question number for sorting (handles various formats)
+function parseQuestionNumber(qNum) {
+    if (!qNum) return Infinity; // Put empty values at end
+    
+    // Try to extract number from string
+    const num = parseInt(String(qNum).replace(/\D/g, ''), 10);
+    return isNaN(num) ? Infinity : num;
+}
+
+// Toggle sort order
+function toggleSortOrder() {
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+    updateSortButtonUI();
+    updateQuestionsList();
+}
+
+// Update sort button UI
+function updateSortButtonUI() {
+    const sortBtn = document.getElementById('sortByQNoBtn');
+    if (sortBtn) {
+        const icon = currentSortOrder === 'asc' ? '↑' : '↓';
+        sortBtn.innerHTML = `🔢 Q.No ${icon}`;
+        sortBtn.title = `Sort by Q.No (${currentSortOrder === 'asc' ? 'Ascending' : 'Descending'})`;
+    }
+}
+
+// Change page size
+function changePageSize(newSize) {
+    questionsPerPage = parseInt(newSize, 10);
+    updateQuestionsList();
 }
 
 // Render paginated questions
@@ -521,12 +579,9 @@ function renderPaginatedQuestions(filteredQuestions) {
         return;
     }
 
-    // Calculate start index for proper numbering
-    const pageState = questionPagination ? questionPagination.getState() : { currentPage: 1, itemsPerPage: filteredQuestions.length };
-    const startIndex = (pageState.currentPage - 1) * pageState.itemsPerPage;
-
     const questionsHTML = questionsToRender.map((question, index) => {
-        const actualIndex = startIndex + index;
+        // Use _originalIndex for edit/delete operations (preserves correct index after filtering)
+        const originalIndex = question._originalIndex !== undefined ? question._originalIndex : index;
         const displayNumber = question.questionNumber || '';
         return `
             <div class="question-preview">
@@ -545,10 +600,10 @@ function renderPaginatedQuestions(filteredQuestions) {
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="editQuestion(${actualIndex})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
+                        <button onclick="editQuestion(${originalIndex})" class="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">
                             ✏️ Edit
                         </button>
-                        <button onclick="deleteQuestion(${actualIndex})" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        <button onclick="deleteQuestion(${originalIndex})" class="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
                             🗑️ Delete
                         </button>
                     </div>
@@ -793,6 +848,55 @@ function applyFilters(questionsToFilter = null) {
         const result = matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
         return result;
     });
+}
+
+// Apply filters and preserve original index for edit/delete operations
+function applyFiltersWithIndex(questionsToFilter = null) {
+    // Use the current question set if none is provided
+    if (!questionsToFilter) {
+        if (currentQuestionSet === 'database') {
+            questionsToFilter = databaseQuestions;
+        } else {
+            questionsToFilter = parsedQuestions;
+        }
+    }
+
+    // Try to get values from search inputs first, then fall back to select elements
+    const subjectFilterInput = document.getElementById('filterSubjectInput');
+    const yearFilterInput = document.getElementById('filterYearInput');
+    const difficultyFilterInput = document.getElementById('filterDifficultyInput');
+    const searchQuery = document.getElementById('searchQuestions');
+
+    const subjectFilterSelect = document.getElementById('filterSubject');
+    const yearFilterSelect = document.getElementById('filterYear');
+    const difficultyFilterSelect = document.getElementById('filterDifficulty');
+
+    // Get values from inputs (prioritize search inputs over selects)
+    const subjectValue = (subjectFilterInput ? subjectFilterInput.value.toLowerCase().trim() : '') ||
+        (subjectFilterSelect ? subjectFilterSelect.value : 'all');
+    const yearValue = (yearFilterInput ? yearFilterInput.value.toLowerCase().trim() : '') ||
+        (yearFilterSelect ? yearFilterSelect.value : 'all');
+    const difficultyValue = (difficultyFilterInput ? difficultyFilterInput.value.toLowerCase().trim() : '') ||
+        (difficultyFilterSelect ? difficultyFilterSelect.value : 'all');
+    const searchValue = searchQuery ? searchQuery.value.toLowerCase().trim() : '';
+
+    // Map with original index, then filter
+    return questionsToFilter
+        .map((question, originalIndex) => ({ ...question, _originalIndex: originalIndex }))
+        .filter(question => {
+            const matchesSubject = subjectValue === 'all' || subjectValue === '' ||
+                (question.subject && question.subject.toLowerCase().includes(subjectValue));
+            const matchesYear = yearValue === 'all' || yearValue === '' ||
+                (question.academicYear && question.academicYear.toLowerCase().includes(yearValue));
+            const matchesDifficulty = difficultyValue === 'all' || difficultyValue === '' ||
+                (question.difficulty && question.difficulty.toLowerCase().includes(difficultyValue));
+            const matchesSearch = !searchValue ||
+                (question.question && question.question.toLowerCase().includes(searchValue)) ||
+                (question.explanation && question.explanation.toLowerCase().includes(searchValue)) ||
+                (question.topic && question.topic.toLowerCase().includes(searchValue));
+
+            return matchesSubject && matchesYear && matchesDifficulty && matchesSearch;
+        });
 }
 
 

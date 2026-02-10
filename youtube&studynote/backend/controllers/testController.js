@@ -10,16 +10,23 @@ class TestController {
             const { 
                 subject, 
                 academicYear, 
-                isActive = true,
-                isPublished = true,
+                isActive = 'true',
+                isPublished = 'true',
                 page = 1, 
                 limit = 20
             } = req.query;
 
-            let query = { 
-                isActive: isActive === 'true',
-                isPublished: isPublished === 'true'
-            };
+            let query = {};
+            
+            // Handle isActive filter (support 'all' to get both)
+            if (isActive !== 'all') {
+                query.isActive = isActive === 'true';
+            }
+            
+            // Handle isPublished filter (support 'all' to get both published and draft)
+            if (isPublished !== 'all') {
+                query.isPublished = isPublished === 'true';
+            }
 
             // Apply filters
             if (subject && subject !== 'all') {
@@ -34,17 +41,22 @@ class TestController {
             
             const tests = await Test.find(query)
                 .populate('questions', 'question subject difficulty')
-                .populate('createdBy', 'username email')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
                 .lean();
 
+            // Add default createdBy info since User model doesn't exist
+            const testsWithCreator = tests.map(test => ({
+                ...test,
+                createdBy: { username: 'Admin', email: 'admin@codingterminals.com' }
+            }));
+
             const total = await Test.countDocuments(query);
 
             res.json({
                 success: true,
-                data: tests,
+                data: testsWithCreator,
                 pagination: {
                     currentPage: parseInt(page),
                     totalPages: Math.ceil(total / limit),
@@ -64,9 +76,12 @@ class TestController {
     // POST - Create new test
     async createTest(req, res) {
         try {
+            // Use req.user._id if authenticated, otherwise use createdBy from body or default
+            const createdBy = req.user?._id || req.body.createdBy || '507f1f77bcf86cd799439011';
+            
             const testData = {
                 ...req.body,
-                createdBy: req.user._id
+                createdBy: createdBy
             };
 
             const test = new Test(testData);
@@ -74,11 +89,14 @@ class TestController {
 
             // Populate references
             await test.populate('questions', 'question subject difficulty');
-            await test.populate('createdBy', 'username email');
+
+            // Add default createdBy info
+            const testResponse = test.toObject();
+            testResponse.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
 
             res.status(201).json({
                 success: true,
-                data: test,
+                data: testResponse,
                 message: 'Test created successfully'
             });
         } catch (error) {
@@ -102,38 +120,57 @@ class TestController {
                 duration = 60
             } = req.body;
 
-            // Validate inputs
-            if (!subject || !academicYear) {
+            // Validate inputs - only subject is required
+            if (!subject) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Subject and academic year are required'
+                    error: 'Subject is required'
                 });
             }
 
-            // Build query for questions
+            // Build query for questions - more flexible matching
             let questionQuery = {
-                subject: subject,
-                academicYear: academicYear,
                 isActive: true
             };
+
+            // Add subject filter (case-insensitive)
+            if (subject && subject !== 'all') {
+                questionQuery.subject = { $regex: new RegExp(`^${subject}$`, 'i') };
+            }
+
+            // Add academicYear filter only if provided and not 'all'
+            if (academicYear && academicYear !== 'all' && academicYear.trim() !== '') {
+                questionQuery.academicYear = academicYear;
+            }
 
             if (topics && topics.length > 0 && !topics.includes('all')) {
                 questionQuery.topic = { $in: topics };
             }
 
+            console.log('Question query:', JSON.stringify(questionQuery));
+
             // Get all matching questions
             let availableQuestions = await Question.find(questionQuery);
+            console.log(`Found ${availableQuestions.length} questions with strict filters`);
 
             // If not enough questions, relax topic constraint
-            if (availableQuestions.length < totalQuestions) {
+            if (availableQuestions.length < totalQuestions && questionQuery.topic) {
                 delete questionQuery.topic;
                 availableQuestions = await Question.find(questionQuery);
+                console.log(`Found ${availableQuestions.length} questions after removing topic filter`);
+            }
+
+            // If still not enough, relax academicYear constraint
+            if (availableQuestions.length < totalQuestions && questionQuery.academicYear) {
+                delete questionQuery.academicYear;
+                availableQuestions = await Question.find(questionQuery);
+                console.log(`Found ${availableQuestions.length} questions after removing year filter`);
             }
 
             if (availableQuestions.length < totalQuestions) {
                 return res.status(400).json({
                     success: false,
-                    error: `Not enough questions available. Found ${availableQuestions.length}, need ${totalQuestions}`
+                    error: `Not enough questions available. Found ${availableQuestions.length}, need ${totalQuestions}. Try reducing the number of questions or selecting a different subject.`
                 });
             }
 
@@ -165,17 +202,21 @@ class TestController {
             }
 
             // Create test
+            const testTitle = academicYear && academicYear !== 'all' 
+                ? `${subject} ${academicYear} Mock Test`
+                : `${subject} Mock Test`;
+            
             const testData = {
-                title: `${subject} ${academicYear} Mock Test`,
+                title: testTitle,
                 subject: subject,
-                academicYear: academicYear,
+                academicYear: academicYear || 'All Years',
                 duration: duration,
                 totalQuestions: questions.length,
                 questions: questions.map(q => q._id),
                 difficultyDistribution: difficultyDistribution,
                 topics: topics,
                 isPublished: true,
-                createdBy: req.user._id,
+                createdBy: req.user?._id || req.body.createdBy || '507f1f77bcf86cd799439011',
                 metadata: {
                     generationMethod: 'auto'
                 }
@@ -186,11 +227,14 @@ class TestController {
 
             // Populate references
             await test.populate('questions', 'question subject difficulty topic');
-            await test.populate('createdBy', 'username email');
+
+            // Add default createdBy info
+            const testResponse = test.toObject();
+            testResponse.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
 
             res.status(201).json({
                 success: true,
-                data: test,
+                data: testResponse,
                 message: 'Test generated successfully'
             });
         } catch (error) {
@@ -209,7 +253,6 @@ class TestController {
             
             const test = await Test.findById(id)
                 .populate('questions')
-                .populate('createdBy', 'username email')
                 .lean();
 
             if (!test) {
@@ -218,6 +261,9 @@ class TestController {
                     error: 'Test not found'
                 });
             }
+
+            // Add default createdBy info
+            test.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
 
             res.json({
                 success: true,
@@ -242,8 +288,7 @@ class TestController {
                 { ...req.body, updatedAt: Date.now() },
                 { new: true, runValidators: true }
             )
-            .populate('questions')
-            .populate('createdBy', 'username email');
+            .populate('questions');
 
             if (!test) {
                 return res.status(404).json({
@@ -252,9 +297,13 @@ class TestController {
                 });
             }
 
+            // Add default createdBy info
+            const testResponse = test.toObject();
+            testResponse.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
+
             res.json({
                 success: true,
-                data: test,
+                data: testResponse,
                 message: 'Test updated successfully'
             });
         } catch (error) {
@@ -311,8 +360,7 @@ class TestController {
                 },
                 { new: true }
             )
-            .populate('questions')
-            .populate('createdBy', 'username email');
+            .populate('questions');
 
             if (!test) {
                 return res.status(404).json({
@@ -321,13 +369,57 @@ class TestController {
                 });
             }
 
+            // Add default createdBy info
+            const testResponse = test.toObject();
+            testResponse.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
+
             res.json({
                 success: true,
-                data: test,
+                data: testResponse,
                 message: 'Test published successfully'
             });
         } catch (error) {
             console.error('❌ Error publishing test:', error);
+            res.status(500).json({
+                success: false,
+                error: error.message
+            });
+        }
+    }
+
+    // PUT - Unpublish test (move back to draft)
+    async unpublishTest(req, res) {
+        try {
+            const { id } = req.params;
+            
+            const test = await Test.findByIdAndUpdate(
+                id,
+                { 
+                    isPublished: false,
+                    updatedAt: Date.now()
+                },
+                { new: true }
+            )
+            .populate('questions');
+
+            if (!test) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Test not found'
+                });
+            }
+
+            // Add default createdBy info
+            const testResponse = test.toObject();
+            testResponse.createdBy = { username: 'Admin', email: 'admin@codingterminals.com' };
+
+            res.json({
+                success: true,
+                data: testResponse,
+                message: 'Test moved to draft successfully'
+            });
+        } catch (error) {
+            console.error('❌ Error unpublishing test:', error);
             res.status(500).json({
                 success: false,
                 error: error.message

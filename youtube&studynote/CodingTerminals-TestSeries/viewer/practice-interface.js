@@ -48,29 +48,214 @@ function determineBaseUrl() {
 }
 
 const API_URLS = {
-    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS
+    GET_ALL_QUESTIONS: API_CONFIG.BASE_URL + API_CONFIG.ENDPOINTS.GET_ALL_QUESTIONS,
+    GET_TEST_BY_ID: API_CONFIG.BASE_URL + '/api/tests',
+    SUBMIT_PROGRESS: API_CONFIG.BASE_URL + '/api/user-progress/submit-test',
+    GET_USER_STATS: API_CONFIG.BASE_URL + '/api/user-progress/stats'
 };
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function () {
-    await loadQuestions();
-    loadExistingValues(); // Load existing values from database
+    // Check if a specific test ID is provided in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const testId = urlParams.get('testId');
 
-    // Check for saved test session or results
-    await checkForSavedSession();
+    if (testId) {
+        // Load and start the specific test
+        await loadSpecificTest(testId);
+    } else {
+        // Normal flow - load questions for configuration
+        await loadQuestions();
+        loadExistingValues(); // Load existing values from database
 
-    // Add event listeners for configuration changes to update calculated values
-    document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('difficultySelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('examTypeSelect').addEventListener('change', updateCalculatedValues);
-    document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
-    document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
+        // Check for saved test session or results
+        await checkForSavedSession();
 
-    // Initialize calculated values
-    updateCalculatedValues();
+        // Add event listeners for configuration changes to update calculated values
+        document.getElementById('questionCountSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('subjectSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('yearSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('difficultySelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('examTypeSelect').addEventListener('change', updateCalculatedValues);
+        document.getElementById('randomSelectionCheckbox').addEventListener('change', updateCalculatedValues);
+        document.getElementById('randomOrderCheckbox').addEventListener('change', updateCalculatedValues);
+
+        // Initialize calculated values
+        updateCalculatedValues();
+    }
 });
+
+// Load a specific test by ID (from test catalog)
+async function loadSpecificTest(testId) {
+    try {
+        showLoading(true, 'Loading test...');
+
+        const response = await fetch(`${API_URLS.GET_TEST_BY_ID}/${testId}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load test: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+            throw new Error('Test not found');
+        }
+
+        const test = result.data;
+        
+        // Store the test ID for saving results later
+        currentTestId = testId;
+
+        // Set up test data
+        filteredQuestions = test.questions || [];
+        
+        if (filteredQuestions.length === 0) {
+            showToast('This test has no questions', 'error');
+            window.location.href = 'test-catalog.html';
+            return;
+        }
+
+        // Initialize question status
+        filteredQuestions.forEach(q => {
+            questionStatus[q._id] = 'not-visited';
+        });
+
+        // Set timer based on test duration
+        totalTimeInSeconds = (test.duration || 60) * 60;
+        timeRemaining = totalTimeInSeconds;
+
+        // Update UI
+        document.getElementById('testConfigSection').classList.add('hidden');
+        document.getElementById('questionSection').classList.remove('hidden');
+        document.getElementById('testHeaderInfo').classList.remove('hidden');
+
+        // Update header with test info
+        const headerTitle = document.querySelector('header h1');
+        if (headerTitle) {
+            headerTitle.innerHTML = `📝 ${sanitizeHTML(test.title || 'Practice Test')}`;
+        }
+
+        document.getElementById('totalCount').textContent = filteredQuestions.length;
+
+        // Mark first question as visited
+        if (filteredQuestions.length > 0) {
+            questionStatus[filteredQuestions[0]._id] = 'not-answered';
+        }
+
+        // Start the test
+        testStarted = true;
+        startTime = new Date();
+        currentQuestionIndex = 0;
+
+        displayCurrentQuestion();
+        updateQuestionNavigator();
+        startTimer();
+
+        showLoading(false);
+        showToast(`Test started: ${test.title}`, 'success');
+
+    } catch (error) {
+        console.error('Error loading test:', error);
+        showLoading(false);
+        showToast(error.message || 'Failed to load test', 'error');
+        
+        // Redirect back to catalog after delay
+        setTimeout(() => {
+            window.location.href = 'test-catalog.html';
+        }, 2000);
+    }
+}
+
+// Note: showLoading is loaded from shared/utils.js
+
+// ==================== USER PROGRESS API ====================
+
+// Current test ID (set when loading a specific test)
+let currentTestId = null;
+
+/**
+ * Save test results to backend API
+ * @param {Array} results - Array of question results
+ * @param {number} totalTimeTaken - Total time in seconds
+ */
+async function saveResultsToAPI(results, totalTimeTaken) {
+    if (!results || results.length === 0) {
+        console.log('No results to save to API');
+        return;
+    }
+
+    try {
+        // Get testId from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const testId = urlParams.get('testId') || currentTestId;
+
+        // Get userId from localStorage or use anonymous
+        const userId = localStorage.getItem('userId') || null;
+
+        const payload = {
+            testId: testId,
+            userId: userId,
+            sessionType: testId ? 'test' : 'practice',
+            results: results
+        };
+
+        console.log('Saving results to API:', {
+            testId,
+            resultsCount: results.length,
+            correctCount: results.filter(r => r.isCorrect).length
+        });
+
+        const response = await fetch(API_URLS.SUBMIT_PROGRESS, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            console.log('✅ Results saved to database:', result.data);
+            // Optionally show a subtle indicator that results were saved
+            showToast('📊 Progress saved', 'success', 2000);
+        } else {
+            console.error('❌ Failed to save results:', result.error);
+        }
+
+    } catch (error) {
+        // Non-blocking error - results are already saved locally
+        console.error('❌ Error saving results to API:', error);
+        // Don't show error to user - local results are already saved
+    }
+}
+
+/**
+ * Load user's stats from API
+ * @returns {Object|null} User statistics or null if error
+ */
+async function loadUserStats() {
+    try {
+        const userId = localStorage.getItem('userId') || '';
+        const response = await fetch(`${API_URLS.GET_USER_STATS}/${userId}`);
+        
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return result.success ? result.data : null;
+
+    } catch (error) {
+        console.error('Error loading user stats:', error);
+        return null;
+    }
+}
 
 // ==================== SESSION PERSISTENCE ====================
 
@@ -161,7 +346,7 @@ function restoreTestSession(savedSession) {
     document.getElementById('totalCount').textContent = filteredQuestions.length;
     displayCurrentQuestion();
     updateAnsweredCount();
-    updateQuestionGrid();
+    updateQuestionNavigator();
 
     // Start timer if time remains
     if (timeRemaining > 0) {
@@ -783,13 +968,25 @@ function submitTest() {
     ).length;
     const unansweredQuestions = totalQuestions - answeredQuestions;
 
-    // Calculate score (assuming 1 mark per correct answer)
+    // Calculate score and prepare results for API
     let score = 0;
+    const resultsForAPI = [];
+    
     filteredQuestions.forEach(question => {
         const questionId = question._id || question.id;
         const userAnswer = userAnswers[questionId];
-        if (userAnswer != null && question.correctAnswer != null && userAnswer === question.correctAnswer) {
-            score++;
+        const isCorrect = userAnswer != null && question.correctAnswer != null && userAnswer === question.correctAnswer;
+        
+        if (isCorrect) score++;
+        
+        // Only include answered questions in API results
+        if (userAnswer != null) {
+            resultsForAPI.push({
+                questionId: questionId,
+                answerGiven: userAnswer,
+                isCorrect: isCorrect,
+                timeTaken: 0 // Per-question time not tracked currently
+            });
         }
     });
 
@@ -802,7 +999,7 @@ function submitTest() {
     const seconds = timeTaken % 60;
     const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
-    // Clear in-progress session and save results
+    // Clear in-progress session and save results locally
     clearSessionData(TEST_SESSION_KEY);
     saveTestResults({
         totalQuestions,
@@ -818,6 +1015,9 @@ function submitTest() {
         userAnswers,
         markedForReview: Array.from(markedForReview)
     });
+
+    // Save results to backend API (async, non-blocking)
+    saveResultsToAPI(resultsForAPI, timeTaken);
 
     // Display results - with safety checks
     const resultTotal = document.getElementById('resultTotal');

@@ -7,8 +7,6 @@ let filteredQuestions = [];
 let selectedQuestions = new Set();
 let currentEditingQuestion = null;
 let currentTab = 'question-bank';
-let currentCreationMethod = 'manual';
-let testQuestions = [];
 let groups = [];
 let duplicates = [];
 
@@ -293,8 +291,6 @@ function switchTab(tabName) {
     // Load data based on tab
     if (tabName === 'question-bank') {
         loadQuestions();
-    } else if (tabName === 'test-creator') {
-        loadTestCreatorData();
     } else if (tabName === 'analytics') {
         loadAnalytics();
     }
@@ -1789,159 +1785,6 @@ function parseBulkQuestions(text, defaultSubject, defaultYear, defaultExamType, 
 // Refresh questions
 function refreshQuestions() {
     loadQuestions();
-}
-
-// Load test creator data
-function loadTestCreatorData() {
-    // Load subjects for test creation
-    const subjectSelect = document.getElementById('testSubject');
-    if (subjectSelect) {
-        subjectSelect.innerHTML = '<option value="">Select Subject</option>';
-
-        const uniqueSubjects = new Set(allQuestions.map(q => q.subject));
-        uniqueSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject;
-            option.textContent = subject;
-            subjectSelect.appendChild(option);
-        });
-    }
-
-    // Load topics for selection
-    const topicSelect = document.getElementById('topicSelection');
-    if (topicSelect) {
-        topicSelect.innerHTML = '<option value="all">All Topics</option>';
-
-        const uniqueTopics = new Set(allQuestions.map(q => q.topic).filter(topic => topic));
-        uniqueTopics.forEach(topic => {
-            const option = document.createElement('option');
-            option.value = topic;
-            option.textContent = topic;
-            topicSelect.appendChild(option);
-        });
-    }
-}
-
-// Create test
-function createTest() {
-    const testTitle = document.getElementById('testTitle')?.value?.trim() || '';
-    const testSubject = document.getElementById('testSubject')?.value?.trim() || '';
-    const testYear = document.getElementById('testYear')?.value?.trim() || '';
-    const testDuration = document.getElementById('testDuration')?.value?.trim() || '';
-    const totalQuestions = document.getElementById('totalQuestions')?.value?.trim() || '';
-
-    if (!testTitle || !testSubject || !testYear) {
-        showToast('Please fill in required fields (Title, Subject, Year)', 'error');
-        return;
-    }
-
-    if (currentCreationMethod === 'manual') {
-        if (testQuestions.length === 0) {
-            showToast('Please add questions to the test', 'error');
-            return;
-        }
-    } else if (currentCreationMethod === 'auto') {
-        // For auto generation, we'll use the criteria to select questions
-        const easyPercent = parseInt(document.getElementById('easyPercent')?.textContent || '30');
-        const mediumPercent = parseInt(document.getElementById('mediumPercent')?.textContent || '50');
-        const hardPercent = parseInt(document.getElementById('hardPercent')?.textContent || '20');
-
-        if (easyPercent + mediumPercent + hardPercent !== 100) {
-            showToast('Difficulty percentages must sum to 100%', 'error');
-            return;
-        }
-    }
-
-    // In real implementation, this would call an API to create the test
-    showToast(`Creating test: ${testTitle}`, 'info');
-
-    // Simulate test creation
-    setTimeout(() => {
-        showToast(`Test "${testTitle}" created successfully!`, 'success');
-    }, 1000);
-}
-
-
-// Preview test
-function previewTest() {
-    if (testQuestions.length === 0) {
-        showToast('No questions in test to preview', 'warning');
-        return;
-    }
-
-    // Open preview in new window
-    const previewWindow = window.open('', '_blank');
-
-    previewWindow.document.write(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Test Preview - ${document.getElementById('testTitle')?.value || 'Untitled Test'}</title>
-            <script src="https://cdn.tailwindcss.com"></script>
-            <style>
-                body { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); }
-                .question-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1rem; }
-                .option-item { padding: 0.75rem; margin: 0.5rem 0; border: 1px solid #e5e7eb; border-radius: 0.375rem; }
-                .option-content { display: inline; }
-                .option-content p { display: inline; margin: 0; }
-            </style>
-        </head>
-        <body class="min-h-screen p-8">
-            <div class="max-w-4xl mx-auto">
-                <h1 class="text-3xl font-bold text-blue-600 mb-6 text-center">${document.getElementById('testTitle')?.value || 'Untitled Test'}</h1>
-                
-                <div class="bg-white rounded-2xl shadow-xl p-8">
-                    ${testQuestions.map((question, index) => {
-                        const displayNumber = question.questionNumber || '';
-                        return `
-                        <div class="question-card">
-                            <div class="flex items-start gap-3 mb-4">
-                                ${displayNumber ? `<span class="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">${displayNumber}</span>` : ''}
-                                <div class="flex-1">
-                                    <h4 class="font-semibold text-gray-800 mb-3">${question.question}</h4>
-                                    
-                                    <div class="space-y-2 mb-4">
-                                        ${question.options.map((option, optIndex) => `
-                                            <div class="option-item">
-                                                <div class="flex items-start gap-2">
-                                                    <input type="radio" disabled ${optIndex == question.correctAnswer ? 'checked' : ''} class="mt-1">
-                                                    <span class="font-bold text-blue-600">${String.fromCharCode(65 + optIndex)}.</span>
-                                                    <div class="flex-1 option-content">${option}</div>
-                                                    ${optIndex == question.correctAnswer ? '<span class="text-green-600 text-xs font-medium">✓ Correct</span>' : ''}
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    
-                                    <div class="bg-blue-50 p-3 rounded-lg">
-                                        <div class="font-semibold text-blue-800 mb-1">Correct Answer: ${String.fromCharCode(65 + question.correctAnswer)}</div>
-                                        <div class="text-sm text-blue-700">${question.explanation || 'No explanation provided.'}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="text-sm text-gray-500">
-                                Difficulty: <span class="font-semibold">${question.difficulty || 'Medium'}</span>
-                            </div>
-                        </div>
-                    `;}).join('')}
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-
-    previewWindow.document.close();
-}
-// Save test template
-function saveTestTemplate() {
-    const templateName = prompt('Enter template name:');
-    if (!templateName) return;
-
-    // In real implementation, this would save the template to the database
-    showToast(`Template "${templateName}" saved successfully!`, 'success');
 }
 
 // Load analytics
