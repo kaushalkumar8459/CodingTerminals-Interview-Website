@@ -1,72 +1,25 @@
-// New file: backend/src/seed.ts
-import 'reflect-metadata';
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './../app.module';
-import { Model } from 'mongoose';
-import { getModelToken } from '@nestjs/mongoose';
-import * as bcrypt from 'bcryptjs';
-import { User } from './../users/schemas/user.schema';
-import { AppModule as ModuleModel } from './../modules/schemas/module.schema';
-import { RoleType } from '../roles/schemas/role.schema';
+// Converted from seed.ts to seed.js for Node.js execution
+require('reflect-metadata');
+const { NestFactory } = require('@nestjs/core');
+const { AppModule } = require('./../app.module');
+const { Model } = require('mongoose');
+const { getModelToken } = require('@nestjs/mongoose');
+const bcrypt = require('bcryptjs');
+const { User } = require('./../users/schemas/user.schema');
+const { AppModule: ModuleModel } = require('./../modules/schemas/module.schema');
+const { RoleType } = require('../roles/schemas/role.schema');
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
 
-  const userModel = app.get<Model<User>>(getModelToken(User.name));
-  const moduleModel = app.get<Model<ModuleModel>>(getModelToken('AppModule'));
+  const userModel = app.get(getModelToken(User.name));
+  const moduleModel = app.get(getModelToken('AppModule'));
 
   console.log('🌱 Starting database seeding...');
 
-  // Create default modules
-  const defaultModules = [
-    {
-      name: 'Study Notes',
-      description: 'Study notes management system',
-      enabled: true,
-      icon: '📚',
-      category: 'Content'
-    },
-    {
-      name: 'YouTube',
-      description: 'YouTube content management',
-      enabled: true,
-      icon: '▶️',
-      category: 'Content'
-    },
-    {
-      name: 'LinkedIn',
-      description: 'LinkedIn content management',
-      enabled: true,
-      icon: '💼',
-      category: 'Content'
-    },
-    {
-      name: 'Blog',
-      description: 'Blog content management',
-      enabled: true,
-      icon: '✍️',
-      category: 'Content'
-    }
-  ];
-
-  console.log('📦 Creating default modules...');
-  for (const moduleData of defaultModules) {
-    const existingModule = await moduleModel.findOne({ name: moduleData.name });
-    if (!existingModule) {
-      const newModule = new moduleModel(moduleData);
-      await newModule.save();
-      console.log(`✅ Created module: ${moduleData.name}`);
-    } else {
-      console.log(`✅ Module already exists: ${moduleData.name}`);
-    }
-  }
-
   // Fetch all modules
-  const allModules = await moduleModel.find({}, '_id name');
-  const allModuleIds = allModules.map((m: any) => m._id);
-  const allModuleNames = allModules.map((m: any) => m.name);
-
-  console.log(`📋 Available modules: ${allModuleNames.join(', ')}`);
+  const allModules = await moduleModel.find({}, '_id');
+  const allModuleIds = allModules.map((m) => m._id);
 
   // Check if super admin already exists
   const existingAdmin = await userModel.findOne({ email: 'admin@example.com' });
@@ -98,7 +51,6 @@ async function bootstrap() {
 
   // Create regular admin if needed
   const existingRegularAdmin = await userModel.findOne({ email: 'editor@example.com' });
-  
   if (!existingRegularAdmin) {
     const hashedPassword = await bcrypt.hash('EditorPass123!', 10);
     const regularAdmin = new userModel({
@@ -117,7 +69,6 @@ async function bootstrap() {
 
   // Create viewer if needed
   const existingViewer = await userModel.findOne({ email: 'viewer@example.com' });
-  
   if (!existingViewer) {
     const hashedPassword = await bcrypt.hash('ViewerPass123!', 10);
     const viewer = new userModel({

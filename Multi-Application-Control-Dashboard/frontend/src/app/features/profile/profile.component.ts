@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ProfileStore } from '../../core/store/profile.store';
 // Import the authorization directives
-import { HasPermissionDirective, AuthDisabledDirective, HasPermissionPipe } from '../../core/directives';
+import { HasPermissionDirective, HasRoleDirective, AuthDisabledDirective, HasPermissionPipe } from '../../core/directives';
 import { RoleType } from '../../core/models/role.model';
 
 @Component({
@@ -14,6 +14,7 @@ import { RoleType } from '../../core/models/role.model';
     ReactiveFormsModule,
     // Add the authorization directives
     HasPermissionDirective,
+    HasRoleDirective,
     AuthDisabledDirective,
     HasPermissionPipe
   ],

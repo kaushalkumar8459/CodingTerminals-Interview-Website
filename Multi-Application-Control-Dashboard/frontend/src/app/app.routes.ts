@@ -5,6 +5,7 @@ import { LayoutComponent } from './shared/layouts/layout.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { RoleType } from './core/models/role.model';
+import { AuthDemoComponent } from './features/auth/auth-demo.component';
 
 export const routes: Routes = [
   // Auth Routes (No Layout)
@@ -18,6 +19,10 @@ export const routes: Routes = [
       {
         path: 'register',
         loadComponent: () => import('./features/auth/registration/register.component').then(m => m.RegisterComponent)
+      },
+      {
+        path: 'demo',
+        component: AuthDemoComponent
       },
       {
         path: '',

@@ -2,6 +2,7 @@ import { Injectable, inject, computed } from '@angular/core';
 import { signalStore, withState, withComputed, withMethods } from '@ngrx/signals';
 import { patchState } from '@ngrx/signals';
 import { firstValueFrom } from 'rxjs';
+import { StudyNotesService } from '../services/study-notes.service';
 
 // Types for StudyNotes
 export type StudyNoteCategory = 'Frontend' | 'Backend' | 'Database' | 'DevOps' | 'Other';
@@ -111,70 +112,17 @@ export class StudyNotesStore extends signalStore(
   })),
   withMethods((store) => {
     // 1. Define internal methods
+    const studyNotesService = inject(StudyNotesService);
     const loadNotes = async (): Promise<void> => {
       patchState(store, { loading: true, error: null });
       try {
-        // Simulate API call to fetch notes
-        // In real implementation, inject StudyNotesService and call API
-        const mockNotes: StudyNoteWithUI[] = [
-          {
-            id: '1',
-            title: 'Angular Basics',
-            category: 'Frontend',
-            content: 'Complete guide to Angular fundamentals including components, directives, and services.',
-            tags: ['angular', 'frontend', 'typescript'],
-            views: 234,
-            createdAt: new Date('2025-12-01'),
-            updatedAt: new Date('2025-12-10'),
-            createdBy: 'admin',
-            isDeleting: false,
-            isUpdating: false
-          },
-          {
-            id: '2',
-            title: 'RxJS Operators',
-            category: 'Frontend',
-            content: 'Deep dive into RxJS operators like map, filter, switchMap, and more.',
-            tags: ['rxjs', 'frontend', 'reactive'],
-            views: 156,
-            createdAt: new Date('2025-11-15'),
-            updatedAt: new Date('2025-12-05'),
-            createdBy: 'trainer',
-            isDeleting: false,
-            isUpdating: false
-          },
-          {
-            id: '3',
-            title: 'Node.js REST APIs',
-            category: 'Backend',
-            content: 'Building scalable REST APIs with Node.js and Express.js.',
-            tags: ['nodejs', 'backend', 'api'],
-            views: 189,
-            createdAt: new Date('2025-11-01'),
-            updatedAt: new Date('2025-12-08'),
-            createdBy: 'admin',
-            isDeleting: false,
-            isUpdating: false
-          }
-        ];
-
-        // Apply filters
-        let filtered = mockNotes;
-        if (store.selectedCategory() !== 'all') {
-          filtered = filtered.filter(n => n.category === store.selectedCategory());
-        }
-        if (store.searchQuery()) {
-          const query = store.searchQuery().toLowerCase();
-          filtered = filtered.filter(n => 
-            n.title.toLowerCase().includes(query) || 
-            n.content.toLowerCase().includes(query) ||
-            n.tags.some(t => t.toLowerCase().includes(query))
-          );
-        }
-
+        const params: any = {};
+        if (store.selectedCategory() !== 'all') params.category = store.selectedCategory();
+        if (store.searchQuery()) params.q = store.searchQuery();
+        const notes = await firstValueFrom(studyNotesService.getNotes(params));
         patchState(store, {
-          notes: filtered,
-          totalNotes: filtered.length,
+          notes,
+          totalNotes: notes.length,
           loading: false,
           error: null
         });
@@ -203,21 +151,7 @@ export class StudyNotesStore extends signalStore(
     async loadNoteById(id: string): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        // Simulate API call
-        const note: StudyNoteWithUI = {
-          id,
-          title: 'Angular Basics',
-          category: 'Frontend',
-          content: 'Complete guide to Angular fundamentals including components, directives, and services.',
-          tags: ['angular', 'frontend', 'typescript'],
-          views: 234,
-          createdAt: new Date('2025-12-01'),
-          updatedAt: new Date('2025-12-10'),
-          createdBy: 'admin',
-          isDeleting: false,
-          isUpdating: false
-        };
-
+        const note = await firstValueFrom(studyNotesService.getNoteById(id));
         patchState(store, {
           currentNote: note,
           loading: false,
@@ -238,31 +172,13 @@ export class StudyNotesStore extends signalStore(
     async createNote(data: CreateStudyNoteRequest): Promise<void> {
       patchState(store, { loading: true, error: null });
       try {
-        // Simulate API call to create note
-        const newNote: StudyNoteWithUI = {
-          id: Date.now().toString(),
-          ...data,
-          views: 0,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          createdBy: 'current-user',
-          isDeleting: false,
-          isUpdating: false
-        };
-
-        const updatedNotes = [newNote, ...(store as any)['notes']()];
+        await firstValueFrom(studyNotesService.createNote(data));
         patchState(store, {
-          notes: updatedNotes,
-          totalNotes: updatedNotes.length,
           success: 'Study note created successfully!',
           error: null,
           loading: false
         });
-
-        // Auto-clear success
         setTimeout(() => patchState(store, { success: null }), 3000);
-        
-        // Reload to apply filters
         await loadNotes();
       } catch (err: any) {
         patchState(store, {
@@ -279,26 +195,13 @@ export class StudyNotesStore extends signalStore(
     async updateNote(id: string, data: UpdateStudyNoteRequest): Promise<void> {
       patchState(store, { error: null });
       try {
-        const updatedNotes = store.notes().map(n =>
-          n.id === id 
-            ? { 
-                ...n, 
-                ...data,
-                updatedAt: new Date(),
-                isUpdating: false
-              } 
-            : n
-        );
-
+        await firstValueFrom(studyNotesService.updateNote(id, data));
         patchState(store, {
-          notes: updatedNotes,
-          currentNote: updatedNotes.find(n => n.id === id) || null,
           success: 'Study note updated successfully!',
           error: null
         });
-
-        // Auto-clear success
         setTimeout(() => patchState(store, { success: null }), 3000);
+        await loadNotes();
       } catch (err: any) {
         patchState(store, {
           error: err?.error?.message ?? 'Failed to update study note'
@@ -311,34 +214,17 @@ export class StudyNotesStore extends signalStore(
      * Delete study note - ASYNC
      */
     async deleteNote(id: string): Promise<void> {
-      // Set deleting flag for UI
-      const notes = (store as any)['notes']().map((n: StudyNoteWithUI) =>
-        n.id === id ? { ...n, isDeleting: true } : n
-      );
-      patchState(store, { notes, error: null });
-
+      patchState(store, { error: null });
       try {
-        // Simulate API call to delete
-        const updatedNotes = (store as any)['notes']().filter((n: StudyNoteWithUI) => n.id !== id);
+        await firstValueFrom(studyNotesService.deleteNote(id));
         patchState(store, {
-          notes: updatedNotes,
-          totalNotes: updatedNotes.length,
           success: 'Study note deleted successfully!',
           error: null
         });
-
-        // Auto-clear success
         setTimeout(() => patchState(store, { success: null }), 3000);
-        
-        // Reload to apply filters
         await loadNotes();
       } catch (err: any) {
-        // Clear deleting flag on error
-        const errorNotes = (store as any)['notes']().map((n: StudyNoteWithUI) =>
-          n.id === id ? { ...n, isDeleting: false } : n
-        );
         patchState(store, {
-          notes: errorNotes,
           error: err?.error?.message ?? 'Failed to delete study note'
         });
         console.error('StudyNotesStore: Error deleting note', err);

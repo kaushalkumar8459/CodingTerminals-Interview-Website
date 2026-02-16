@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, BehaviorSubject, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { RoleType, UserStatus } from '../models/role.model';
 import { Router } from '@angular/router';
@@ -42,8 +42,13 @@ export class AuthService {
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.hasToken());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
+  private refreshTokenTimeout: any;
+
   constructor(private http: HttpClient, private router: Router) {
     this.loadStoredUser();
+    if (this.hasToken()) {
+      this.scheduleTokenRefresh();
+    }
   }
 
   /**
@@ -56,6 +61,7 @@ export class AuthService {
         this.currentUserSubject.next(JSON.parse(storedUser));
       } catch (e) {
         console.error('Error parsing stored user:', e);
+        this.clearStorage();
       }
     }
   }
@@ -128,6 +134,24 @@ export class AuthService {
    * Logout user
    */
   logout(): void {
+    // Call backend logout endpoint
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) {
+      this.http.post(`${this.apiUrl}/logout`, { refreshToken }).subscribe({
+        next: () => console.log('Logged out successfully'),
+        error: (error) => console.error('Logout error:', error)
+      });
+    }
+    
+    this.clearStorage();
+    this.router.navigate(['/login']);
+  }
+
+  /**
+   * Clear all stored authentication data
+   */
+  private clearStorage(): void {
+    clearTimeout(this.refreshTokenTimeout);
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('currentUser');
@@ -146,6 +170,34 @@ export class AuthService {
     localStorage.setItem('currentUser', JSON.stringify(response.user));
     this.currentUserSubject.next(response.user);
     this.isAuthenticatedSubject.next(true);
+    
+    // Schedule automatic token refresh
+    this.scheduleTokenRefresh();
+  }
+
+  /**
+   * Schedule automatic token refresh before expiration
+   */
+  private scheduleTokenRefresh(): void {
+    // Clear any existing timeout
+    clearTimeout(this.refreshTokenTimeout);
+    
+    // Schedule refresh 5 minutes before token expiration (24h - 5min = 1435 minutes)
+    const refreshTime = 1435 * 60 * 1000; // 1435 minutes in milliseconds
+    
+    this.refreshTokenTimeout = setTimeout(() => {
+      this.refreshToken().subscribe({
+        next: () => {
+          console.log('Token refreshed automatically');
+          // Schedule next refresh
+          this.scheduleTokenRefresh();
+        },
+        error: (error) => {
+          console.error('Automatic token refresh failed:', error);
+          this.logout();
+        }
+      });
+    }, refreshTime);
   }
 
   /**
@@ -174,14 +226,25 @@ export class AuthService {
    */
   refreshToken(): Observable<LoginResponse> {
     const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) {
+      return new Observable(observer => {
+        observer.error(new Error('No refresh token available'));
+        this.logout();
+      });
+    }
+
     return new Observable(observer => {
       this.http.post<LoginResponse>(`${this.apiUrl}/refresh`, { refreshToken }).subscribe({
         next: (response) => {
           localStorage.setItem('accessToken', response.accessToken);
+          if (response.refreshToken) {
+            localStorage.setItem('refreshToken', response.refreshToken);
+          }
           observer.next(response);
           observer.complete();
         },
         error: (error) => {
+          console.error('Token refresh failed:', error);
           this.logout();
           observer.error(error);
         }
@@ -194,5 +257,37 @@ export class AuthService {
    */
   getProfile(): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/profile`);
+  }
+
+  /**
+   * Check if user has specific role
+   */
+  hasRole(role: RoleType): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === role;
+  }
+
+  /**
+   * Check if user has any of the specified roles
+   */
+  hasAnyRole(roles: RoleType[]): boolean {
+    const user = this.getCurrentUser();
+    return user ? roles.includes(user.role) : false;
+  }
+
+  /**
+   * Check if user has access to a specific module
+   */
+  hasModuleAccess(moduleId: string): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+    
+    // Super Admin has access to all modules
+    if (user.role === RoleType.SUPER_ADMIN) {
+      return true;
+    }
+    
+    // Check assigned modules
+    return user.assignedModules.includes(moduleId);
   }
 }
