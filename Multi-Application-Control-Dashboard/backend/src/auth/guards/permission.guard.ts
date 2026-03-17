@@ -1,7 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Inject } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RoleType, PermissionAction } from '../../roles/schemas/role.schema';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 // Metadata keys
 export const PERMISSIONS_KEY = 'permissions';
@@ -18,16 +17,6 @@ export class PermissionGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route is marked as public
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    
-    if (isPublic) {
-      return true;
-    }
-
     // Get required permissions from decorator metadata
     const requiredPermissions = this.reflector.getAllAndOverride<PermissionRequirement[]>(
       PERMISSIONS_KEY,
@@ -46,12 +35,8 @@ export class PermissionGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Debug: Log user and permissions
-    console.log('[PermissionGuard] User:', user);
-    console.log('[PermissionGuard] Required permissions:', requiredPermissions);
-    // Super Admin bypasses all permission and module checks
+    // Super Admin bypasses all permission checks
     if (user.role === RoleType.SUPER_ADMIN) {
-      console.log('[PermissionGuard] Super admin bypass');
       return true;
     }
 
@@ -142,16 +127,6 @@ export class ModuleAccessGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route is marked as public
-    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-    
-    if (isPublic) {
-      return true;
-    }
-
     const requiredModule = this.reflector.getAllAndOverride<string>(MODULE_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -168,12 +143,8 @@ export class ModuleAccessGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Debug: Log user and required module
-    console.log('[ModuleAccessGuard] User:', user);
-    console.log('[ModuleAccessGuard] Required module:', requiredModule);
-    // Super Admin has access to all modules, regardless of assignedModules
+    // Super Admin has access to all modules
     if (user.role === RoleType.SUPER_ADMIN) {
-      console.log('[ModuleAccessGuard] Super admin bypass');
       return true;
     }
 

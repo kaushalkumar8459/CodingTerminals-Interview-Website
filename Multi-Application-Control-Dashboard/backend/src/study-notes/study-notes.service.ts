@@ -18,13 +18,21 @@ export class StudyNotesService {
       return this.noteModel
         .find({ isPublic })
         .sort({ createdAt: -1 })
-        .populate('author', 'email firstName lastName')
+        .populate({
+          path: 'author',
+          select: 'email firstName lastName',
+          options: { strictPopulate: false } // Don't fail if author doesn't exist
+        })
         .exec();
     }
     return this.noteModel
       .find()
       .sort({ createdAt: -1 })
-      .populate('author', 'email firstName lastName')
+      .populate({
+        path: 'author',
+        select: 'email firstName lastName',
+        options: { strictPopulate: false } // Don't fail if author doesn't exist
+      })
       .exec();
   }
 
@@ -33,14 +41,22 @@ export class StudyNotesService {
       id,
       { $inc: { views: 1 } },
       { new: true }
-    ).populate('author', 'email firstName lastName').exec();
+    ).populate({
+      path: 'author',
+      select: 'email firstName lastName',
+      options: { strictPopulate: false } // Don't fail if author doesn't exist
+    }).exec();
     return note;
   }
 
   async update(id: string, updateStudyNoteDto: UpdateStudyNoteDto) {
     return this.noteModel
       .findByIdAndUpdate(id, updateStudyNoteDto, { new: true })
-      .populate('author', 'email firstName lastName')
+      .populate({
+        path: 'author',
+        select: 'email firstName lastName',
+        options: { strictPopulate: false } // Don't fail if author doesn't exist
+      })
       .exec();
   }
 
