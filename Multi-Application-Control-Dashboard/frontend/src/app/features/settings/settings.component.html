@@ -17,23 +17,13 @@
         <label class="block text-gray-700 font-semibold mb-3">🎨 Theme</label>
         <div class="space-y-2">
           <label class="flex items-center">
-            <input 
-              type="radio" 
-              formControlName="theme" 
-              value="light" 
-              appAuthDisabled="Settings" 
-              appAuthDisabledAction="edit"
-              class="mr-2">
+            <input type="radio" formControlName="theme" value="light" appAuthDisabled="Settings"
+              appAuthDisabledAction="edit" class="mr-2">
             <span class="text-gray-700">Light Mode</span>
           </label>
           <label class="flex items-center">
-            <input 
-              type="radio" 
-              formControlName="theme" 
-              value="dark" 
-              appAuthDisabled="Settings" 
-              appAuthDisabledAction="edit"
-              class="mr-2">
+            <input type="radio" formControlName="theme" value="dark" appAuthDisabled="Settings"
+              appAuthDisabledAction="edit" class="mr-2">
             <span class="text-gray-700">Dark Mode</span>
           </label>
         </div>
@@ -43,11 +33,7 @@
       <div class="mb-6 pb-6 border-b border-gray-200">
         <label class="flex items-center justify-between">
           <span class="text-gray-700 font-semibold">🔔 In-App Notifications</span>
-          <input 
-            type="checkbox" 
-            formControlName="notifications" 
-            appAuthDisabled="Settings" 
-            appAuthDisabledAction="edit"
+          <input type="checkbox" formControlName="notifications" appAuthDisabled="Settings" appAuthDisabledAction="edit"
             class="toggle">
         </label>
         <p class="text-sm text-gray-600 mt-2">Receive notifications for important updates</p>
@@ -57,17 +43,12 @@
       <div class="mb-6 pb-6 border-b border-gray-200">
         <label class="flex items-center justify-between">
           <span class="text-gray-700 font-semibold">📧 Email Notifications</span>
-          <input 
-            type="checkbox" 
-            formControlName="emailNotifications" 
-            appAuthDisabled="Settings" 
-            appAuthDisabledAction="edit"
-            [disabled]="emailNotificationsDisabled"
-            class="toggle">
+          <input type="checkbox" formControlName="emailNotifications" appAuthDisabled="Settings"
+            appAuthDisabledAction="edit" class="toggle">
         </label>
         <p class="text-sm text-gray-600 mt-2">Receive email notifications for system events</p>
         @if(emailNotificationsDisabled){
-          <p class="text-sm text-orange-600 mt-1">Enable in-app notifications first</p>
+        <p class="text-sm text-orange-600 mt-1">Enable in-app notifications first</p>
         }
       </div>
 
@@ -75,11 +56,7 @@
       <div *appHasPermission="'Settings'; action: 'manage-security'" class="mb-6 pb-6 border-b border-gray-200">
         <label class="flex items-center justify-between">
           <span class="text-gray-700 font-semibold">🔐 Two-Factor Authentication</span>
-          <input 
-            type="checkbox" 
-            formControlName="twoFactorAuth" 
-            appAuthDisabled="Settings" 
-            appAuthDisabledAction="edit"
+          <input type="checkbox" formControlName="twoFactorAuth" appAuthDisabled="Settings" appAuthDisabledAction="edit"
             class="toggle">
         </label>
         <p class="text-sm text-gray-600 mt-2">Add extra security to your account</p>
@@ -89,46 +66,32 @@
       <div class="mb-6">
         <label class="flex items-center justify-between">
           <span class="text-gray-700 font-semibold">📊 Data Collection</span>
-          <input 
-            type="checkbox" 
-            formControlName="dataCollection" 
-            appAuthDisabled="Settings" 
-            appAuthDisabledAction="edit"
-            class="toggle">
+          <input type="checkbox" formControlName="dataCollection" appAuthDisabled="Settings"
+            appAuthDisabledAction="edit" class="toggle">
         </label>
         <p class="text-sm text-gray-600 mt-2">Allow us to collect usage data for improvements</p>
       </div>
 
       <!-- Admin-Only Settings -->
-      <div *appHasRole="[RoleType.SUPER_ADMIN, RoleType.ADMIN]" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <div *appHasRole="[RoleType.SUPER_ADMIN, RoleType.ADMIN]"
+        class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <h3 class="font-semibold text-blue-800 mb-3">Administrator Settings</h3>
         <p class="text-sm text-blue-600">Advanced settings available only to administrators</p>
       </div>
 
       <!-- Buttons -->
       <div class="flex space-x-4 pt-6">
-        <button 
-          type="submit" 
-          [disabled]="loading || !('Settings' | hasPermission:'edit')"
-          appAuthDisabled="Settings" 
-          appAuthDisabledAction="edit"
-          class="btn-primary">
+        <button type="submit" [disabled]="loading || !('Settings' | hasPermission:'edit')" appAuthDisabled="Settings"
+          appAuthDisabledAction="edit" class="btn-primary">
           {{ loading ? 'Saving...' : 'Save Settings' }}
         </button>
-        
-        <button 
-          type="button" 
-          (click)="changePassword()" 
-          [disabled]="!('Settings' | hasPermission:'edit-password')"
+
+        <button type="button" (click)="changePassword()" [disabled]="!('Settings' | hasPermission:'edit-password')"
           class="btn-secondary">
           🔑 Change Password
         </button>
-        
-        <button 
-          type="button" 
-          (click)="resetToDefaults()"
-          *appHasRole="[RoleType.SUPER_ADMIN]"
-          class="btn-danger">
+
+        <button type="button" (click)="resetToDefaults()" *appHasRole="[RoleType.SUPER_ADMIN]" class="btn-danger">
           🔄 Reset to Defaults
         </button>
       </div>

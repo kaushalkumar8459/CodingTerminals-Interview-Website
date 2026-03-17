@@ -63,7 +63,7 @@ RoleSchema.index({ isSystemRole: 1 });
 // Transform output
 RoleSchema.set('toJSON', {
   virtuals: true,
-  transform: function (doc, ret) {
+  transform: function (doc, ret: any) {
     ret.id = ret._id;
     delete ret._id;
     delete ret.__v;

@@ -106,9 +106,11 @@ export class AuthStore extends signalStore(
       patchState(store, { loading: true, error: null });
       try {
         const response = await firstValueFrom(authService.login(credentials));
+        // The auth service already calls setSession() which saves to localStorage
+        // Now sync the auth store state with localStorage
         patchState(store, {
           currentUser: response.user,
-          token: response.accessToken,
+          token: response.accessToken,  // Store in auth store state
           refreshToken: response.refreshToken || null,
           isAuthenticated: true,
           success: 'Login successful!',

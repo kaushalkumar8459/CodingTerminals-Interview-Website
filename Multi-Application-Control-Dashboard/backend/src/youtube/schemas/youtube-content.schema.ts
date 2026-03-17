@@ -9,7 +9,7 @@ export enum VideoStatus {
   ARCHIVED = 'archived',
 }
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'youtubeVideos' })
 export class YouTubeContent {
   @Prop({ required: true })
   title: string;

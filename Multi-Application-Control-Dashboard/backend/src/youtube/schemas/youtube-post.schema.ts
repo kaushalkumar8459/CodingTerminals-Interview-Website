@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type YouTubePostDocument = YouTubePost & Document;
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'youtubeVideos' })
 export class YouTubePost extends Document {
   @Prop({ required: true })
   title: string;
